@@ -1,0 +1,20 @@
+package-as: Bazooka
+
+externals:
+    libs/LibStub-1.0: svn://svn.wowace.com/wow/libstub/mainline/tags/1.0
+    libs/CallbackHandler-1.0: svn://svn.wowace.com/wow/callbackhandler/mainline/tags/1.0.3/CallbackHandler-1.0
+    libs/Ace3/AceAddon-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceAddon-3.0
+    libs/Ace3/AceEvent-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceEvent-3.0
+    libs/Ace3/AceDB-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDB-3.0
+    libs/Ace3/AceLocale-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceLocale-3.0
+    libs/LibSharedMedia-3.0: svn://svn.wowace.com/wow/libsharedmedia-3-0/mainline/trunk/LibSharedMedia-3.0
+    libs/LibDualSpec-1.0: 
+        url: git://git.wowace.com/wow/libdualspec-1-0/mainline.git
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceGUI-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceGUI-3.0
+    Bazooka_Options/libs/Ace3/AceConfig-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfig-3.0
+    Bazooka_Options/libs/Ace3/AceDBOptions-3.0: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDBOptions-3.0
+    Bazooka_Options/libs/AceGUI-3.0-SharedMediaWidgets: svn://svn.wowace.com/wow/ace-gui-3-0-shared-media-widgets/mainline/trunk/AceGUI-3.0-SharedMediaWidgets
+
+move-folders:
+    Bazooka/Bazooka_Options: Bazooka_Options

@@ -1,0 +1,16 @@
+## Interface: 30200
+## Title: Bazooka Options
+## Author: mitch0
+## Version: 0.1
+## Notes: Configuration options for Bazooka
+## OptionalDeps: AceGUI-3.0-SharedMediaWidgets
+## Dependencies: Bazooka
+## LoadOnDemand: 1
+## X-License: Public Domain
+## X-RelSite-WoWI:
+
+#@no-lib-strip@
+embeds.xml
+#@end-no-lib-strip@
+localizations\localizations.xml
+Options.lua
