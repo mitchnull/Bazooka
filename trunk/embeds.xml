@@ -10,6 +10,7 @@
 <Include file="libs\LibSharedMedia-3.0\lib.xml"/>
 <Script file="libs\LibDualSpec-1.0\LibDualSpec-1.0.lua"/>
 <Script file="libs\LibDataBroker-1.1\LibDataBroker-1.1.lua"/>
+<Include file="libs\LibJostle-3.0\lib.xml"/>
 
 </Ui>
 
