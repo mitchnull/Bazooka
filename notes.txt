@@ -1,0 +1,19 @@
+- Auto adjust frames (toggle) : LibJostle
+- auto hide top/bottom panels
+- create new
+- font size
+- overflow plugins
+- thickness (betwwen panels)
+
+- background: color / texture
+- left/center/right spacing (10/20/10, 0-40)
+- attach top/bottom/detach
+- lock panel
+- remove panel
+
+tooltip:
+- font size 
+- hide in combat
+- transparency
+
+
