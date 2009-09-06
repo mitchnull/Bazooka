@@ -66,7 +66,6 @@ do
                 type = 'toggle',
                 width = 'full',
                 name = L["Locked"],
-                desc = L["Lock/Unlock display frame"],
                 order = 110,
                 disabled = function()
                     lastConfiguredOpts = nil

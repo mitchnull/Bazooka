@@ -34,7 +34,7 @@ local DefaultFontName = "Friz Quadrata TT"
 local DefaultFontPath = GameFontNormal:GetFont()
 local DefaultFrameWidth = 112
 local DefaultFrameHeight = 36
-local Icon = [[Interface\Icons\INV_Misc_MissileSmall_Green]]
+local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
 
 ---------------------------------
 

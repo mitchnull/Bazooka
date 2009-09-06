@@ -23,5 +23,5 @@ Bazooka.lua
 #@do-not-package@
 Bazooka_Options\embeds.xml
 Bazooka_Options\localizations\localizations.xml
-RBazooka_Options\Options.lua
+Bazooka_Options\Options.lua
 #@end-do-not-package@ 
