@@ -1,19 +1,101 @@
-- Auto adjust frames (toggle) : LibJostle
-- auto hide top/bottom panels
-- create new
-- font size
-- overflow plugins
-- thickness (betwwen panels)
+global settings
+- locked
+- Auto adjust blizz frames (toggle) : LibJostle
+- show DataObject label/name if Alt pressed
+- create new bar
 
-- background: color / texture
+- Bar defaults
+  - ...
+- BD defaults
+  - ...
+
+==================================================================
+
+bar settings:
+- auto hide / alpha (??)
+- font size/color/outline etc
+- label color / text color / suffix color(?)
+- height
+- width (only used if not attached to top/bottom?)
+
+- background: color / texture (register FuBar bg to LSM)
 - left/center/right spacing (10/20/10, 0-40)
 - attach top/bottom/detach
-- lock panel
-- remove panel
+- remove panel (are you sure?)
+- reset to defaults
 
-tooltip:
-- font size 
-- hide in combat
-- transparency
+- OnEnter: if Alt-pressed, show DO name only in tooltip
+- disable mouse in combat (always)
+- cancel drag if entering combat
 
+==================================================================
+
+BD settings:
+
+- enabled (or make a "None" setting in the bar dropdown)
+- bar
+- position: left/center/right/free
+- disable tooltip
+- disable tooltip in combat
+- disable mouse in combat
+- show label
+- show text
+- show icon
+- reset to defaults
+
+===================
+
+global data:
+
+- draggedBD - currently dragged BD or nil
+- bars = {} (list)
+- bds = { name => BD }
+- sortedBDNames {} // only there when Options loads
+
+
+===================
+
+bar data:
+- frame
+- id (numeric value, 1..n)
+- left {DO1, DO2, ...}
+- center {}
+- right {}
+
+
+===================
+BD data:
+- data (LDB object)
+- frame
+- displayName ( = data.label or addon-title or addon-name or data.name)
+- bar
+- pos (left, center, right, free)
+- index (position in bar[pos])
+
+functions:
+
+bar, pos, index = getPlacementUnderMouse()
+
+detachBD(bd) -> removes bd from bd.bar, reparents to UIParent, keeps orig placement in .orig.bar, etc
+removeBD(bd) -> detach + hide + wipe
+attachBD(bd, bar, pos, index)
+restoreBD(bd) -> attachBD to .orig
+
+updateLayout()
+updateBarLayout(bar)
+getBDContentWidth(bd) - return the current width of the BD ([icon + gap + ][text])
+updateBDWidth(bd) - check current size, shrink if smaller than threshold, grow if larger than curr size
+
+createBD()
+createBar()
+removeBar(bar)
+  - disable all BD's, remove settings from db, reindex remaining bars,
+    removeBarOptions()
+removeBarOptions()
+  - dummy in main addon, overwritten by Options, remove options group from
+  AceConfig
+
+addBarOptions(bar)
+addBDOptions(bd)
+  - inject bar options to AceConfig, update order based on name order
 
