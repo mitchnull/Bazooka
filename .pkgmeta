@@ -19,3 +19,7 @@ externals:
 
 move-folders:
     Bazooka/Bazooka_Options: Bazooka_Options
+
+tools-used:
+    - libdatabroker-1-1
+
