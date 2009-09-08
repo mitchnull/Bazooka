@@ -12,6 +12,7 @@ local AppName = "Bazooka"
 local OptionsAppName = AppName .. "_Options"
 local VERSION = AppName .. "-r" .. ("$Revision$"):match("%d+")
 
+local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
 local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
@@ -39,11 +40,20 @@ local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
 ---------------------------------
 
 Bazooka = LibStub("AceAddon-3.0"):NewAddon(AppName, "AceEvent-3.0")
+local Bazooka = Bazooka
+
 Bazooka:SetDefaultModuleState(false)
 
 Bazooka.version = VERSION
 Bazooka.AppName = AppName
 Bazooka.OptionsAppName = OptionsAppName
+
+Bazooka.draggedBD = nil
+Bazooka.draggedBar = nil
+Bazooka.bars = {}
+Bazooka.bds = {}
+Bazooka.disableUpdates = false
+
 
 -- Default DB stuff
 
@@ -55,10 +65,56 @@ end
 local defaults = {
     profile = {
         locked = false,
+        adjustFrames = false,
+        simpleTip = true,
+        defaults = {
+            bars = {
+                splitCenter = false,
+                singleCentered = true,
+
+                leftSpacing = 10,
+                centerSpacing = 20,
+                rightSpacinig = 10,
+                
+                attach = 'top',
+
+                font = DefaultFontName,
+                fontSize = 12,
+                fontOutline = "",
+
+                labelColor = makeColor(1.0, 1.0, 1.0),
+                textColor = makeColor(1.0, 0.82, 0),
+
+                strata = "HIGH",
+
+                frameWidth = DefaultFrameWidth,
+                frameHeight = DefaultFrameHeight,
+
+                bgEnabled = true,
+                bgTexture = DefaultBGTexture,
+                bgBorderTexture = DefaultEdgeTexture,
+                bgTile = false,
+                bgTileSize = 32,
+                bgEdgeSize = 16,
+                bgColor = makeColor(0, 0, 0, 0.7),
+                bgBorderColor = makeColor(0.8, 0.6, 0.0),
+
+            },
+            bds = {
+                -- bar = 1,
+                -- pos = 'left',
+                disableTooltip = false,
+                disableTooltipInCombat = true,
+                disableMouseInCombat = false,
+                showIcon = true,
+                showLabel = false,
+                showText = true,
+            },
+        },
     },
 }
 
--- AceAddon stuff
+-- BEGIN AceAddon stuff
 
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults)
@@ -75,10 +131,48 @@ function Bazooka:OnInitialize()
 end
 
 function Bazooka:OnEnable(first)
+    self:initBDs()
+    LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
+    LDB.RegisterCallback(self, "LibDataBroker_AttributeChanged", "attributeChanged")
+    if (#self.bars == 0) then
+        self:createBar()
+    end
+    for i, bar in ipairs(self.bars) do
+        bar.frame:Show()
+    end
 end
 
 function Bazooka:OnDisable()
     self:UnregisterAllEvents()
+    LDB.UnregisterAllCallbacks(self)
+    for i, bar in ipairs(self.bars) do
+        bar.frame:Hide()
+    end
+end
+
+-- END AceAddon stuff
+
+function Bazooka:initBDs()
+    local du = self.disableUpdates
+    self.disableUpdates = true
+    for name, dataobj in LDB:DataObjectIterator() do
+        self:dataObjectCreated(name, dataobj)
+    end
+    self.disableUpdates = du
+    self:update()
+end
+
+function Bazooka:dataObjectCreated(name, dataobj)
+    print("### new DO: " .. tostring(name))
+end
+
+function Bazooka:attributeChanged(name, attr, value, dataobj)
+    print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
+end
+
+function Bazooka:profileChanged()
+    local locked = self.db.profile.locked
+    self:applySettings()
 end
 
 function Bazooka:applySettings()
@@ -87,11 +181,6 @@ function Bazooka:applySettings()
         return
     end
     self:toggleLocked(self.db.profile.locked == true)
-end
-
-function Bazooka:profileChanged()
-    local locked = self.db.profile.locked
-    self:applySettings()
 end
 
 function Bazooka:lock()
@@ -112,8 +201,6 @@ function Bazooka:toggleLocked(flag)
 end
 
 function Bazooka:setupLDB()
-    local LDB = LibStub:GetLibrary("LibDataBroker-1.1", true)
-    if (not LDB) then return end
     local ldb = {
         type = "launcher",
         icon = Icon,
@@ -133,7 +220,7 @@ function Bazooka:setupLDB()
     LDB:NewDataObject(self.AppName, ldb)
 end
 
--- LoD Options muckery
+-- BEGIN LoD Options muckery
 
 function Bazooka:setupDummyOptions()
     if (self.optionsLoaded) then
@@ -173,6 +260,8 @@ function Bazooka:openConfigDialog(ud)
     InterfaceOptionsFrame_OpenToCategory(self.dummyOpts)
 end
 
+-- END LoD Options muckery
+
 -- register slash command
 
 SLASH_RANGEDISPLAY1 = "/bazooka"
@@ -184,6 +273,8 @@ SlashCmdList["BAZOOKA"] = function(msg)
         Bazooka:openConfigDialog()
     end
 end
+
+-- CONFIGMODE
 
 CONFIGMODE_CALLBACKS = CONFIGMODE_CALLBACKS or {}
 CONFIGMODE_CALLBACKS[AppName] = function(action)

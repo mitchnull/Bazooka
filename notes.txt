@@ -4,10 +4,13 @@ global settings
 - show DataObject label/name if Alt pressed
 - create new bar
 
+
 - Bar defaults
   - ...
+  - apply to all bars (are you sure?)
 - BD defaults
   - ...
+  - apply to all BDs (are you sure?)
 
 ==================================================================
 
@@ -17,6 +20,7 @@ bar settings:
 - label color / text color / suffix color(?)
 - height
 - width (only used if not attached to top/bottom?)
+- split center area
 
 - background: color / texture (register FuBar bg to LSM)
 - left/center/right spacing (10/20/10, 0-40)
@@ -34,7 +38,7 @@ BD settings:
 
 - enabled (or make a "None" setting in the bar dropdown)
 - bar
-- position: left/center/right/free
+- position: left/center-left/center-right/right/free
 - disable tooltip
 - disable tooltip in combat
 - disable mouse in combat
@@ -48,6 +52,7 @@ BD settings:
 global data:
 
 - draggedBD - currently dragged BD or nil
+- draggedBar - currently dragged Bar or nil
 - bars = {} (list)
 - bds = { name => BD }
 - sortedBDNames {} // only there when Options loads
