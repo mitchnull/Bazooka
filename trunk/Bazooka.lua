@@ -24,6 +24,7 @@ local _ -- throwaway
 
 local GetCursorPosition = GetCursorPosition
 local UIParent = UIParent
+local InCombatLockdown = InCombatLockdown
 
 -- hard-coded config stuff
 
@@ -48,11 +49,11 @@ Bazooka.version = VERSION
 Bazooka.AppName = AppName
 Bazooka.OptionsAppName = OptionsAppName
 
-Bazooka.draggedBD = nil
+Bazooka.draggedPlugin = nil
 Bazooka.draggedBar = nil
 Bazooka.bars = {}
-Bazooka.bds = {}
-Bazooka.disableUpdates = false
+Bazooka.plugins = {}
+Bazooka.disableUpdates = nil
 
 
 -- Default DB stuff
@@ -100,7 +101,7 @@ local defaults = {
                 bgBorderColor = makeColor(0.8, 0.6, 0.0),
 
             },
-            bds = {
+            plugins = {
                 -- bar = 1,
                 -- pos = 'left',
                 disableTooltip = false,
@@ -111,6 +112,8 @@ local defaults = {
                 showText = true,
             },
         },
+        bars = {},
+        plugins = {},
     },
 }
 
@@ -131,7 +134,7 @@ function Bazooka:OnInitialize()
 end
 
 function Bazooka:OnEnable(first)
-    self:initBDs()
+    self:initPlugins()
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
     LDB.RegisterCallback(self, "LibDataBroker_AttributeChanged", "attributeChanged")
     if (#self.bars == 0) then
@@ -152,16 +155,6 @@ end
 
 -- END AceAddon stuff
 
-function Bazooka:initBDs()
-    local du = self.disableUpdates
-    self.disableUpdates = true
-    for name, dataobj in LDB:DataObjectIterator() do
-        self:dataObjectCreated(name, dataobj)
-    end
-    self.disableUpdates = du
-    self:update()
-end
-
 function Bazooka:dataObjectCreated(name, dataobj)
     print("### new DO: " .. tostring(name))
 end
@@ -173,6 +166,36 @@ end
 function Bazooka:profileChanged()
     local locked = self.db.profile.locked
     self:applySettings()
+end
+
+function Bazooka:createBar()
+    local id = #self.bars + 1
+    local db = self.db.profile.bars[id]
+    local bar = {}
+    bar.id = id
+    bar.db = db
+    bar.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
+    bar.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, bar.frame)
+    bar.centerFrame:SetPoint("CENTER", bar.frame, "CENTER", 0, 0)
+end
+
+function Bazooka:initPlugins()
+    local du = self.disableUpdates
+    self.disableUpdates = true
+    for name, dataobj in LDB:DataObjectIterator() do
+        self:dataObjectCreated(name, dataobj)
+    end
+    self.disableUpdates = du
+    self:updateAll()
+end
+
+function Bazooka:updateAll()
+    if (self.disableUpdates or InCombatLockdown()) then
+        self.needUpdate = true
+        return
+    end
+    self.needUpdate = nil
+    print("### updateAll")
 end
 
 function Bazooka:applySettings()
@@ -264,7 +287,7 @@ end
 
 -- register slash command
 
-SLASH_RANGEDISPLAY1 = "/bazooka"
+SLASH_BAZOOKA1 = "/bazooka"
 SlashCmdList["BAZOOKA"] = function(msg)
     msg = strtrim(msg or "")
     if (msg == "locked") then
