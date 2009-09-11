@@ -104,6 +104,7 @@ local defaults = {
 
             },
             plugins = {
+                enabled = true,
                 -- bar = 1,
                 -- area = 'left',
                 -- pos = nil,
@@ -136,7 +137,6 @@ end
 -- BEGIN Bar stuff
 
 local Bar = {
-
     id = nil,
     db = nil,
     frame = nil,
@@ -149,6 +149,7 @@ local Bar = {
         right = {},
     },
     inset = 0,
+    backdrop = nil,
 }
 
 function Bar:New(id, db)
@@ -160,6 +161,119 @@ function Bar:New(id, db)
     bar.centerFrame:EnableMouse(false)
     bar.centerFrame:SetPoint("CENTER", bar.frame, "CENTER", 0, 0)
     return bar
+end
+
+function Bar:attachPlugin(plugin, area, pos)
+    area = area or "left"
+    plugin.db.bar = self.id
+    plugin.db.area = area
+    local plugins = self.plugins[area]
+    local lp, rp
+    if (not pos) then
+        local count = #self.plugins[area]
+        if (count > 0) then
+            lp = plugins[count]
+            plugin.db.pos = lp.pos + 1
+        else
+            plugin.db.pos = 1
+        end
+        tinsert(plugins, plugin)
+    else
+        local rpi
+        for i, p in ipairs(plugins) do
+            if (pos <= p.db.pos) then
+                if (not rp) then
+                    rp = p
+                    rpi = i
+                end
+                if (pos < p.db.pos) then
+                    break
+                end
+                pos = pos + 1
+                p.db.pos = pos
+            elseif (not rp) then
+                lp = p
+            end
+        end
+        tinsert(plugins, plugin, rpi)
+    end
+    plugin.frame:SetParent(self.frame)
+    plugin.frame:ClearAllPoints()
+    plugin.frame:SetPoint("TOP", self.frame, "TOP")
+    plugin.frame:SetPoint("BOTTOM", self.frame, "BOTTOM")
+    self:setLeftAttachPoint(plugin, lp)
+    self:setRightAttachPoint(plugin, rp)
+    self:setRightAttachPoint(lp, plugin)
+    self:setLeftAttachPoint(rp, plugin)
+    if (area == "center") then
+        self.centerFrame:SetWidth(self:calculateCenterWidth())
+    end
+end
+
+function Bar:calculateCenterWidth()
+    local cw = 0
+    for i, p in ipairs(self.plugins.center) do
+        cw = cw + p.frame:GetWidth()
+    end
+    local numGaps = #self.plugins.center - 1
+    if (numGaps > 0) then
+        cw = cw + (numGaps * self.db.centerSpacing)
+    end
+    return cw
+end
+
+function Bar:getEdgeSpacing()
+    return self.db.sideSpacing + self.inset
+end
+
+function Bar:setLeftAttachPoint(plugin, lp)
+    if (not plugin) then
+        return
+    end
+    local area = plugin.db.area
+    if (area == "left") then
+        if (lp) then
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.sideSpacing, 0)
+        else
+            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", self:getEdgeSpacing(), 0)
+        end
+    elseif (area == "center") then
+        if (lp) then
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.centerSpacing, 0)
+        else
+            plugin.frame:SetPoint("LEFT", self.centerFrame, "LEFT", 0, 0)
+        end
+    elseif (area == "cright") then
+        if (lp) then
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.centerSpacing, 0)
+        else
+            plugin.frame:SetPoint("LEFT", self.centerFrame, "RIGHT", self.db.centerSpacing, 0)
+        end
+    end
+end
+
+function Bar:setRightAttachPoint(plugin, rp)
+    if (not plugin) then
+        return
+    end
+    local area = plugin.db.area
+    if (area == "cleft") then
+        if (rp) then
+            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.centerSpacing, 0)
+        else
+            plugin.frame:SetPoint("RIGHT", self.centerFrame, "LEFT", -self.db.centerSpacing, 0)
+        end
+    elseif (area == "right") then
+        if (rp) then
+            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.sideSpacing, 0)
+        else
+            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -self:getEdgeSpacing(), 0)
+        end
+    end
+end
+
+function Bar:applySettings()
+    -- TODO
 end
 
 Bazooka.Bar = Bar
@@ -177,6 +291,16 @@ local Plugin = {
     text = nil,
     label = nil,
 }
+
+function Plugin:New(name, dataobj, db)
+    local plugin = copyTable(Plugin)
+    plugin.name = name
+    plugin.dataobj = dataobj
+    plugin.db = db
+    plugin:updateLabel()
+    plugin:applySettings()
+    return plugin
+end
 
 function Plugin:createIcon()
     self.icon = self.frame:CreateTexture("BazookaPluginIcon_" .. self.name, "ARTWORK")
@@ -205,7 +329,27 @@ function Plugin:updateLayout()
     end
 end
 
+function Plugin:enable()
+    self.db.enabled = true
+    if (not self.frame) then
+        self.frame = CreateFrame("Frame", "BazookaPlugin_" .. self.name, UIParent)
+    end
+    self.frame:Show()
+end
+
+function Plugin:disable()
+    self.db.enabled = false
+    if (self.frame) then
+        self.frame:Hide()
+    end
+end
+
 function Plugin:applySettings()
+    if (not self.db.enabled) then
+        self:disable()
+        return
+    end
+    self:enable()
     if (self.db.showIcon) then
         if (not self.icon) then
             self:createIcon()
@@ -215,7 +359,7 @@ function Plugin:applySettings()
     elseif (self.icon) then
         self.icon:Hide()
     end
-    if (slef.db.showText or self.db.showLabel) then
+    if (self.db.showText or self.db.showLabel) then
         if (not self.text) then
             self:createText(self)
         end
@@ -268,18 +412,6 @@ end
 function Plugin:updateLabel()
     self.label = self.dataobj.label or self.name
     -- FIXME: muck around with dataobj.tocname?
-end
-
-function Plugin:New(name, dataobj, db)
-    local plugin = copyTable(Plugin)
-    plugin.name = name
-    plugin.dataobj = dataobj
-    plugin.db = db
-    -- FIXME: delay frame creation, only do it if enabled
-    plugin.frame = CreateFrame("Frame", "BazookaPlugin_" .. name, UIParent)
-    plugin:updateLabel()
-    plugin:applySettings()
-    return plugin
 end
 
 Bazooka.Plugin = Plugin
@@ -361,124 +493,10 @@ function Bazooka:createPlugin(name, dataobj)
     end
     local plugin = Plugin:New(name, dataobj, db)
     -- FIXME: only if enabled
-    self:attachPlugin(plugin)
+    if (plugin.db.enabled) then
+        self:attachPlugin(plugin, self.bars[plugin.db.bar], plugin.db.area, plugin.db.pos)
+    end
     return plugin
-end
-
--- FIXME: convert the following functions, too if it makes sense
-
-function Bazooka:attachPlugin(plugin, bar, area, pos)
-    area = area or "left"
-    if (not bar) then
-        bar = self.bars[1]
-        pos = nil
-    end
-    plugin.db.bar = bar.id
-    plugin.db.area = area
-    local plugins = bar.plugins[area]
-    local lp, rp
-    if (not pos) then
-        if (count > 0) then
-            lp = plugins[count]
-            plugin.db.pos = lp.pos + 1
-        else
-            plugin.db.pos = 1
-        end
-        tinsert(plugins, plugin)
-    else
-        local rpi
-        for i, p in ipairs(plugins) do
-            if (pos <= p.db.pos) then
-                if (not rp) then
-                    rp = p
-                    rpi = i
-                end
-                if (pos < p.db.pos) then
-                    break
-                end
-                pos = pos + 1
-                p.db.pos = pos
-            elseif (not rp) then
-                lp = p
-            end
-        end
-        tinsert(plugins, plugin, rpi)
-    end
-    plugin.frame:SetParent(bar.frame)
-    plugin.frame:ClearAllPoints()
-    plugin.frame:SetPoint("TOP", plugin.bar.frame, "TOP")
-    plugin.frame:SetPoint("BOTTOM", plugin.bar.frame, "BOTTOM")
-    self:setLeftAttachPoint(plugin, lp)
-    self:setRightAttachPoint(plugin, rp)
-    self:setRightAttachPoint(lp, plugin)
-    self:setLeftAttachPoint(rp, plugin)
-    if (area == "center") then
-        bar.centerFrame:SetWidth(self:calculateCenterWidth(bar))
-    end
-end
-
-function Bazooka:calculateCenterWidth(bar)
-    local cw = 0
-    for i, p in ipairs(bar.plugins.center) do
-        cw = cw + p.frame:GetWidth()
-    end
-    local numGaps = #bar.plugins.center - 1
-    if (numGaps > 0) then
-        cw = cw + (numGaps * bar.db.centerSpacing)
-    end
-    return cw
-end
-
-function self:getEdgeSpacing(bar)
-    return bar.db.sideSpacing + bar.inset
-end
-
-function Bazooka:setLeftAttachPoint(plugin, lp)
-    if (not plugin) then
-        return
-    end
-    local bar = plugin.bar
-    local area = plugin.db.area
-    if (area == "left") then
-        if (lp) then
-            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", bar.db.sideSpacing, 0)
-        else
-            plugin.frame:SetPoint("LEFT", bar.frame, "LEFT", self:getEdgeSpacing(bar), 0)
-        end
-    elseif (area == "center") then
-        if (lp) then
-            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", bar.db.centerSpacing, 0)
-        else
-            plugin.frame:SetPoint("LEFT", bar.centerFrame, "LEFT", 0, 0)
-        end
-    elseif (area == "cright") then
-        if (lp) then
-            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", bar.db.centerSpacing, 0)
-        else
-            plugin.frame:SetPoint("LEFT", bar.centerFrame, "RIGHT", bar.db.centerSpacing, 0)
-        end
-    end
-end
-
-function Bazooka:setRightAttachPoint(plugin, rp)
-    if (not plugin) then
-        return
-    end
-    local bar = plugin.bar
-    local area = plugin.db.area
-    if (area == "cleft") then
-        if (rp) then
-            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -bar.db.centerSpacing, 0)
-        else
-            plugin.frame:SetPoint("RIGHT", bar.centerFrame, "LEFT", -bar.db.centerSpacing, 0)
-        end
-    elseif (area == "right") then
-        if (rp) then
-            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -bar.db.sideSpacing, 0)
-        else
-            plugin.frame:SetPoint("RIGHT", bar.frame, "RIGHT", -self:getEdgeSpacing(bar), 0)
-        end
-    end
 end
 
 function Bazooka:initPlugins()
@@ -496,7 +514,7 @@ function Bazooka:updateAll()
         self.needUpdate = true
         return
     end
-    self.needUpdate = nil
+    self.needUpdate = false
     print("### updateAll")
 end
 
@@ -506,6 +524,12 @@ function Bazooka:applySettings()
         return
     end
     self:toggleLocked(self.db.profile.locked == true)
+    for i, bar in ipairs(self.bars) do
+        bar:applySettings()
+    end
+    for name, plugin in pairs(self.plugins) do
+        plugin:applySettings()
+    end
 end
 
 function Bazooka:lock()
