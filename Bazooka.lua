@@ -25,6 +25,7 @@ local _ -- throwaway
 local GetCursorPosition = GetCursorPosition
 local UIParent = UIParent
 local InCombatLockdown = InCombatLockdown
+local tinsert = tinsert
 
 -- hard-coded config stuff
 
@@ -37,6 +38,9 @@ local DefaultFontPath = GameFontNormal:GetFont()
 local DefaultFrameWidth = 112
 local DefaultFrameHeight = 36
 local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
+local MissingIcon = nil
+
+local IconTextSpacing = 4
 
 ---------------------------------
 
@@ -55,7 +59,6 @@ Bazooka.bars = {}
 Bazooka.plugins = {}
 Bazooka.disableUpdates = nil
 
-
 -- Default DB stuff
 
 local function makeColor(r, g, b, a)
@@ -73,9 +76,8 @@ local defaults = {
                 splitCenter = false,
                 singleCentered = true,
 
-                leftSpacing = 10,
+                sideSpacing = 10,
                 centerSpacing = 20,
-                rightSpacinig = 10,
                 
                 attach = 'top',
 
@@ -103,7 +105,8 @@ local defaults = {
             },
             plugins = {
                 -- bar = 1,
-                -- pos = 'left',
+                -- area = 'left',
+                -- pos = nil,
                 disableTooltip = false,
                 disableTooltipInCombat = true,
                 disableMouseInCombat = false,
@@ -116,6 +119,172 @@ local defaults = {
         plugins = {},
     },
 }
+
+local function copyTable(src, dst)
+    if (type(dst) ~= "table") then dst = {} end
+    if (type(src) == "table") then
+        for k, v in pairs(src) do
+            if (type(v) == "table") then
+                v = copyTable(v, dst[k])
+            end
+            dst[k] = v
+        end
+    end
+    return dst
+end
+
+-- BEGIN Bar stuff
+
+local Bar = {
+
+    id = nil,
+    db = nil,
+    frame = nil,
+    centerFrame = nil,
+    plugins = {
+        left = {},
+        cleft = {},
+        center = {},
+        cright = {},
+        right = {},
+    },
+    inset = 0,
+}
+
+function Bar:New(id, db)
+    local bar = copyTable(Bar)
+    bar.id = id
+    bar.db = db
+    bar.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
+    bar.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, bar.frame)
+    bar.centerFrame:EnableMouse(false)
+    bar.centerFrame:SetPoint("CENTER", bar.frame, "CENTER", 0, 0)
+    return bar
+end
+
+Bazooka.Bar = Bar
+
+-- END Bar stuff
+
+-- BEGIN Plugin stuff
+
+local Plugin = {
+    name = nil,
+    dataobj = nil,
+    db = nil,
+    frame = nil,
+    icon = nil,
+    text = nil,
+    label = nil,
+}
+
+function Plugin:createIcon()
+    self.icon = self.frame:CreateTexture("BazookaPluginIcon_" .. self.name, "ARTWORK")
+    self.icon:ClearAllPoints()
+    local iconSize = self.db.fontSize
+    self.icon:SetWidth(iconSize)
+    self.icon:SetHeight(iconSize)
+    self.icon:SetPoint("LEFT", self.frame, "LEFT", 0, 0)
+end
+
+function Plugin:createText()
+    self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
+    self.textSetFont(DefaultFontPath, 10, "")
+end
+
+function Plugin:updateLayout()
+    if (self.db.showText) then
+        local tw = self.text:GetStringWidth()
+        local offset = self.showIcon and (self.icon.getWidth() + IconTextSpacing) or 0
+        self.text:SetPoint("LEFT", self.frame, "LEFT", offset, 0)
+        self.frame:SetWidth(offset + tw)
+    elseif (self.hasIcon) then
+        self.frame:SetWidth(self.icon.GetWidth())
+    else
+        self.frame:SetWidth(0)
+    end
+end
+
+function Plugin:applySettings()
+    if (self.db.showIcon) then
+        if (not self.icon) then
+            self:createIcon()
+        end
+        self.icon:SetTexture(self.dataobj.icon or MissingIcon)
+        self.icon:Show()
+    elseif (self.icon) then
+        self.icon:Hide()
+    end
+    if (slef.db.showText or self.db.showLabel) then
+        if (not self.text) then
+            self:createText(self)
+        end
+        self.text:SetFormattedText(self:getFormattedText())
+    elseif (self.text) then
+        self.text:SetFormattedText("")
+        self.text:Hide()
+    end
+    self:updateLayout()
+end
+
+function Plugin:setIcon()
+    local dataobj = self.dataobj
+    local icon = self.icon
+    if (not dataobj.icon) then
+        icon:SetTexture(MissingIcon)
+        -- FIXME: maybe we need to SetTexCoord() and SetVertexColor() here?
+    end
+    icon:SetTexture(dataobj.icon)
+    if (dataobj.iconR) then
+        icon.SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
+    end
+    if (dataobj.iconCoords) then
+        icon:SetTexCoord(dataobj.iconCoords)
+    end
+end
+
+function Plugin:setText()
+    local dataobj = self.dataobj
+    -- FIXME: label/suffix color?
+    if (self.db.showLabel) then
+        if (dataobj.text) then
+            self.text:SetFormattedText("%s: %s", self.label, dataobj.text)
+        elseif (dataobj.value and dataobj.suffix) then
+            self.text:SetFormattedText("%s: %s %s", self.label, dataobj.value, dataobj.suffix)
+        else
+            self.text:SetFormattedText(self.label)
+        end
+    else
+        if (dataobj.text) then
+            self.text:SetFormattedText(dataobj.text)
+        elseif (dataobj.value and dataobj.suffix) then
+            self.text:SetFormattedText("%s %s", dataobj.value, dataobj.suffix)
+        else
+            self.text:SetFormattedText("")
+        end
+    end
+end
+
+function Plugin:updateLabel()
+    self.label = self.dataobj.label or self.name
+    -- FIXME: muck around with dataobj.tocname?
+end
+
+function Plugin:New(name, dataobj, db)
+    local plugin = copyTable(Plugin)
+    plugin.name = name
+    plugin.dataobj = dataobj
+    plugin.db = db
+    -- FIXME: delay frame creation, only do it if enabled
+    plugin.frame = CreateFrame("Frame", "BazookaPlugin_" .. name, UIParent)
+    plugin:updateLabel()
+    plugin:applySettings()
+    return plugin
+end
+
+Bazooka.Plugin = Plugin
+
+-- END Plugin stuff
 
 -- BEGIN AceAddon stuff
 
@@ -155,6 +324,8 @@ end
 
 -- END AceAddon stuff
 
+-- BEGIN handlers
+
 function Bazooka:dataObjectCreated(name, dataobj)
     print("### new DO: " .. tostring(name))
 end
@@ -168,15 +339,146 @@ function Bazooka:profileChanged()
     self:applySettings()
 end
 
+-- END handlers
+
 function Bazooka:createBar()
     local id = #self.bars + 1
     local db = self.db.profile.bars[id]
-    local bar = {}
-    bar.id = id
-    bar.db = db
-    bar.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
-    bar.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, bar.frame)
-    bar.centerFrame:SetPoint("CENTER", bar.frame, "CENTER", 0, 0)
+    if (not db) then
+        db = copyTable(self.db.profile.defaults.bars)
+        self.db.profile.bars[id] = db
+    end
+    return Bar:New(id, db)
+end
+
+function Bazooka:createPlugin(name, dataobj)
+    local db = self.db.profile.plugins[name]
+    if (not db) then
+        db = copyTable(self.db.profile.defaults.plugins)
+        self.db.profile.plugins[name] = db
+        db.bar = 1
+        db.area = "left"
+    end
+    local plugin = Plugin:New(name, dataobj, db)
+    -- FIXME: only if enabled
+    self:attachPlugin(plugin)
+    return plugin
+end
+
+-- FIXME: convert the following functions, too if it makes sense
+
+function Bazooka:attachPlugin(plugin, bar, area, pos)
+    area = area or "left"
+    if (not bar) then
+        bar = self.bars[1]
+        pos = nil
+    end
+    plugin.db.bar = bar.id
+    plugin.db.area = area
+    local plugins = bar.plugins[area]
+    local lp, rp
+    if (not pos) then
+        if (count > 0) then
+            lp = plugins[count]
+            plugin.db.pos = lp.pos + 1
+        else
+            plugin.db.pos = 1
+        end
+        tinsert(plugins, plugin)
+    else
+        local rpi
+        for i, p in ipairs(plugins) do
+            if (pos <= p.db.pos) then
+                if (not rp) then
+                    rp = p
+                    rpi = i
+                end
+                if (pos < p.db.pos) then
+                    break
+                end
+                pos = pos + 1
+                p.db.pos = pos
+            elseif (not rp) then
+                lp = p
+            end
+        end
+        tinsert(plugins, plugin, rpi)
+    end
+    plugin.frame:SetParent(bar.frame)
+    plugin.frame:ClearAllPoints()
+    plugin.frame:SetPoint("TOP", plugin.bar.frame, "TOP")
+    plugin.frame:SetPoint("BOTTOM", plugin.bar.frame, "BOTTOM")
+    self:setLeftAttachPoint(plugin, lp)
+    self:setRightAttachPoint(plugin, rp)
+    self:setRightAttachPoint(lp, plugin)
+    self:setLeftAttachPoint(rp, plugin)
+    if (area == "center") then
+        bar.centerFrame:SetWidth(self:calculateCenterWidth(bar))
+    end
+end
+
+function Bazooka:calculateCenterWidth(bar)
+    local cw = 0
+    for i, p in ipairs(bar.plugins.center) do
+        cw = cw + p.frame:GetWidth()
+    end
+    local numGaps = #bar.plugins.center - 1
+    if (numGaps > 0) then
+        cw = cw + (numGaps * bar.db.centerSpacing)
+    end
+    return cw
+end
+
+function self:getEdgeSpacing(bar)
+    return bar.db.sideSpacing + bar.inset
+end
+
+function Bazooka:setLeftAttachPoint(plugin, lp)
+    if (not plugin) then
+        return
+    end
+    local bar = plugin.bar
+    local area = plugin.db.area
+    if (area == "left") then
+        if (lp) then
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", bar.db.sideSpacing, 0)
+        else
+            plugin.frame:SetPoint("LEFT", bar.frame, "LEFT", self:getEdgeSpacing(bar), 0)
+        end
+    elseif (area == "center") then
+        if (lp) then
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", bar.db.centerSpacing, 0)
+        else
+            plugin.frame:SetPoint("LEFT", bar.centerFrame, "LEFT", 0, 0)
+        end
+    elseif (area == "cright") then
+        if (lp) then
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", bar.db.centerSpacing, 0)
+        else
+            plugin.frame:SetPoint("LEFT", bar.centerFrame, "RIGHT", bar.db.centerSpacing, 0)
+        end
+    end
+end
+
+function Bazooka:setRightAttachPoint(plugin, rp)
+    if (not plugin) then
+        return
+    end
+    local bar = plugin.bar
+    local area = plugin.db.area
+    if (area == "cleft") then
+        if (rp) then
+            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -bar.db.centerSpacing, 0)
+        else
+            plugin.frame:SetPoint("RIGHT", bar.centerFrame, "LEFT", -bar.db.centerSpacing, 0)
+        end
+    elseif (area == "right") then
+        if (rp) then
+            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -bar.db.sideSpacing, 0)
+        else
+            plugin.frame:SetPoint("RIGHT", bar.frame, "RIGHT", -self:getEdgeSpacing(bar), 0)
+        end
+    end
 end
 
 function Bazooka:initPlugins()
