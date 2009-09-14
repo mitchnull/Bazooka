@@ -121,6 +121,28 @@ local defaults = {
     },
 }
 
+local function deepCopy(src)
+    local res = {}
+    for k, v in pairs(src) do
+        if (type(v) == 'table') then
+            v = deepCopy(v)
+        end
+        res[k] = v
+    end
+    return res
+end
+
+local function setDeepCopyIndex(proto)
+    proto.__index = function(t, k)
+        local v = proto[k]
+        if (type(v) == 'table') then
+            v = deepCopy(v)
+            t[k] = v
+        end
+        return v
+    end
+end
+
 local function copyTable(src, dst)
     if (type(dst) ~= "table") then dst = {} end
     if (type(src) == "table") then
