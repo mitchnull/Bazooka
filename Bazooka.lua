@@ -29,10 +29,15 @@ end
 
 local GetCursorPosition = GetCursorPosition
 local UIParent = UIParent
+local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local tinsert = tinsert
+local tremove = tremove
+local tostring = tostring
+local print = print
 local pairs = pairs
 local ipairs = ipairs
+local type = type
 
 -- hard-coded config stuff
 
@@ -254,12 +259,14 @@ function Bar:highlight(x, w)
         self.hl = self.frame:CreateTexture("BazookaBarHL_" .. self.id, "OVERLAY")
         self.hl:SetTexture(HighlightImage)
     end
-    w = w or 2
+    if (not w or w <= 0) then
+        w = 2
+    end
     self.hl:ClearAllPoints()
     self.hl:SetPoint("TOP", self.frame, "TOP", 0, 0)
     self.hl:SetPoint("BOTTOM", self.frame, "BOTTOM", 0, 0)
-    self.hl:SetPoint("LEFT", self.frame, "LEFT", x - width, 0)
-    self.hl:SetPoint("RIGHT", self.frame, "LEFT", x + width, 0)
+    self.hl:SetPoint("LEFT", self.frame, "LEFT", x - w, 0)
+    self.hl:SetPoint("RIGHT", self.frame, "LEFT", x + w, 0)
     self.hl:Show()
 end
 
@@ -756,7 +763,7 @@ end
 
 function Bazooka:mediaUpdate(event, mediaType, key)
     if (mediaType == 'font') then
-        if (key == db.profile.font) then
+        if (key == self.db.profile.font) then
             self:applyFontSettings()
         end
     end
