@@ -5,4 +5,3 @@ local L = LibStub("AceLocale-3.0"):NewLocale("Bazooka", "enUS", true)
 L["|cffeda55fDrag|r to move the frame"] = "|cffeda55fDrag|r to move the frame"
 L["|cffeda55fLeft Click|r to lock/unlock frames"] = "|cffeda55fLeft Click|r to lock/unlock frames"
 L["|cffeda55fRight Click|r to open the configuration window"] = "|cffeda55fRight Click|r to open the configuration window"
-
