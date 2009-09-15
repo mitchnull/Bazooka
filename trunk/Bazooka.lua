@@ -581,28 +581,26 @@ local Plugin = {
         frame.bzkPlugin:highlight(true)
     end,
     OnLeave = function(frame)
-        frame.bzkClicked = nil
         frame.bzkPlugin:highlight(false)
     end,
-    OnMouseDown = function(frame, ...)
-        frame.bzkClicked = true
-    end,
-    OnMouseUp = function(frame, ...)
-        if (not frame.bzkClicked or frame:IsDragging()) then
-            return
-        end
+    OnClick = function(frame, ...)
         local self = frame.bzkPlugin
         if (self.dataobj.OnClick) then
             self.dataobj.OnClick(frame, ...)
         end
     end,
     OnDragStart = function(frame, ...)
-        frame.bzkClicked = nil
+        if (Bazooka.db.profile.locked) then
+            return
+        end
         frame:SetAlpha(0.5)
         frame.bzkPlugin:detach()
         frame:StartMoving()
     end,
     OnDragStop = function(frame, ...)
+        if (Bazooka.db.profile.locked) then
+            return
+        end
         frame:StopMovingOrSizing()
         frame:SetAlpha(1.0)
         frame.bzkPlugin:attach() -- FIXME: check for valid drop position
@@ -707,13 +705,17 @@ end
 
 function Plugin:enable()
     if (not self.frame) then
-        self.frame = CreateFrame("Frame", "BazookaPlugin_" .. self.name, UIParent)
+        self.frame = CreateFrame("Button", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
         -- FIXME
         self.frame:SetScript("OnEnter", Plugin.OnEnter)
         self.frame:SetScript("OnLeave", Plugin.OnLeave)
-        self.frame:SetScript("OnMouseUp", Plugin.OnMouseUp)
-        self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
+--        self.frame:SetScript("OnMouseUp", Plugin.OnMouseUp)
+--        self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
+        self.frame:SetScript("OnClick", Plugin.OnClick)
+        self.frame:RegisterForDrag("LeftButton")
+        self.frame:RegisterForClicks("AnyUp")
+
         self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
         self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
         self.frame:EnableMouse(true)
