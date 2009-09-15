@@ -19,6 +19,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 -- internal vars
 
 local _ -- throwaway
+local uiScale = 1.0 -- just to be safe...
 
 local function printf(...)
     print(string.format(...))
@@ -191,6 +192,15 @@ local function setDeepCopyIndex(proto)
     end
 end
 
+local function updateUIScale()
+    uiScale = UIParent:GetEffectiveScale()
+end
+
+local function getScaledCursorPosition()
+    local x, y = GetCursorPosition()
+    return x / uiScale, y / uiScale
+end
+
 -- BEGIN Bar stuff
 
 local Bar = {
@@ -233,8 +243,8 @@ function Bar:New(id, db)
     return bar
 end
 
-function Bar:highlight(sx, ex)
-    if (not sx) then
+function Bar:highlight(x, w)
+    if (not x) then
         if (self.hl) then
             self.hl:Hide()
         end
@@ -244,11 +254,12 @@ function Bar:highlight(sx, ex)
         self.hl = self.frame:CreateTexture("BazookaBarHL_" .. self.id, "OVERLAY")
         self.hl:SetTexture(HighlightImage)
     end
+    w = w or 2
     self.hl:ClearAllPoints()
     self.hl:SetPoint("TOP", self.frame, "TOP", 0, 0)
     self.hl:SetPoint("BOTTOM", self.frame, "BOTTOM", 0, 0)
-    self.hl:SetPoint("LEFT", self.frame, "LEFT", sx, 0)
-    self.hl:SetPoint("RIGHT", self.frame, "LEFT", ex, 0)
+    self.hl:SetPoint("LEFT", self.frame, "LEFT", x - width, 0)
+    self.hl:SetPoint("RIGHT", self.frame, "LEFT", x + width, 0)
     self.hl:Show()
 end
 
@@ -263,6 +274,33 @@ function Bar:updateCenterWidth()
         cw = 1
     end
     self.centerFrame:SetWidth(cw)
+end
+
+function Bar:detachPlugin(plugin)
+    local plugins = self.plugins[plugin.area]
+    local lp, rp, index
+    for i, p in ipairs(plugins) do
+        if (index) then
+            rp = p
+            break
+        end
+        if (p == plugin) then
+            index = i
+        else
+            lp = plugin
+        end
+    end
+    if (not found) then
+        return -- this should never happen
+    end
+    tremove(plugins, index)
+    plugin.origBar = self
+    plugin.frame:ClearAllPoints()
+    self:setRightAttachPoint(lp, rp)
+    self:setLeftAttachPoint(rp, lp)
+    if (plugin.area == 'center') then
+        self:updateCenterWidth()
+    end
 end
 
 function Bar:attachPlugin(plugin, area, pos)
