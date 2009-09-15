@@ -25,6 +25,15 @@ local function printf(...)
     print(string.format(...))
 end
 
+local function makeColor(r, g, b, a)
+    a = a or 1.0
+    return { ["r"] = r, ["g"] = g, ["b"] = b, ["a"] = a }
+end
+
+local function colorToHex(color)
+    return ("%02x%02x%02x%02x"):format((color.a and color.a * 255 or 255), color.r*255, color.g*255, color.b*255)	
+end
+
 -- cached stuff
 
 local GetCursorPosition = GetCursorPosition
@@ -41,24 +50,29 @@ local type = type
 
 -- hard-coded config stuff
 
--- local DefaultBGTexture = "Blizzard Tooltip"
--- local DefaultBGFile = [[Interface\Tooltips\UI-Tooltip-Background]]
-local DefaultBGTexture = "Blizzard Dialog Background"
-local DefaultBGFile = [[Interface\DialogFrame\UI-DialogBox-Background]]
--- local DefaultEdgeTexture = "Blizzard Tooltip"
--- local DefaultEdgeFile = [[Interface\Tooltips\UI-Tooltip-Border]]
-local DefaultEdgeTexture = "None"
-local DefaultEdgeFile = [[Interface\None]]
-local DefaultFontName = "Friz Quadrata TT"
-local DefaultFontPath = GameFontNormal:GetFont()
-local DefaultFrameWidth = 256
-local DefaultFrameHeight = 20
+local Defaults =  {
+--  bgTexture = "Blizzard Tooltip",
+--  bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
+    bgTexture = "Blizzard Dialog Background",
+    bgFile = [[Interface\DialogFrame\UI-DialogBox-Background]],
+--  edgeTexture = "Blizzard Tooltip",
+--  edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]],
+    edgeTexture = "None",
+    edgeFile = [[Interface\None]],
+    fontName = "Friz Quadrata TT",
+    fontPath = GameFontNormal:GetFont(),
+    frameWidth = 256,
+    frameHeight = 20,
+    iconTextSpacing = 2,
+    labelColor = makeColor(0.9, 0.9, 0.9),
+    textColor = makeColor(1.0, 0.82, 0),
+    suffixColor = makeColor(0, 0.82, 0),
+}
+
 local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
 local UnlockedIcon = [[Interface\Icons\INV_Misc_MissileLarge_Red]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
-
-local IconTextSpacing = 2
 
 ---------------------------------
 
@@ -80,11 +94,6 @@ Bazooka.numBars = 0
 
 -- Default DB stuff
 
-local function makeColor(r, g, b, a)
-    a = a or 1.0
-    return { ["r"] = r, ["g"] = g, ["b"] = b, ["a"] = a }
-end
-
 local defaults = {
     profile = {
         locked = false,
@@ -92,30 +101,33 @@ local defaults = {
         simpleTip = true,
         disableHL = false,
 
-        font = DefaultFontName,
-        fontSize = 12,
-        fontOutline = "",
-
-        iconSize = 16,
-
-        labelColor = makeColor(1.0, 1.0, 1.0),
-        textColor = makeColor(1.0, 0.82, 0),
 
         bars = {
             ["**"] = {
                 sideSpacing = 5,
                 centerSpacing = 10,
+                iconTextSpacing = Defaults.iconTextSpacing,
+
+                font = Defaults.fontName,
+                fontSize = 12,
+                fontOutline = "",
+
+                iconSize = 16,
+
+                labelColor = makeColor(0.9, 0.9, 0.9),
+                textColor = makeColor(1.0, 0.82, 0),
+                suffixColor = makeColor(0, 0.82, 0),
                 
                 attach = 'top',
 
-                strata = "HIGH",
+                strata = "MEDIUM",
 
-                frameWidth = DefaultFrameWidth,
-                frameHeight = DefaultFrameHeight,
+                frameWidth = Defaults.frameWidth,
+                frameHeight = Defaults.frameHeight,
 
                 bgEnabled = true,
-                bgTexture = DefaultBGTexture,
-                bgBorderTexture = DefaultEdgeTexture,
+                bgTexture = Defaults.bgTexture,
+                bgBorderTexture = Defaults.edgeTexture,
                 bgTile = false,
                 bgTileSize = 32,
                 bgEdgeSize = 16,
@@ -455,6 +467,7 @@ function Bar:applySettings()
         self.frame:SetWidth(self.db.frameWidth)
     end
     self.frame:SetFrameStrata(self.db.strata)
+    self:applyFontSettings()
     self:applyBGSettings()
 end
 
@@ -468,18 +481,18 @@ function Bar:applyBGSettings()
     if (LSM) then
         bg.bgFile = LSM:Fetch("background", self.db.bgTexture, true)
         if (not bg.bgFile) then
-            bg.bgFile = DefaultBGFile
+            bg.bgFile = Defaults.bgFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
         bg.edgeFile = LSM:Fetch("border", self.db.bgBorderTexture, true)
         printf("### fetching: %s -> %s", tostring(self.db.bgBorderTexture), tostring(bg.edgeFile))
         if (not bg.edgeFile) then
-            bg.edgeFile = DefaultEdgeFile
+            bg.edgeFile = Defaults.edgeFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
     else
-        bg.bgFile = DefaultBGFile
-        bg.edgeFile = DefaultEdgeFile
+        bg.bgFile = Defaults.bgFile
+        bg.edgeFile = Defaults.edgeFile
     end
     bg.tile = self.db.bgTile
     bg.tileSize = self.db.bgTileSize
@@ -495,6 +508,18 @@ function Bar:applyBGSettings()
     self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a)
 end
 
+function Bar:applyFontSettings()
+    if (LSM) then
+        self.dbFontPath = LSM:Fetch("font", self.db.profile.font, true)
+        if (not dbFontPath) then
+            LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
+            self.dbFontPath = Defaults.fontPath
+            return
+        end
+    end
+    self:globalSettingsChanged()
+end
+
 function Bar:mediaUpdate(event, mediaType, key)
     if (mediaType == 'background') then
         if (key == self.db.bgTexture) then
@@ -504,6 +529,16 @@ function Bar:mediaUpdate(event, mediaType, key)
         if (key == self.db.bgBorderTexture) then
             self:applyBGSettings()
         end
+    elseif (mediaType == 'font') then
+        if (key == self.db.font) then
+            self:applyFontSettings()
+        end
+    end
+end
+
+function Bar:globalSettingsChanged()
+    for name, plugin in pairs(self.allPlugins) do
+        plugin:globalSettingsChanged()
     end
 end
 
@@ -522,6 +557,11 @@ local Plugin = {
     text = nil,
     label = nil,
     hl = nil,
+    iconSize = Defaults.iconSize,
+    iconTextSpacing = Defaults.iconTextSpacing,
+    fontSize = Defaults.fontSize,
+    labelColorHex = colorToHex(Defaults.labelColor),
+    suffixColorHex = colorToHex(Defaults.suffixColor),
 
     OnEnter = function(frame)
         frame.bzkPlugin:highlight(true)
@@ -559,29 +599,24 @@ function Plugin:highlight(flag)
 end
 
 function Plugin:globalSettingsChanged()
+    local bdb = self.bar and self.bar.db or Defaults
+    self.labelColorHex = colorToHex(bdb.labelColor)
+    self.suffixColorHex = colorToHex(bdb.suffixColor)
+    self.iconTextSpacing = bdb.iconTextSpacing
+    self.iconSize = bdb.iconSize
+    self.fontSize = bdb.fontSize
     if (self.text) then
-        local bdb = Bazooka.db.profile
-        local dbFontPath
-        if (LSM) then
-            dbFontPath = LSM:Fetch("font", bdb.font, true)
-            if (not dbFontPath) then
-                dbFontPath = DefaultFontPath
-                LSM.RegisterCallback(Bazooka, "LibSharedMedia_Registered", "mediaUpdate")
-            end
-        else
-            dbFontPath = DefaultFontPath
-        end
+        local dbFontPath = self.bar and self.bar.dbFontPath or bdb.fontPath
         local fontPath, fontSize, fontOutline = self.text:GetFont()
         fontOutline = fontOutline or ""
         if (dbFontPath ~= fontPath or bdb.fontSize ~= fontSize or bdb.fontOutline ~= fontOutline) then
-            self.text:SetFont(dbFontPath, bdb.fontSize, bdb.fontOutline)
+            self.text:SetFont(dbFontPath, self.fontSize, bdb.fontOutline)
         end
         self.text:SetTextColor(bdb.textColor.r, bdb.textColor.g, bdb.textColor.b, bdb.textColor.a)
     end
     if (self.icon) then
-        local iconSize = Bazooka.db.profile.iconSize
-        self.icon:SetWidth(iconSize)
-        self.icon:SetHeight(iconSize)
+        self.icon:SetWidth(self.iconSize)
+        self.icon:SetHeight(self.iconSize)
     end
     self:updateLayout()
 end
@@ -597,7 +632,7 @@ end
 
 function Plugin:createText()
     self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
-    self.text:SetFont(DefaultFontPath, defaults.profile.fontSize, "")
+    self.text:SetFont(Defaults.fontPath, defaults.profile.fontSize, "")
 end
 
 function Plugin:updateLayout()
@@ -606,7 +641,7 @@ function Plugin:updateLayout()
         local tw = self.text:GetStringWidth()
         local iw = self.db.showIcon and self.icon:GetWidth() or 0
         if (tw > 0) then
-            local offset = (iw > 0) and (iw + IconTextSpacing) or 0
+            local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
             self.text:SetPoint("LEFT", self.frame, "LEFT", offset, 0)
             w = offset + tw
         elseif (iw > 0) then
@@ -697,20 +732,19 @@ end
 
 function Plugin:setText()
     local dataobj = self.dataobj
-    -- FIXME: label/suffix color?
     if (self.db.showLabel) then
         if (dataobj.text) then
-            self.text:SetFormattedText("%s: %s", self.label, dataobj.text)
+            self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
         elseif (dataobj.value and dataobj.suffix) then
-            self.text:SetFormattedText("%s: %s %s", self.label, dataobj.value, dataobj.suffix)
+            self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.value, dataobj.suffix)
         else
-            self.text:SetFormattedText("%s", self.label)
+            self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
         end
     else
         if (dataobj.text) then
             self.text:SetFormattedText("%s", dataobj.text)
         elseif (dataobj.value and dataobj.suffix) then
-            self.text:SetFormattedText("%s %s", dataobj.value, dataobj.suffix)
+            self.text:SetFormattedText("%s |c%s%s|r", dataobj.value, self.suffixColorHex, dataobj.suffix)
         else
             self.text:SetFormattedText("")
         end
@@ -788,28 +822,7 @@ function Bazooka:profileChanged()
     self:applySettings()
 end
 
-function Bazooka:mediaUpdate(event, mediaType, key)
-    if (mediaType == 'font') then
-        if (key == self.db.profile.font) then
-            self:applyFontSettings()
-        end
-    end
-end
-
 -- END handlers
-
-function Bazooka:applyFontSettings()
-    if (LSM) then
-        local dbFontPath = LSM:Fetch("font", self.db.profile.font, true)
-        if (not dbFontPath) then
-            LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
-            return
-        end
-    end
-    for name, plugin in pairs(self.plugins) do
-        plugin:globalSettingsChanged()
-    end
-end
 
 function Bazooka:createBar()
     self.numBars = self.numBars + 1
