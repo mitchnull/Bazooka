@@ -26,4 +26,5 @@ L["Strata"] = "Strata"
 L["Thick"] = "Thick"
 L["Tile Background"] = "Tile Background"
 L["Width"] = "Width"
-
+L["Top"] = "Top"
+L["Bottom"] = "Bottom"

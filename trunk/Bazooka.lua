@@ -61,16 +61,21 @@ local Defaults =  {
     edgeFile = [[Interface\None]],
     fontName = "Friz Quadrata TT",
     fontPath = GameFontNormal:GetFont(),
+    fontSize = 12,
+    fontOutline = "",
+    iconSize = 16,
     frameWidth = 256,
     frameHeight = 20,
-    iconTextSpacing = 2,
     labelColor = makeColor(0.9, 0.9, 0.9),
     textColor = makeColor(1.0, 0.82, 0),
     suffixColor = makeColor(0, 0.82, 0),
+    sideSpacing = 8,
+    centerSpacing = 16,
+    iconTextSpacing = 2,
 }
 
 local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
-local UnlockedIcon = [[Interface\Icons\INV_Misc_MissileLarge_Red]]
+local UnlockedIcon = [[Interface\Icons\INV_Ammo_Bullet_03]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
 
@@ -100,25 +105,30 @@ local defaults = {
         adjustFrames = false,
         simpleTip = true,
         disableHL = false,
+        numBars = 1,
 
 
         bars = {
             ["**"] = {
-                sideSpacing = 5,
-                centerSpacing = 10,
+                point = "CENTER",
+                rePoint = "CENTER",
+                x = 0,
+                y = 0,
+                sideSpacing = Defaults.sideSpacing,
+                centerSpacing = Defaults.centerSpacing,
                 iconTextSpacing = Defaults.iconTextSpacing,
 
                 font = Defaults.fontName,
-                fontSize = 12,
-                fontOutline = "",
+                fontSize = Defaults.fontSize,
+                fontOutline = Defaults.fontOutline,
 
-                iconSize = 16,
+                iconSize = Defaults.iconSize,
 
-                labelColor = makeColor(0.9, 0.9, 0.9),
-                textColor = makeColor(1.0, 0.82, 0),
-                suffixColor = makeColor(0, 0.82, 0),
+                labelColor = Defaults.labelColor,
+                textColor = Defaults.textColor,
+                suffixColor = Defaults.suffixColor,
                 
-                attach = 'top',
+                attach = 'none',
 
                 strata = "MEDIUM",
 
@@ -133,6 +143,12 @@ local defaults = {
                 bgEdgeSize = 16,
                 bgColor = makeColor(0, 0, 0, 0.7),
                 bgBorderColor = makeColor(0.8, 0.6, 0.0),
+            },
+            [1] = {
+                attach = 'top',
+            },
+            [2] = {
+                attach = 'bottom',
             },
         },
         plugins = {
@@ -251,27 +267,27 @@ end
 function Bar:enable(id, db)
     self.id = id
     self.db = db
-    if (not bar.frame) then
-        bar.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
-        bar.frame.bzkBar = bar
-        bar.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, bar.frame)
-        bar.centerFrame:EnableMouse(false)
-        bar.centerFrame:SetPoint("TOP", bar.frame, "TOP", 0, 0)
-        bar.centerFrame:SetPoint("BOTTOM", bar.frame, "BOTTOM", 0, 0)
+    if (not self.frame) then
+        self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
+        self.frame.bzkBar = bar
+        self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
+        self.centerFrame:EnableMouse(false)
+        self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
+        self.centerFrame:SetPoint("BOTTOM", self.frame, "BOTTOM", 0, 0)
     end
-    bar:updateCenterWidth()
-    bar.frame:Show()
+    self:updateCenterWidth()
+    self.frame:Show()
 end
 
 function Bar:disable()
-    if (bar.frame) then
-        bar.frame:Hide()
+    if (self.frame) then
+        self.frame:Hide()
     end
-    for name, plugin in bar.allPlugins do
+    for name, plugin in pairs(self.allPlugins) do
         plugin:disable()
     end
     wipe(self.allPlugins)
-    for area, plugins in self.plugins do
+    for area, plugins in pairs(self.plugins) do
         wipe(plugins)
     end
 end
@@ -320,7 +336,7 @@ function Bar:updateCenterWidth()
 end
 
 function Bar:detachPlugin(plugin)
-    local plugins = self.plugins[plugin.area]
+    local plugins = self.plugins[plugin.db.area]
     local lp, rp, index
     for i, p in ipairs(plugins) do
         if (index) then
@@ -330,14 +346,13 @@ function Bar:detachPlugin(plugin)
         if (p == plugin) then
             index = i
         else
-            lp = plugin
+            lp = p
         end
     end
-    if (not found) then
+    if (not index) then
         return -- this should never happen
     end
     tremove(plugins, index)
-    plugin.origBar = self
     plugin.frame:ClearAllPoints()
     self:setRightAttachPoint(lp, rp)
     self:setLeftAttachPoint(rp, lp)
@@ -452,7 +467,6 @@ function Bar:setRightAttachPoint(plugin, rp)
 end
 
 function Bar:applySettings()
-    -- FIXME align multiple bars on top/bottom correctly
     if (self.db.attach == "top") then
         self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
         self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, 0)
@@ -510,7 +524,7 @@ end
 
 function Bar:applyFontSettings()
     if (LSM) then
-        self.dbFontPath = LSM:Fetch("font", self.db.profile.font, true)
+        self.dbFontPath = LSM:Fetch("font", self.db.font, true)
         if (not dbFontPath) then
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
             self.dbFontPath = Defaults.fontPath
@@ -567,7 +581,31 @@ local Plugin = {
         frame.bzkPlugin:highlight(true)
     end,
     OnLeave = function(frame)
+        frame.bzkClicked = nil
         frame.bzkPlugin:highlight(false)
+    end,
+    OnMouseDown = function(frame, ...)
+        frame.bzkClicked = true
+    end,
+    OnMouseUp = function(frame, ...)
+        if (not frame.bzkClicked or frame:IsDragging()) then
+            return
+        end
+        local self = frame.bzkPlugin
+        if (self.dataobj.OnClick) then
+            self.dataobj.OnClick(frame, ...)
+        end
+    end,
+    OnDragStart = function(frame, ...)
+        frame.bzkClicked = nil
+        frame:SetAlpha(0.5)
+        frame.bzkPlugin:detach()
+        frame:StartMoving()
+    end,
+    OnDragStop = function(frame, ...)
+        frame:StopMovingOrSizing()
+        frame:SetAlpha(1.0)
+        frame.bzkPlugin:attach() -- FIXME: check for valid drop position
     end,
 }
 
@@ -624,7 +662,7 @@ end
 function Plugin:createIcon()
     self.icon = self.frame:CreateTexture("BazookaPluginIcon_" .. self.name, "ARTWORK")
     self.icon:ClearAllPoints()
-    local iconSize = defaults.profile.iconSize
+    local iconSize = Defaults.iconSize
     self.icon:SetWidth(iconSize)
     self.icon:SetHeight(iconSize)
     self.icon:SetPoint("LEFT", self.frame, "LEFT", 0, 0)
@@ -632,7 +670,7 @@ end
 
 function Plugin:createText()
     self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
-    self.text:SetFont(Defaults.fontPath, defaults.profile.fontSize, "")
+    self.text:SetFont(Defaults.fontPath, Defaults.fontSize, Defaults.fontOutline)
 end
 
 function Plugin:updateLayout()
@@ -668,21 +706,29 @@ function Plugin:updateLayout()
 end
 
 function Plugin:enable()
-    self.db.enabled = true
     if (not self.frame) then
         self.frame = CreateFrame("Frame", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
         -- FIXME
         self.frame:SetScript("OnEnter", Plugin.OnEnter)
         self.frame:SetScript("OnLeave", Plugin.OnLeave)
+        self.frame:SetScript("OnMouseUp", Plugin.OnMouseUp)
+        self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
+        self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
+        self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
         self.frame:EnableMouse(true)
     end
     self.frame:Show()
+    if (Bazooka.db.profile.locked) then
+        self:lock()
+    else
+        self:unlock()
+    end
 end
 
 function Plugin:disable()
-    self.db.enabled = false
     if (self.frame) then
+        self.frame:ClearAllPoints()
         self.frame:Hide()
     end
 end
@@ -712,6 +758,23 @@ function Plugin:applySettings()
         self.text:Hide()
     end
     self:updateLayout()
+end
+
+function Plugin:lock()
+    if (self.frame) then
+        if (self.frame:IsDragging()) then
+            self.frame:StopMovingOrSizing()
+        end
+        self.frame:RegisterForDrag(nil)
+        self.frame:SetMovable(false)
+    end
+end
+
+function Plugin:unlock()
+    if (self.frame) then
+        self.frame:RegisterForDrag("LeftButton")
+        self.frame:SetMovable(true)
+    end
 end
 
 function Plugin:setIcon()
@@ -756,6 +819,18 @@ function Plugin:updateLabel()
     -- FIXME: muck around with dataobj.tocname?
 end
 
+function Plugin:attach()
+    if (self.bar) then
+        self.bar:attachPlugin(self, self.db.area, self.db.pos)
+    end
+end
+
+function Plugin:detach()
+    if (self.bar) then
+        self.bar:detachPlugin(self)
+    end
+end
+
 Bazooka.Plugin = Plugin
 
 -- END Plugin stuff
@@ -777,18 +852,14 @@ function Bazooka:OnInitialize()
 end
 
 function Bazooka:OnEnable(first)
-    if (self.numBars == 0) then
-        self:createBar()
-    end
-    for i, bar in ipairs(self.bars) do
-        bar.frame:Show()
-    end
-    self:initPlugins()
+    self.enabled = true
+    self:init()
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
     LDB.RegisterCallback(self, "LibDataBroker_AttributeChanged", "attributeChanged")
 end
 
 function Bazooka:OnDisable()
+    self.enabled = false
     self:UnregisterAllEvents()
     LDB.UnregisterAllCallbacks(self)
     for i, bar in ipairs(self.bars) do
@@ -801,7 +872,7 @@ end
 -- BEGIN handlers
 
 function Bazooka:dataObjectCreated(event, name, dataobj)
-    print("### new DO: " .. tostring(name))
+    print("### new DO: " .. tostring(name) .. " : " .. tostring(event))
     local plugin = self:createPlugin(name, dataobj)
 end
 
@@ -810,22 +881,38 @@ function Bazooka:attributeChanged(event, name, attr, value, dataobj)
 end
 
 function Bazooka:profileChanged()
-    if (true) then return end -- FIXME
-    for name, plugin in pairs(self.plugins) do
-        plugin:disable()
+    if (not self.enabled) then
+        return
     end
-    for i, bar in ipairs(self.bars) do
-        bar:disable()
-    end
-    self:initBars()
-    self:initPlugins()
-    self:applySettings()
+    self:init()
 end
 
 -- END handlers
 
+function Bazooka:init()
+    print("### init()")
+    for i, bar in ipairs(self.bars) do
+        bar:disable()
+    end
+    for name, plugin in pairs(self.plugins) do
+        plugin:disable()
+    end
+    self.numBars = 0
+    local numBars = self.db.profile.numBars
+    if (not numBars or numBars <= 0) then
+        numBars = 1
+    end
+    for i = 1, numBars do
+        self:createBar()
+    end
+    self:initPlugins()
+    self:applySettings()
+    self:toggleLocked(self.db.profile.locked)
+end
+
 function Bazooka:createBar()
     self.numBars = self.numBars + 1
+    self.db.profile.numBars = self.numBars
     local id =  self.numBars
     local db = self.db.profile.bars[id]
     local bar = self.bars[id]
@@ -844,13 +931,14 @@ function Bazooka:removeBar(bar)
     end
     bar:disable()
     self.numBars = self.numBars - 1
+    self.db.profile.numBars = self.numBars
     for i = bar.id, self.numBars do
         self.db.profile.bars[i] = self.db.profile.bars[i + 1]
         self.bars[i] = self.bars[i + 1]
     end
     self.db.profile.bars[self.numBars + 1] = nil
     self.bars[self.numBars + 1] = nil
-    self:updateAll()
+    self:init()
 end
 
 function Bazooka:createPlugin(name, dataobj)
@@ -878,10 +966,6 @@ function Bazooka:attachPlugin(plugin)
     else
         bar:attachPlugin(plugin, plugin.db.area, plugin.db.pos)
     end
-end
-
-function Bazooka:initBars()
-    -- FIXME
 end
 
 function Bazooka:initPlugins()
@@ -920,11 +1004,17 @@ end
 function Bazooka:lock()
     self.db.profile.locked = true
     self.ldb.icon = Icon
+    for name, plugin in pairs(self.plugins) do
+        plugin:lock()
+    end
 end
 
 function Bazooka:unlock()
     self.db.profile.locked = false
     self.ldb.icon = UnlockedIcon
+    for name, plugin in pairs(self.plugins) do
+        plugin:unlock()
+    end
 end
 
 function Bazooka:toggleLocked(flag)
