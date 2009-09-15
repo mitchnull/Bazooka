@@ -23,6 +23,12 @@ local FrameStratas = {
     ["LOW"] = L["Low"],
 }
 
+local AttachPositions = {
+    ['top'] = L["Top"],
+    ['bottom'] = L["Bottom"],
+    ['none'] = L["None"],
+}
+
 function Bazooka:openConfigDialog(opts)
     opts = opts or lastConfiguredOpts
     if (opts) then
