@@ -47,6 +47,7 @@ local print = print
 local pairs = pairs
 local ipairs = ipairs
 local type = type
+local unpack = unpack
 
 -- hard-coded config stuff
 
@@ -788,10 +789,10 @@ function Plugin:setIcon()
     end
     icon:SetTexture(dataobj.icon)
     if (dataobj.iconR) then
-        icon.SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
+        icon:SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
     end
     if (dataobj.iconCoords) then
-        icon:SetTexCoord(dataobj.iconCoords)
+        icon:SetTexCoord(unpack(dataobj.iconCoords))
     end
 end
 
