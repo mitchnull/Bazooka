@@ -55,7 +55,6 @@ local DefaultFrameWidth = 256
 local DefaultFrameHeight = 20
 local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
 local UnlockedIcon = [[Interface\Icons\INV_Misc_MissileLarge_Red]]
-local MissingIcon = nil
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
 
@@ -77,6 +76,7 @@ Bazooka.draggedBar = nil
 Bazooka.bars = {}
 Bazooka.plugins = {}
 Bazooka.disableUpdates = nil
+Bazooka.numBars = 0
 
 -- Default DB stuff
 
@@ -90,6 +90,7 @@ local defaults = {
         locked = false,
         adjustFrames = false,
         simpleTip = true,
+        disableHL = false,
 
         font = DefaultFontName,
         fontSize = 12,
@@ -213,6 +214,7 @@ local Bar = {
     db = nil,
     frame = nil,
     centerFrame = nil,
+    allPlugins = {},
     plugins = {
         left = {},
         cleft = {},
@@ -229,23 +231,45 @@ setDeepCopyIndex(Bar)
 
 function Bar:New(id, db)
     local bar = setmetatable({}, Bar)
-    bar.id = id
-    bar.db = db
-    bar.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
-    bar.frame.bzkBar = bar
-    bar.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, bar.frame)
-    bar.centerFrame:EnableMouse(false)
-    bar.centerFrame:SetPoint("TOP", bar.frame, "TOP", 0, 0)
-    bar.centerFrame:SetPoint("BOTTOM", bar.frame, "BOTTOM", 0, 0)
-    bar:updateCenterWidth()
-    -- FIXME
-    if (false) then
-        bar.overlay = bar.frame:CreateTexture("BazookaBarOverlay_" .. id, "OVERLAY")
-        bar.overlay:SetTexture(0, 0.42, 0, 0.42)
-        bar.overlay:SetAllPoints()
-    end
+    bar:enable(id, db)
     bar:applySettings()
     return bar
+end
+
+function Bar:enable(id, db)
+    self.id = id
+    self.db = db
+    if (not bar.frame) then
+        bar.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
+        bar.frame.bzkBar = bar
+        bar.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, bar.frame)
+        bar.centerFrame:EnableMouse(false)
+        bar.centerFrame:SetPoint("TOP", bar.frame, "TOP", 0, 0)
+        bar.centerFrame:SetPoint("BOTTOM", bar.frame, "BOTTOM", 0, 0)
+    end
+    bar:updateCenterWidth()
+    bar.frame:Show()
+end
+
+function Bar:disable()
+    if (bar.frame) then
+        bar.frame:Hide()
+    end
+    for name, plugin in bar.allPlugins do
+        plugin:disable()
+    end
+    wipe(self.allPlugins)
+    for area, plugins in self.plugins do
+        wipe(plugins)
+    end
+end
+
+function Bar:getSpacing(area)
+    if (area == 'left' or area == 'right') then
+        return self.db.sideSpacing
+    else
+        return self.db.centerSpacing
+    end
 end
 
 function Bar:highlight(x, w)
@@ -308,6 +332,7 @@ function Bar:detachPlugin(plugin)
     if (plugin.area == 'center') then
         self:updateCenterWidth()
     end
+    self.allPlugins[plugin.name] = nil
 end
 
 function Bar:attachPlugin(plugin, area, pos)
@@ -361,6 +386,7 @@ function Bar:attachPlugin(plugin, area, pos)
     if (area == "center") then
         self:updateCenterWidth()
     end
+    self.allPlugins[plugin.name] = plugin
 end
 
 function Bar:getEdgeSpacing()
@@ -428,6 +454,7 @@ function Bar:applySettings()
         self.frame:SetHeight(self.db.frameHeight)
         self.frame:SetWidth(self.db.frameWidth)
     end
+    self.frame:SetFrameStrata(self.db.strata)
     self:applyBGSettings()
 end
 
@@ -517,7 +544,7 @@ function Plugin:New(name, dataobj, db)
 end
 
 function Plugin:highlight(flag)
-    if (not flag) then
+    if (not flag or Bazooka.db.profile.disableHL) then
         if (self.hl) then
             self.hl:Hide()
         end
@@ -716,7 +743,7 @@ function Bazooka:OnInitialize()
 end
 
 function Bazooka:OnEnable(first)
-    if (#self.bars == 0) then
+    if (self.numBars == 0) then
         self:createBar()
     end
     for i, bar in ipairs(self.bars) do
@@ -785,10 +812,32 @@ function Bazooka:applyFontSettings()
 end
 
 function Bazooka:createBar()
-    local id = #self.bars + 1
+    self.numBars = self.numBars + 1
+    local id =  self.numBars
     local db = self.db.profile.bars[id]
-    local bar = Bar:New(id, db)
-    self.bars[bar.id] = bar
+    local bar = self.bars[id]
+    if (bar) then
+        bar:enable(id, db)
+        bar:applySettings()
+    else
+        bar = Bar:New(id, db)
+        self.bars[bar.id] = bar
+    end
+end
+
+function Bazooka:removeBar(bar)
+    if (self.numBars <= 1) then
+        return
+    end
+    bar:disable()
+    self.numBars = self.numBars - 1
+    for i = bar.id, self.numBars do
+        self.db.profile.bars[i] = self.db.profile.bars[i + 1]
+        self.bars[i] = self.bars[i + 1]
+    end
+    self.db.profile.bars[self.numBars + 1] = nil
+    self.bars[self.numBars + 1] = nil
+    self:updateAll()
 end
 
 function Bazooka:createPlugin(name, dataobj)
@@ -814,7 +863,6 @@ function Bazooka:attachPlugin(plugin)
     if (not bar) then
         self.bars[1]:attachPlugin(plugin)
     else
-        if (not next(self.plugins)) then area = 'center' end
         bar:attachPlugin(plugin, plugin.db.area, plugin.db.pos)
     end
 end
