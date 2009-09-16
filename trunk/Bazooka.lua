@@ -99,7 +99,6 @@ Bazooka.OptionsAppName = OptionsAppName
 Bazooka.draggedFrame = nil
 Bazooka.bars = {}
 Bazooka.plugins = {}
-Bazooka.disableUpdates = nil
 Bazooka.numBars = 0
 
 -- Default DB stuff
@@ -320,23 +319,18 @@ end
 function Bar:getAreaCoords(area)
     if (area == 'left') then
         local left, bottom, width, height = self.frame:GetRect()
---        printf("### bar%d:left: left: %d, width: %d", self.id, left, width)
         return left, bottom + height / 2
     elseif (area == 'cleft') then
         local left, bottom, width, height = self.centerFrame:GetRect()
---        printf("### bar%d:cleft: left: %d, width: %d", self.id, left, width)
         return left, bottom + height / 2
     elseif (area == 'cright') then
         local left, bottom, width, height = self.centerFrame:GetRect()
---        printf("### bar%d:cright: left: %d, width: %d", self.id, left, width)
         return left + width, bottom + height / 2
     elseif (area == 'right') then
         local left, bottom, width, height = self.frame:GetRect()
---        printf("### bar%d:right: left: %d, width: %d", self.id, left, width)
         return left + width, bottom + height / 2
     else -- center
         local left, bottom, width, height = self.centerFrame:GetRect()
---        printf("### bar%d:center: left: %d, width: %d", self.id, left, width)
         return left + width / 2, bottom + height / 2
     end
 end
@@ -401,7 +395,11 @@ function Bar:highlight(area, pos)
         return
     end
     if (not self.hl) then
-        self.hl = self.frame:CreateTexture("BazookaBarHL_" .. self.id, "OVERLAY")
+        self.hlFrame = CreateFrame("Frame", "BazookaBarHLF_" .. self.id, self.frame)
+        self.hlFrame:SetFrameLevel(self.frame:GetFrameLevel() + 5)
+        self.hlFrame:EnableMouse(false)
+        self.hlFrame:SetAllPoints()
+        self.hl = self.hlFrame:CreateTexture("BazookaBarHL_" .. self.id, "OVERLAY")
         self.hl:SetTexture(HighlightImage)
     end
     local center = self:getHighlightCenter(area, pos) - self.frame:GetLeft()
@@ -427,7 +425,6 @@ function Bar:updateCenterWidth()
     if (cw <= 0) then
         cw = 1
     end
-    printf("### numGaps: %d, cw: %d", numGaps, cw)
     self.centerFrame:SetWidth(cw)
 end
 
@@ -478,6 +475,7 @@ function Bar:attachPlugin(plugin, area, pos)
         if (pos < 0) then
             pos = 1 - pos
         end
+        plugin.db.pos = pos
         local rpi
         for i, p in ipairs(plugins) do
             if (pos <= p.db.pos) then
@@ -500,6 +498,7 @@ function Bar:attachPlugin(plugin, area, pos)
             tinsert(plugins, plugin)
         end
     end
+    self.allPlugins[plugin.name] = plugin
     plugin.frame:SetParent(self.frame)
     plugin.frame:ClearAllPoints()
     plugin.frame:SetPoint("TOP", self.frame, "TOP")
@@ -512,7 +511,6 @@ function Bar:attachPlugin(plugin, area, pos)
     if (area == "center") then
         self:updateCenterWidth()
     end
-    self.allPlugins[plugin.name] = plugin
 end
 
 function Bar:getEdgeSpacing()
@@ -598,7 +596,6 @@ function Bar:applyBGSettings()
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
         bg.edgeFile = LSM:Fetch("border", self.db.bgBorderTexture, true)
-        printf("### fetching: %s -> %s", tostring(self.db.bgBorderTexture), tostring(bg.edgeFile))
         if (not bg.edgeFile) then
             bg.edgeFile = Defaults.edgeFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
@@ -610,7 +607,6 @@ function Bar:applyBGSettings()
     bg.tile = self.db.bgTile
     bg.tileSize = self.db.bgTileSize
     bg.edgeSize = (bg.edgeFile and bg.edgeFile ~= [[Interface\None]]) and self.db.bgEdgeSize or 0
-    printf("### edgeSize: %d", bg.edgeSize)
     local inset = math.floor(bg.edgeSize / 4)
     self.inset = inset
     bg.insets.left = inset
@@ -707,20 +703,20 @@ Plugin.OnUpdate = function(frame, ...)
 end
 
 Plugin.OnDragStart = function(frame, ...)
-    if (Bazooka.db.profile.locked) then
+    if (Bazooka.locked) then
         return
     end
     frame.bzkPlugin:highlight(nil)
     frame.bzkPlugin:detach()
     updateUIScale()
-    frame:SetAlpha(0.5)
+    frame:SetAlpha(0.7)
     Bazooka.draggedFrame, Bazooka.lastX, Bazooka.lastY = frame, nil, nil
     frame:StartMoving()
     frame:SetScript("OnUpdate", Plugin.OnUpdate)
 end
 
 Plugin.OnDragStop = function(frame, ...)
-    if (Bazooka.db.profile.locked) then
+    if (Bazooka.locked) then
         return
     end
     frame:SetScript("OnUpdate", nil)
@@ -837,7 +833,7 @@ function Plugin:updateLayout()
     end
     if (w ~= self.frame:GetWidth()) then
         self.frame:SetWidth(w)
-        if (self.bar and self.area == 'center') then
+        if (self.bar and self.db.area == 'center') then
             self.bar:updateCenterWidth()
         end
     end
@@ -966,6 +962,9 @@ end
 function Plugin:detach()
     if (self.bar) then
         self.bar:detachPlugin(self)
+        if (self.frame) then
+            self.frame:SetFrameStrata("HIGH")
+        end
     end
 end
 
@@ -1023,7 +1022,6 @@ end
 -- BEGIN handlers
 
 function Bazooka:dataObjectCreated(event, name, dataobj)
-    print("### new DO: " .. tostring(name) .. " : " .. tostring(event))
     local plugin = self:createPlugin(name, dataobj)
 end
 
@@ -1035,8 +1033,8 @@ function Bazooka:attributeChanged(event, name, attr, value, dataobj)
             updater(plugin)
             return
         end
+        print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
     end
-    print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
 end
 
 function Bazooka:profileChanged()
@@ -1066,7 +1064,6 @@ function Bazooka:init()
     end
     self:initPlugins()
     self:applySettings()
-    self:toggleLocked(self.db.profile.locked)
 end
 
 function Bazooka:createBar()
@@ -1133,22 +1130,9 @@ function Bazooka:attachPlugin(plugin)
 end
 
 function Bazooka:initPlugins()
-    local du = self.disableUpdates
-    self.disableUpdates = true
     for name, dataobj in LDB:DataObjectIterator() do
         self:dataObjectCreated(nil, name, dataobj)
     end
-    self.disableUpdates = du
-    self:updateAll()
-end
-
-function Bazooka:updateAll()
-    if (self.disableUpdates or InCombatLockdown()) then
-        self.needUpdate = true
-        return
-    end
-    self.needUpdate = false
-    print("### updateAll")
 end
 
 function Bazooka:applySettings()
@@ -1174,18 +1158,19 @@ function Bazooka:cancelDrag()
 end
 
 function Bazooka:lock()
-    self.db.profile.locked = true
+    self.locked = true
     self.ldb.icon = Icon
     self:cancelDrag()
 end
 
 function Bazooka:unlock()
-    self.db.profile.locked = false
+    self.locked = false
     self.ldb.icon = UnlockedIcon
 end
 
 function Bazooka:toggleLocked(flag)
     if (flag == nil) then flag = not self.db.profile.locked end
+    self.db.profile.locked = flag
     if (flag) then
         self:lock()
     else
@@ -1223,7 +1208,6 @@ function Bazooka:getDropPlace(x, y)
             dstBar, dstArea, dstPos, minDist = bar, area, pos, dist
         end
     end
-    printf("### drop place: %s, %s, %s, %d", tostring(dstBar), tostring(dstArea), tostring(dstPos), minDist)
     if (minDist < NearSquared or getDistance2Frame(x, y, dstBar.frame) < NearSquared) then
         return dstBar, dstArea, dstPos
     end
@@ -1336,8 +1320,10 @@ end
 -- DEBUG
 function Bazooka:dump()
     for name, plugin in pairs(self.plugins) do
-        printf("%s = { bar%d[%s][%d], width = %d }", plugin.name, plugin.db.bar, plugin.db.area, plugin.db.pos, plugin.frame:GetWidth())
-        self:showPoints(plugin.frame)
+        if (plugin.db.enabled) then
+            printf("%s = { bar%d[%s][%d], width = %d }", plugin.name, plugin.db.bar, plugin.db.area, plugin.db.pos, plugin.frame:GetWidth())
+            self:showPoints(plugin.frame)
+        end
     end
 end
 
