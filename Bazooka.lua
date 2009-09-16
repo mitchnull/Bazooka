@@ -320,18 +320,23 @@ end
 function Bar:getAreaCoords(area)
     if (area == 'left') then
         local left, bottom, width, height = self.frame:GetRect()
+--        printf("### bar%d:left: left: %d, width: %d", self.id, left, width)
         return left, bottom + height / 2
     elseif (area == 'cleft') then
         local left, bottom, width, height = self.centerFrame:GetRect()
-        return left - self.db.centerSpacing / 2, bottom + height / 2
-    elseif (area == 'crigth') then
+--        printf("### bar%d:cleft: left: %d, width: %d", self.id, left, width)
+        return left, bottom + height / 2
+    elseif (area == 'cright') then
         local left, bottom, width, height = self.centerFrame:GetRect()
-        return left + width + self.db.centerSpacing / 2, bottom + height / 2
+--        printf("### bar%d:cright: left: %d, width: %d", self.id, left, width)
+        return left + width, bottom + height / 2
     elseif (area == 'right') then
         local left, bottom, width, height = self.frame:GetRect()
+--        printf("### bar%d:right: left: %d, width: %d", self.id, left, width)
         return left + width, bottom + height / 2
     else -- center
-        local left, bottom, width, height = self.frame:GetRect()
+        local left, bottom, width, height = self.centerFrame:GetRect()
+--        printf("### bar%d:center: left: %d, width: %d", self.id, left, width)
         return left + width / 2, bottom + height / 2
     end
 end
@@ -368,12 +373,21 @@ end
 function Bar:getHighlightCenter(area, pos)
     local plugins = self.plugins[area]
     if (#plugins == 0) then
-        local x = self:getAreaCoords()
+        local x = self:getAreaCoords(area)
         return x
     end
-    for i, plugin in ipairs(plugins) do
-        if (pos <= plugin.db.pos) then
-            return plugin.frame:GetLeft()
+    if (pos < 0) then
+        pos = -pos
+        for i, plugin in ipairs(plugins) do
+            if (pos <= plugin.db.pos) then
+                return plugin.frame:GetRight()
+            end
+        end
+    else
+        for i, plugin in ipairs(plugins) do
+            if (pos <= plugin.db.pos) then
+                return plugin.frame:GetLeft()
+            end
         end
     end
     return plugins[#plugins].frame:GetRight()
@@ -413,6 +427,7 @@ function Bar:updateCenterWidth()
     if (cw <= 0) then
         cw = 1
     end
+    printf("### numGaps: %d, cw: %d", numGaps, cw)
     self.centerFrame:SetWidth(cw)
 end
 
@@ -434,13 +449,13 @@ function Bar:detachPlugin(plugin)
         return -- this should never happen
     end
     tremove(plugins, index)
+    self.allPlugins[plugin.name] = nil
     plugin.frame:ClearAllPoints()
     self:setRightAttachPoint(lp, rp)
     self:setLeftAttachPoint(rp, lp)
-    if (plugin.area == 'center') then
+    if (plugin.db.area == 'center') then
         self:updateCenterWidth()
     end
-    self.allPlugins[plugin.name] = nil
 end
 
 function Bar:attachPlugin(plugin, area, pos)
@@ -460,6 +475,9 @@ function Bar:attachPlugin(plugin, area, pos)
         end
         tinsert(plugins, plugin)
     else
+        if (pos < 0) then
+            pos = 1 - pos
+        end
         local rpi
         for i, p in ipairs(plugins) do
             if (pos <= p.db.pos) then
@@ -681,7 +699,7 @@ Plugin.OnClick = function(frame, ...)
 end
 
 Plugin.OnUpdate = function(frame, ...)
-    local x, y = Bazooka:getScaledCursorPosition()
+    local x, y = getScaledCursorPosition()
     if (x ~= Bazooka.lastX or y ~= Bazooka.lastY) then
         Bazooka.lastX, Bazooka.lastY = x, y
         Bazooka:highlight(Bazooka:getDropPlace(x, y))
@@ -711,12 +729,12 @@ Plugin.OnDragStop = function(frame, ...)
     Bazooka:highlight(nil)
     if (Bazooka.draggedFrame) then -- we'll signal an aborted drag with clearing draggedFrame
         Bazooka.draggedFrame = nil
-        local bar, area, pos = Bazooka:getDropPlace(Bazooka:getScaledCursorPosition())
+        local bar, area, pos = Bazooka:getDropPlace(getScaledCursorPosition())
         if (bar) then
             bar:attachPlugin(frame.bzkPlugin, area, pos)
         else
             frame.bzkPlugin:reattach()
-            Bazooka:openStaticDialog(BzkDialogDisablePlugin, frame.bzkPlugin)
+            Bazooka:openStaticDialog(BzkDialogDisablePlugin, frame.bzkPlugin, frame.bzkPlugin.label)
         end
     end
 end
@@ -726,7 +744,6 @@ function Plugin:New(name, dataobj, db)
     plugin.name = name
     plugin.dataobj = dataobj
     plugin.db = db
-    plugin:updateLabel()
     plugin:applySettings()
     return plugin
 end
@@ -738,7 +755,7 @@ function Plugin:getDropPlace(x, y)
     if (ld < rd) then
         return self.db.pos, ld
     else
-        return self.db.pos + 1, rd
+        return -self.db.pos, rd
     end
 end
 
@@ -847,11 +864,13 @@ function Plugin:disable()
     if (self.frame) then
         self.frame:ClearAllPoints()
         self.frame:Hide()
+        self.bar = nil
     end
 end
 
 function Plugin:applySettings()
     if (not self.db.enabled) then
+        self:detach()
         self:disable()
         return
     end
@@ -869,13 +888,14 @@ function Plugin:applySettings()
     end
     if (self.db.showText or self.db.showLabel) then
         if (not self.text) then
-            self:createText(self)
+            self:createText()
         end
         self:setText()
     elseif (self.text) then
         self.text:SetFormattedText("")
         self.text:Hide()
     end
+    self:updateLabel()
     self:updateLayout()
 end
 
@@ -918,6 +938,7 @@ function Plugin:setText()
         else
             self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
         end
+        self:updateLayout()
     elseif (self.db.showText) then
         if (dataobj.text) then
             self.text:SetFormattedText("%s", dataobj.text)
@@ -926,12 +947,14 @@ function Plugin:setText()
         else
             self.text:SetFormattedText("")
         end
+        self:updateLayout()
     end
 end
 
 function Plugin:updateLabel()
-    self.label = self.dataobj.label or self.name
     -- FIXME: muck around with dataobj.tocname?
+    self.label = self.dataobj.label or self.name
+    self:setText()
 end
 
 function Plugin:reattach()
@@ -949,7 +972,7 @@ end
 Bazooka.Plugin = Plugin
 
 Bazooka.updaters = {
-    label = Plugin.setText,
+    label = Plugin.updateLabel,
     text = Plugin.setText,
     value = Plugin.setText,
     suffix = Plugin.setText,
@@ -1005,15 +1028,15 @@ function Bazooka:dataObjectCreated(event, name, dataobj)
 end
 
 function Bazooka:attributeChanged(event, name, attr, value, dataobj)
-    print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
     local plugin = self.plugins[name]
-    if (not plugin or not plugin.db.enabled) then
-        return
+    if (plugin and plugin.db.enabled) then
+        local updater = self.updaters[attr]
+        if (updater) then
+            updater(plugin)
+            return
+        end
     end
-    local updater = self.updaters[attr]
-    if (updater) then
-        updater(plugin)
-    end
+    print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
 end
 
 function Bazooka:profileChanged()
@@ -1093,6 +1116,11 @@ function Bazooka:createPlugin(name, dataobj)
         self:attachPlugin(plugin)
     end
     return plugin
+end
+
+function Bazooka:disablePlugin(plugin)
+    plugin.db.enabled = false
+    plugin:applySettings()
 end
 
 function Bazooka:attachPlugin(plugin)
@@ -1192,18 +1220,17 @@ function Bazooka:getDropPlace(x, y)
     for i, bar in ipairs(self.bars) do
         local area, pos, dist = bar:getDropPlace(x, y)
         if (dist < minDist) then
-            local area, pos, dist = bar:getDropPlace(x)
-            if (dist < minDist) then
-                dstBar, dstArea, dstPos = bar, area, pos
-            end
+            dstBar, dstArea, dstPos, minDist = bar, area, pos, dist
         end
     end
+    printf("### drop place: %s, %s, %s, %d", tostring(dstBar), tostring(dstArea), tostring(dstPos), minDist)
     if (minDist < NearSquared or getDistance2Frame(x, y, dstBar.frame) < NearSquared) then
         return dstBar, dstArea, dstPos
     end
 end
 
 function Bazooka:highlight(bar, area, pos)
+-- FIXME: re-do highlight stuff so that the plugins don't overlap the HL texture
     if (self.hlBar and self.hlBar ~= bar) then
         self.hlBar:highlight(nil)
     end
@@ -1255,10 +1282,10 @@ end
 
 -- static dialog setup
 
-function Bazooka:openStaticDialog(dialog, arg)
-    local dialogFrame = StaticPopupDialogs_Show(dialog)
+function Bazooka:openStaticDialog(dialog, frameArg, textArg1, textArg2)
+    local dialogFrame = StaticPopup_Show(dialog, textArg1, textArg2)
     if (dialogFrame) then
-        dialogFrame.data = arg
+        dialogFrame.data = frameArg
     end
 end
 
@@ -1267,7 +1294,7 @@ function Bazooka:closeStaticDialog(dialog)
 end
 
 StaticPopupDialogs[BzkDialogDisablePlugin] = {
-    text = L["Disable %s?"],
+    text = L["Disable %s plugin?"],
     button1 = _G.YES,
     button2 = _G.NO,
     OnAccept = function(frame)
