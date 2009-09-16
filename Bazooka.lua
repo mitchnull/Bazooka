@@ -866,11 +866,13 @@ function Plugin:applySettings()
             self:createIcon()
         end
         self:setIcon()
+        self:setIconColor()
+        self:setIconCoords()
         self.icon:Show()
     elseif (self.icon) then
         self.icon:Hide()
     end
-    if (true and (self.db.showText or self.db.showLabel)) then
+    if (self.db.showText or self.db.showLabel) then
         if (not self.text) then
             self:createText(self)
         end
@@ -900,28 +902,45 @@ function Plugin:unlock()
 end
 
 function Plugin:setIcon()
+    if (not self.db.showIcon) then
+        return
+    end
     local dataobj = self.dataobj
     local icon = self.icon
     icon:SetTexture(dataobj.icon)
-    if (dataobj.iconR) then
-        icon:SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
+end
+
+function Plugin:setIconColor()
+    if (not self.db.showIcon) then
+        return
     end
+    local dataobj = self.dataobj
+    if (dataobj.iconR) then
+        self.icon:SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
+    end
+end
+
+function Plugin:setIconCoords()
+    if (not self.db.showIcon) then
+        return
+    end
+    local dataobj = self.dataobj
     if (dataobj.iconCoords) then
-        icon:SetTexCoord(unpack(dataobj.iconCoords))
+        self.icon:SetTexCoord(unpack(dataobj.iconCoords))
     end
 end
 
 function Plugin:setText()
     local dataobj = self.dataobj
     if (self.db.showLabel) then
-        if (dataobj.text) then
+        if (self.db.showText and dataobj.text) then
             self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
-        elseif (dataobj.value and dataobj.suffix) then
+        elseif (self.db.showText and dataobj.value and dataobj.suffix) then
             self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.value, dataobj.suffix)
         else
             self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
         end
-    else
+    elseif (self.db.showText) then
         if (dataobj.text) then
             self.text:SetFormattedText("%s", dataobj.text)
         elseif (dataobj.value and dataobj.suffix) then
@@ -950,6 +969,19 @@ function Plugin:detach()
 end
 
 Bazooka.Plugin = Plugin
+
+Bazooka.updaters = {
+    label = Plugin.setText,
+    text = Plugin.setText,
+    value = Plugin.setText,
+    suffix = Plugin.setText,
+
+    icon = Plugin.setIcon,
+    iconR = Plugin.setIconColor,
+    iconG = Plugin.setIconColor,
+    iconB = Plugin.setIconColor,
+    iconCoords = Plugin.setIconCoords,
+}
 
 -- END Plugin stuff
 
@@ -996,6 +1028,14 @@ end
 
 function Bazooka:attributeChanged(event, name, attr, value, dataobj)
     print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
+    local plugin = self.plugins[name]
+    if (not plugin or not plugin.db.enabled) then
+        return
+    end
+    local updater = self.updaters[attr]
+    if (updater) then
+        updater(plugin)
+    end
 end
 
 function Bazooka:profileChanged()
