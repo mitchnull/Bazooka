@@ -48,6 +48,8 @@ local pairs = pairs
 local ipairs = ipairs
 local type = type
 local unpack = unpack
+local wipe = wipe
+local math = math
 
 -- hard-coded config stuff
 
@@ -79,6 +81,8 @@ local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
 local UnlockedIcon = [[Interface\Icons\INV_Ammo_Bullet_03]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
+local NearSquared = 20 * 20
+local MinDropPlaceHLDX = 3
 
 ---------------------------------
 
@@ -236,6 +240,26 @@ local function getScaledCursorPosition()
     return x / uiScale, y / uiScale
 end
 
+local function distance2(x1, y1, x2, y2)
+    return (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)
+end
+
+local function getDistance2Frame(x, y, frame)
+    local left, bottom, width, height = frame:GetRect()
+    local dx, dy = 0, 0
+    if (left > x) then
+        dx = left - x
+    elseif (x > left + width) then
+        dx = x - (left + width)
+    end
+    if (bottom > y) then
+        dy = bottom - y
+    elseif (y > bottom + height) then
+        dy = y - (bottom + height)
+    end
+    return dx * dx + dy * dy
+end
+
 -- BEGIN Bar stuff
 
 local Bar = {
@@ -270,7 +294,7 @@ function Bar:enable(id, db)
     self.db = db
     if (not self.frame) then
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
-        self.frame.bzkBar = bar
+        self.frame.bzkBar = self
         self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -293,6 +317,46 @@ function Bar:disable()
     end
 end
 
+function Bar:getAreaCoords(area)
+    if (area == 'left') then
+        local left, bottom, width, height = self.frame:GetRect()
+        return left, bottom + height / 2
+    elseif (area == 'cleft') then
+        local left, bottom, width, height = self.centerFrame:GetRect()
+        return left - self.db.centerSpacing / 2, bottom + height / 2
+    elseif (area == 'crigth') then
+        local left, bottom, width, height = self.centerFrame:GetRect()
+        return left + width + self.db.centerSpacing / 2, bottom + height / 2
+    elseif (area == 'right') then
+        local left, bottom, width, height = self.frame:GetRect()
+        return left + width, bottom + height / 2
+    else -- center
+        local left, bottom, width, height = self.frame:GetRect()
+        return left + width / 2, bottom + height / 2
+    end
+end
+
+function Bar:getDropPlace(x, y)
+    local dstArea, dstPos
+    local minDist = math.huge
+    for area, plugins in pairs(self.plugins) do
+        if (#plugins == 0) then
+            local dist = distance2(x, y, self:getAreaCoords(area))
+            if (dist < minDist) then
+                dstArea, dstPos, minDist = area, 1, dist
+            end
+        else
+            for i, plugin in ipairs(plugins) do
+                local pos, dist = plugin:getDropPlace(x, y)
+                if (dist < minDist) then
+                    dstArea, dstPos, minDist = area, pos, dist
+                end
+            end
+        end
+    end
+    return dstArea, dstPos, minDist
+end
+
 function Bar:getSpacing(area)
     if (area == 'left' or area == 'right') then
         return self.db.sideSpacing
@@ -301,8 +365,22 @@ function Bar:getSpacing(area)
     end
 end
 
-function Bar:highlight(x, w)
-    if (not x) then
+function Bar:getHighlightCenter(area, pos)
+    local plugins = self.plugins[area]
+    if (#plugins == 0) then
+        local x = self:getAreaCoords()
+        return x
+    end
+    for i, plugin in ipairs(plugins) do
+        if (pos <= plugin.db.pos) then
+            return plugin.frame:GetLeft()
+        end
+    end
+    return plugins[#plugins].frame:GetRight()
+end
+
+function Bar:highlight(area, pos)
+    if (not area) then
         if (self.hl) then
             self.hl:Hide()
         end
@@ -312,14 +390,16 @@ function Bar:highlight(x, w)
         self.hl = self.frame:CreateTexture("BazookaBarHL_" .. self.id, "OVERLAY")
         self.hl:SetTexture(HighlightImage)
     end
-    if (not w or w <= 0) then
-        w = 2
+    local center = self:getHighlightCenter(area, pos) - self.frame:GetLeft()
+    local dx = math.floor(self:getSpacing(area) / 2 + 0.5)
+    if (dx < MinDropPlaceHLDX) then
+        dx = MinDropPlaceHLDX
     end
     self.hl:ClearAllPoints()
     self.hl:SetPoint("TOP", self.frame, "TOP", 0, 0)
     self.hl:SetPoint("BOTTOM", self.frame, "BOTTOM", 0, 0)
-    self.hl:SetPoint("LEFT", self.frame, "LEFT", x - w, 0)
-    self.hl:SetPoint("RIGHT", self.frame, "LEFT", x + w, 0)
+    self.hl:SetPoint("LEFT", self.frame, "LEFT", center - dx, 0)
+    self.hl:SetPoint("RIGHT", self.frame, "LEFT", center + dx, 0)
     self.hl:Show()
 end
 
@@ -526,7 +606,7 @@ end
 function Bar:applyFontSettings()
     if (LSM) then
         self.dbFontPath = LSM:Fetch("font", self.db.font, true)
-        if (not dbFontPath) then
+        if (not self.dbFontPath) then
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
             self.dbFontPath = Defaults.fontPath
             return
@@ -578,37 +658,65 @@ local Plugin = {
     labelColorHex = colorToHex(Defaults.labelColor),
     suffixColorHex = colorToHex(Defaults.suffixColor),
 
-    OnEnter = function(frame)
-        frame.bzkPlugin:highlight(true)
-    end,
-    OnLeave = function(frame)
-        frame.bzkPlugin:highlight(false)
-    end,
-    OnClick = function(frame, ...)
-        local self = frame.bzkPlugin
-        if (self.dataobj.OnClick) then
-            self.dataobj.OnClick(frame, ...)
-        end
-    end,
-    OnDragStart = function(frame, ...)
-        if (Bazooka.db.profile.locked) then
-            return
-        end
-        frame:SetAlpha(0.5)
-        frame.bzkPlugin:detach()
-        frame:StartMoving()
-    end,
-    OnDragStop = function(frame, ...)
-        if (Bazooka.db.profile.locked) then
-            return
-        end
-        frame:StopMovingOrSizing()
-        frame:SetAlpha(1.0)
-        frame.bzkPlugin:attach() -- FIXME: check for valid drop position
-    end,
 }
 
 setDeepCopyIndex(Plugin)
+
+Plugin.OnEnter = function(frame)
+    if (Bazooka.draggedFrame) then
+        return
+    end
+    frame.bzkPlugin:highlight(true)
+end
+
+Plugin.OnLeave = function(frame)
+    frame.bzkPlugin:highlight(nil)
+end
+
+Plugin.OnClick = function(frame, ...)
+    local self = frame.bzkPlugin
+    if (self.dataobj.OnClick) then
+        self.dataobj.OnClick(frame, ...)
+    end
+end
+
+Plugin.OnUpdate = function(frame, ...)
+    local x, y = Bazooka:getScaledCursorPosition()
+    if (x ~= Bazooka.lastX or y ~= Bazooka.lastY) then
+        Bazooka.lastX, Bazooka.lastY = x, y
+        Bazooka:highlight(Bazooka:getDropPlace(x, y))
+    end
+end
+
+Plugin.OnDragStart = function(frame, ...)
+    if (Bazooka.db.profile.locked) then
+        return
+    end
+    frame.bzkPlugin:highlight(nil)
+    frame.bzkPlugin:detach()
+    updateUIScale()
+    frame:SetAlpha(0.5)
+    Bazooka.draggedFrame, Bazooka.lastX, Bazooka.lastY = frame, nil, nil
+    frame:StartMoving()
+    frame:SetScript("OnUpdate", Plugin.OnUpdate)
+end
+
+Plugin.OnDragStop = function(frame, ...)
+    if (Bazooka.db.profile.locked) then
+        return
+    end
+    frame:SetScript("OnUpdate", nil)
+    frame:StopMovingOrSizing()
+    frame:SetAlpha(1.0)
+    Bazooka.draggedFrame = nil
+    Bazooka:highlight(nil)
+    local bar, area, pos = Bazooka:getDropPlace(Bazooka:getScaledCursorPosition())
+    if (bar) then
+        bar:attachPlugin(frame.bzkPlugin, area, pos)
+    else
+        frame.bzkPlugin:reattach() -- FIXME: ask to disable plugin
+    end
+end
 
 function Plugin:New(name, dataobj, db)
     local plugin = setmetatable({}, Plugin)
@@ -618,6 +726,17 @@ function Plugin:New(name, dataobj, db)
     plugin:updateLabel()
     plugin:applySettings()
     return plugin
+end
+
+function Plugin:getDropPlace(x, y)
+    local left, bottom, width, height = self.frame:GetRect()
+    local ld = distance2(x, y, left, bottom + height / 2)
+    local rd = distance2(x, y, left + width, bottom + height / 2)
+    if (ld < rd) then
+        return self.db.pos, ld
+    else
+        return self.db.pos + 1, rd
+    end
 end
 
 function Plugin:highlight(flag)
@@ -783,10 +902,6 @@ end
 function Plugin:setIcon()
     local dataobj = self.dataobj
     local icon = self.icon
-    if (not dataobj.icon) then
-        icon:SetTexture(MissingIcon)
-        -- FIXME: maybe we need to SetTexCoord() and SetVertexColor() here?
-    end
     icon:SetTexture(dataobj.icon)
     if (dataobj.iconR) then
         icon:SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
@@ -822,7 +937,7 @@ function Plugin:updateLabel()
     -- FIXME: muck around with dataobj.tocname?
 end
 
-function Plugin:attach()
+function Plugin:reattach()
     if (self.bar) then
         self.bar:attachPlugin(self, self.db.area, self.db.pos)
     end
@@ -1048,6 +1163,33 @@ function Bazooka:setupLDB()
     }
     LDB:NewDataObject(self.AppName, ldb)
     self.ldb = ldb
+end
+
+function Bazooka:getDropPlace(x, y)
+    local dstBar, dstArea, dstPos
+    local minDist = math.huge
+    for i, bar in ipairs(self.bars) do
+        local area, pos, dist = bar:getDropPlace(x, y)
+        if (dist < minDist) then
+            local area, pos, dist = bar:getDropPlace(x)
+            if (dist < minDist) then
+                dstBar, dstArea, dstPos = bar, area, pos
+            end
+        end
+    end
+    if (minDist < NearSquared or getDistance2Frame(x, y, dstBar.frame) < NearSquared) then
+        return dstBar, dstArea, dstPos
+    end
+end
+
+function Bazooka:highlight(bar, area, pos)
+    if (self.hlBar and self.hlBar ~= bar) then
+        self.hlBar:highlight(nil)
+    end
+    self.hlBar = bar
+    if (bar) then
+        bar:highlight(area, pos)
+    end
 end
 
 -- BEGIN LoD Options muckery
