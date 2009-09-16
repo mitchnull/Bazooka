@@ -81,7 +81,7 @@ local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
 local UnlockedIcon = [[Interface\Icons\INV_Ammo_Bullet_03]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
-local NearSquared = 20 * 20
+local NearSquared = 32 * 32
 local MinDropPlaceHLDX = 3
 local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
 
@@ -108,7 +108,7 @@ local defaults = {
         locked = false,
         adjustFrames = false,
         simpleTip = true,
-        disableHL = false,
+        enableHL = true,
         numBars = 1,
 
 
@@ -716,22 +716,24 @@ Plugin.OnDragStart = function(frame, ...)
 end
 
 Plugin.OnDragStop = function(frame, ...)
-    if (Bazooka.locked) then
+    if (not Bazooka.draggedFrame) then
         return
     end
+    Bazooka.draggedFrame = nil
     frame:SetScript("OnUpdate", nil)
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
     Bazooka:highlight(nil)
-    if (Bazooka.draggedFrame) then -- we'll signal an aborted drag with clearing draggedFrame
-        Bazooka.draggedFrame = nil
-        local bar, area, pos = Bazooka:getDropPlace(getScaledCursorPosition())
-        if (bar) then
-            bar:attachPlugin(frame.bzkPlugin, area, pos)
-        else
-            frame.bzkPlugin:reattach()
-            Bazooka:openStaticDialog(BzkDialogDisablePlugin, frame.bzkPlugin, frame.bzkPlugin.label)
-        end
+    if (Bazooka.locked) then
+        frame.bzkPlugin:reattach()
+        return
+    end
+    local bar, area, pos = Bazooka:getDropPlace(getScaledCursorPosition())
+    if (bar) then
+        bar:attachPlugin(frame.bzkPlugin, area, pos)
+    else
+        frame.bzkPlugin:reattach()
+        Bazooka:openStaticDialog(BzkDialogDisablePlugin, frame.bzkPlugin, frame.bzkPlugin.label)
     end
 end
 
@@ -756,18 +758,18 @@ function Plugin:getDropPlace(x, y)
 end
 
 function Plugin:highlight(flag)
-    if (not flag or Bazooka.db.profile.disableHL) then
+    if (flag and Bazooka.db.profile.enableHL) then
+        if (not self.hl) then
+            self.hl = self.frame:CreateTexture("BazookaHL_" .. self.name, "OVERLAY")
+            self.hl:SetTexture(HighlightImage)
+            self.hl:SetAllPoints()
+        end
+        self.hl:Show()
+    else
         if (self.hl) then
             self.hl:Hide()
         end
-        return
     end
-    if (not self.hl) then
-        self.hl = self.frame:CreateTexture("BazookaHL_" .. self.name, "OVERLAY")
-        self.hl:SetTexture(HighlightImage)
-        self.hl:SetAllPoints()
-    end
-    self.hl:Show()
 end
 
 function Plugin:globalSettingsChanged()
@@ -1004,6 +1006,8 @@ end
 function Bazooka:OnEnable(first)
     self.enabled = true
     self:init()
+    self:RegisterEvent("PLAYER_REGEN_DISABLED")
+    self:RegisterEvent("PLAYER_REGEN_ENABLED")
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
     LDB.RegisterCallback(self, "LibDataBroker_AttributeChanged", "attributeChanged")
 end
@@ -1020,6 +1024,16 @@ end
 -- END AceAddon stuff
 
 -- BEGIN handlers
+
+function Bazooka:PLAYER_REGEN_DISABLED()
+    self:lock()
+end
+
+function Bazooka:PLAYER_REGEN_ENABLED()
+    if (not self.db.profile.locked) then
+        self:unlock()
+    end
+end
 
 function Bazooka:dataObjectCreated(event, name, dataobj)
     local plugin = self:createPlugin(name, dataobj)
@@ -1150,10 +1164,12 @@ function Bazooka:applySettings()
 end
 
 function Bazooka:cancelDrag()
-    local draggedFrame = self.draggedFrame
-    self.draggedFrame = nil
-    if (draggedFrame and draggedFrame.OnDragStop) then
-        draggedFrame.OnDragStop(draggedFrame)
+    if (self.draggedFrame) then
+        if (self.draggedFrame.bzkPlugin) then
+            self.draggedFrame.bzkPlugin.OnDragStop(self.draggedFrame)
+        elseif (self.draggedFrame.bzkBar) then
+            self.draggedFrame.bzkPBar.OnDragStop(self.draggedFrame)
+        end
     end
 end
 
@@ -1161,6 +1177,7 @@ function Bazooka:lock()
     self.locked = true
     self.ldb.icon = Icon
     self:cancelDrag()
+    self:closeStaticDialog(BzkDialogDisablePlugin)
 end
 
 function Bazooka:unlock()

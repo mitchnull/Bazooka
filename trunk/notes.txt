@@ -1,26 +1,18 @@
 global settings
 - locked
 - Auto adjust blizz frames (toggle) : LibJostle
-- show DataObject label/name if Alt pressed
+- show DataObject label/name if Alt pressed (simple tooltip)
 - create new bar
 
-
-- Bar defaults
-  - ...
-  - apply to all bars (are you sure?)
-- BD defaults
-  - ...
-  - apply to all BDs (are you sure?)
 
 ==================================================================
 
 bar settings:
 - auto hide / alpha (??)
 - font size/color/outline etc
-- label color / text color / suffix color(?)
+- label color / text color / suffix color
 - height
 - width (only used if not attached to top/bottom?)
-- split center area
 
 - background: color / texture (register FuBar bg to LSM)
 - left/center/right spacing (10/20/10, 0-40)
@@ -36,9 +28,9 @@ bar settings:
 
 BD settings:
 
-- enabled (or make a "None" setting in the bar dropdown)
+- enabled
 - bar
-- position: left/center-left/center-right/right/free
+- position: left/center-left/center/center-right/right
 - disable tooltip
 - disable tooltip in combat
 - disable mouse in combat
