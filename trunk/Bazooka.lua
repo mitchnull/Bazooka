@@ -83,6 +83,7 @@ local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
 local NearSquared = 20 * 20
 local MinDropPlaceHLDX = 3
+local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
 
 ---------------------------------
 
@@ -95,8 +96,7 @@ Bazooka.version = VERSION
 Bazooka.AppName = AppName
 Bazooka.OptionsAppName = OptionsAppName
 
-Bazooka.draggedPlugin = nil
-Bazooka.draggedBar = nil
+Bazooka.draggedFrame = nil
 Bazooka.bars = {}
 Bazooka.plugins = {}
 Bazooka.disableUpdates = nil
@@ -708,13 +708,16 @@ Plugin.OnDragStop = function(frame, ...)
     frame:SetScript("OnUpdate", nil)
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
-    Bazooka.draggedFrame = nil
     Bazooka:highlight(nil)
-    local bar, area, pos = Bazooka:getDropPlace(Bazooka:getScaledCursorPosition())
-    if (bar) then
-        bar:attachPlugin(frame.bzkPlugin, area, pos)
-    else
-        frame.bzkPlugin:reattach() -- FIXME: ask to disable plugin
+    if (Bazooka.draggedFrame) then -- we'll signal an aborted drag with clearing draggedFrame
+        Bazooka.draggedFrame = nil
+        local bar, area, pos = Bazooka:getDropPlace(Bazooka:getScaledCursorPosition())
+        if (bar) then
+            bar:attachPlugin(frame.bzkPlugin, area, pos)
+        else
+            frame.bzkPlugin:reattach()
+            Bazooka:openStaticDialog(BzkDialogDisablePlugin, frame.bzkPlugin)
+        end
     end
 end
 
@@ -827,25 +830,17 @@ function Plugin:enable()
     if (not self.frame) then
         self.frame = CreateFrame("Button", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
-        -- FIXME
         self.frame:SetScript("OnEnter", Plugin.OnEnter)
         self.frame:SetScript("OnLeave", Plugin.OnLeave)
---        self.frame:SetScript("OnMouseUp", Plugin.OnMouseUp)
---        self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
         self.frame:SetScript("OnClick", Plugin.OnClick)
         self.frame:RegisterForDrag("LeftButton")
         self.frame:RegisterForClicks("AnyUp")
-
+        self.frame:SetMovable(true)
         self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
         self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
         self.frame:EnableMouse(true)
     end
     self.frame:Show()
-    if (Bazooka.db.profile.locked) then
-        self:lock()
-    else
-        self:unlock()
-    end
 end
 
 function Plugin:disable()
@@ -882,23 +877,6 @@ function Plugin:applySettings()
         self.text:Hide()
     end
     self:updateLayout()
-end
-
-function Plugin:lock()
-    if (self.frame) then
-        if (self.frame:IsDragging()) then
-            self.frame:StopMovingOrSizing()
-        end
-        self.frame:RegisterForDrag(nil)
-        self.frame:SetMovable(false)
-    end
-end
-
-function Plugin:unlock()
-    if (self.frame) then
-        self.frame:RegisterForDrag("LeftButton")
-        self.frame:SetMovable(true)
-    end
 end
 
 function Plugin:setIcon()
@@ -1159,20 +1137,23 @@ function Bazooka:applySettings()
     end
 end
 
+function Bazooka:cancelDrag()
+    local draggedFrame = self.draggedFrame
+    self.draggedFrame = nil
+    if (draggedFrame and draggedFrame.OnDragStop) then
+        draggedFrame.OnDragStop(draggedFrame)
+    end
+end
+
 function Bazooka:lock()
     self.db.profile.locked = true
     self.ldb.icon = Icon
-    for name, plugin in pairs(self.plugins) do
-        plugin:lock()
-    end
+    self:cancelDrag()
 end
 
 function Bazooka:unlock()
     self.db.profile.locked = false
     self.ldb.icon = UnlockedIcon
-    for name, plugin in pairs(self.plugins) do
-        plugin:unlock()
-    end
 end
 
 function Bazooka:toggleLocked(flag)
@@ -1271,6 +1252,34 @@ function Bazooka:openConfigDialog(opts)
     end
     InterfaceOptionsFrame_OpenToCategory(self.dummyOpts)
 end
+
+-- static dialog setup
+
+function Bazooka:openStaticDialog(dialog, arg)
+    local dialogFrame = StaticPopupDialogs_Show(dialog)
+    if (dialogFrame) then
+        dialogFrame.data = arg
+    end
+end
+
+function Bazooka:closeStaticDialog(dialog)
+    StaticPopup_Hide(dialog)
+end
+
+StaticPopupDialogs[BzkDialogDisablePlugin] = {
+    text = L["Disable %s?"],
+    button1 = _G.YES,
+    button2 = _G.NO,
+    OnAccept = function(frame)
+        if (not frame.data) then
+            return
+        end
+        Bazooka:disablePlugin(frame.data)
+    end,
+    timeout = 0,
+    whileDead = 1,
+    hideOnEscape = 1,
+}
 
 -- END LoD Options muckery
 
