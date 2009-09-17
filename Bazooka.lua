@@ -1163,20 +1163,9 @@ function Bazooka:applySettings()
     end
 end
 
-function Bazooka:cancelDrag()
-    if (self.draggedFrame) then
-        if (self.draggedFrame.bzkPlugin) then
-            self.draggedFrame.bzkPlugin.OnDragStop(self.draggedFrame)
-        elseif (self.draggedFrame.bzkBar) then
-            self.draggedFrame.bzkPBar.OnDragStop(self.draggedFrame)
-        end
-    end
-end
-
 function Bazooka:lock()
     self.locked = true
     self.ldb.icon = Icon
-    self:cancelDrag()
     self:closeStaticDialog(BzkDialogDisablePlugin)
 end
 
