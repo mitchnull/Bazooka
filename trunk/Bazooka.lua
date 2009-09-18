@@ -21,8 +21,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
-local function printf(...)
-    print(string.format(...))
+local function printf(fmt, ...)
+    print(fmt:format(...))
 end
 
 local function makeColor(r, g, b, a)
@@ -37,6 +37,8 @@ end
 -- cached stuff
 
 local GetCursorPosition = GetCursorPosition
+local GetScreenWidth = GetScreenWidth
+local GetScreenHeight = GetScreenHeight
 local UIParent = UIParent
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
@@ -50,6 +52,7 @@ local type = type
 local unpack = unpack
 local wipe = wipe
 local math = math
+local GameTooltip = GameTooltip
 
 -- hard-coded config stuff
 
@@ -84,6 +87,9 @@ local EmptyPluginWidth = 1
 local NearSquared = 32 * 32
 local MinDropPlaceHLDX = 3
 local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
+local FadeOutDelay = 2.0
+local FadeOutDuration = 1.0
+local FadeInDuration = 0.5
 
 ---------------------------------
 
@@ -101,6 +107,20 @@ Bazooka.bars = {}
 Bazooka.plugins = {}
 Bazooka.numBars = 0
 
+Bazooka.AreaNames = {
+    left = L["left"],
+    cleft = L["cleft"],
+    center = L["center"],
+    cright = L["cright"],
+    right = L["right"],
+}
+
+Bazooka.AttachNames = {
+    top = L["top"],
+    bottom = L["bottom"],
+    none = L["none"],
+}
+
 -- Default DB stuff
 
 local defaults = {
@@ -111,13 +131,17 @@ local defaults = {
         enableHL = true,
         numBars = 1,
 
-
         bars = {
             ["**"] = {
+                autoFade = false,
+                combatFade = false,
+                fadeAlpha = 0.2,
+
                 point = "CENTER",
                 rePoint = "CENTER",
                 x = 0,
                 y = 0,
+
                 sideSpacing = Defaults.sideSpacing,
                 centerSpacing = Defaults.centerSpacing,
                 iconTextSpacing = Defaults.iconTextSpacing,
@@ -259,6 +283,25 @@ local function getDistance2Frame(x, y, frame)
     return dx * dx + dy * dy
 end
 
+function setupTooltip(owner, ttFrame)
+    ttFrame = ttFrame or GameTooltip
+    if (not owner) then
+        return ttFrame
+    end
+    if (ttFrame:IsObjectType("GameTooltip")) then
+        ttFrame:SetOwner(owner, "ANCHOR_NONE")
+        ttFrame:ClearLines()
+    end
+    ttFrame:ClearAllPoints()
+    local cx, cy = owner:GetCenter()
+    if (cy < GetScreenHeight() / 2) then
+        ttFrame:SetPoint("BOTTOM", owner, "TOP")
+    else
+        ttFrame:SetPoint("TOP", owner, "BOTTOM")
+    end
+    return ttFrame
+end
+
 -- BEGIN Bar stuff
 
 local Bar = {
@@ -281,11 +324,113 @@ local Bar = {
 
 setDeepCopyIndex(Bar)
 
+Bar.OnEnter = function(frame)
+    local self = frame.bzkBar
+    if (not self.db.combatFade or InCombatLockdown()) then
+        self:fadeIn()
+    end
+end
+
+Bar.OnLeave = function(frame)
+    local self = frame.bzkBar
+    if (self.db.autoFade) then
+        self:fadeOut()
+    end
+end
+
+Bar.OnDragStart = function(frame)
+    if (Bazooka.locked) then
+        return
+    end
+    local self = frame.bzkBar
+    updateUIScale()
+    frame:SetAlpha(0.7)
+    Bazooka.draggedFrame = frame
+    frame:StartMoving()
+end
+
+Bar.OnDragStop = function(frame)
+    if (not Bazooka.draggedFrame) then
+        return
+    end
+    local self = frame.bzkBar
+    Bazooka.draggedFrame = nil
+    frame:StopMovingOrSizing()
+    frame:SetAlpha(1.0)
+    if (not Bazooka.locked) then
+        if (self.db.attach == 'none') then
+            self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
+        else
+            local cx, cy = frame:GetCenter()
+            if (cy < GetScreenHeight() / 2) then
+                self.db.attach = 'bottom'
+            else
+                self.db.attach = 'top'
+            end
+        end
+    end
+    self:applySettings()
+end
+
 function Bar:New(id, db)
     local bar = setmetatable({}, Bar)
     bar:enable(id, db)
     bar:applySettings()
     return bar
+end
+
+function Bar:createFadeAnim()
+        self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
+        self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
+end
+
+function Bar:fadeIn()
+    if (self.fadeAnim) then
+        self.fadeAnim:Stop()
+    end
+    local alpha = self.frame:GetAlpha()
+    if (alpha < self.db.fadeAlpha) then -- better be safe
+        alpha = self.db.fadeAlpha
+        self.frame:SetAlpha(alpha)
+    end
+    local change = 1 - alpha
+    if (change < 0.05) then
+        self.frame:SetAlpha(1.0)
+        return
+    end
+    local fullChange = 1.0 - self.db.fadeAlpha
+    if (not self.fadeAnim) then
+        self:createFadeAnim()
+    end
+    self.fadeAnim:SetStartDelay(0)
+    self.fadeAnim:SetDuration(FadeInDuration * change / fullChange)
+    self.fadeAnim:SetChange(change)
+    self.fadeAnim:Play()
+end
+
+function Bar:fadeOut()
+    if (self.fadeAnim) then
+        self.fadeAnim:Stop()
+    end
+    local alpha = self.frame:GetAlpha()
+    if (alpha < self.db.fadeAlpha) then -- better be safe
+        alpha = self.db.fadeAlpha
+        self.frame:SetAlpha(alpha)
+        return
+    end
+    local change = alpha - self.db.fadeAlpha
+    if (change < 0.05) then
+        self.frame:SetAlpha(self.db.fadeAlpha)
+        return
+    end
+    local fullChange = 1.0 - self.db.fadeAlpha
+    if (not self.fadeAnim) then
+        self:createFadeAnim()
+    end
+    self.fadeAnim:SetStartDelay(FadeOutDelay)
+    self.fadeAnim:SetDuration(FadeOutDuration * change / fullChange)
+    self.fadeAnim:SetChange(-change)
+    self.fadeAnim:Play()
 end
 
 function Bar:enable(id, db)
@@ -391,6 +536,10 @@ function Bar:highlight(area, pos)
     if (not area) then
         if (self.hl) then
             self.hl:Hide()
+            if (GameTooltip:IsOwned(self.hl)) then -- FIXME: does it work?
+                print("### hiding GameTooltip")
+                GameTooltip:Hide()
+            end
         end
         return
     end
@@ -413,6 +562,10 @@ function Bar:highlight(area, pos)
     self.hl:SetPoint("LEFT", self.frame, "LEFT", center - dx, 0)
     self.hl:SetPoint("RIGHT", self.frame, "LEFT", center + dx, 0)
     self.hl:Show()
+    local tt = setupTooltip(self.hl)
+    tt:SetText(("%s%d[%s]"):format(self.id, L[area]))
+    tt:Show()
+    tt:FadeOut()
 end
 
 function Bar:updateCenterWidth()
@@ -676,15 +829,45 @@ local Plugin = {
 
 setDeepCopyIndex(Plugin)
 
-Plugin.OnEnter = function(frame)
+Plugin.OnEnter = function(frame, ...)
+    local self = frame.bzkPlugin
+    self.bar.OnEnter(frame)
     if (Bazooka.draggedFrame) then
         return
     end
-    frame.bzkPlugin:highlight(true)
+    if (Bazooka.db.profile.enableHL) then
+        self:highlight(true)
+    end
+    -- tooltip handling
+    if (self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown())) then
+        return
+    end
+    local dataobj = self.dataobj
+    if (dataobj.tooltip) then
+        setupTooltip(dataobj.tooltip)
+        dataobj.tooltip:Show()
+    elseif (dataobj.OnEnter) then
+        dataobj.OnEnter(frame, ...)
+    elseif (dataobj.OnTooltipShow) then
+        local tt = setupTooltip(frame)
+        dataobj.OnTooltipShow(tt)
+        tt:Show()
+    end
 end
 
-Plugin.OnLeave = function(frame)
-    frame.bzkPlugin:highlight(nil)
+Plugin.OnLeave = function(frame, ...)
+    local self = frame.bzkPlugin
+    self.bar.OnLeave(frame)
+    self:highlight(nil)
+    local dataobj = self.dataobj
+    if (dataobj.tooltip) then
+        dataobj.tooltip:Hide()
+    elseif (dataobj.OnLeave) then
+        dataobj.OnLeave(frame, ...)
+    elseif (dataobj.OnTooltipShow) then
+        local tt = setupTooltip()
+        tt:Hide()
+    end
 end
 
 Plugin.OnClick = function(frame, ...)
@@ -694,7 +877,7 @@ Plugin.OnClick = function(frame, ...)
     end
 end
 
-Plugin.OnUpdate = function(frame, ...)
+Plugin.OnUpdate = function(frame)
     local x, y = getScaledCursorPosition()
     if (x ~= Bazooka.lastX or y ~= Bazooka.lastY) then
         Bazooka.lastX, Bazooka.lastY = x, y
@@ -702,12 +885,13 @@ Plugin.OnUpdate = function(frame, ...)
     end
 end
 
-Plugin.OnDragStart = function(frame, ...)
+Plugin.OnDragStart = function(frame)
     if (Bazooka.locked) then
         return
     end
-    frame.bzkPlugin:highlight(nil)
-    frame.bzkPlugin:detach()
+    local self = frame.bzkPlugin
+    self:highlight(nil)
+    self:detach()
     updateUIScale()
     frame:SetAlpha(0.7)
     Bazooka.draggedFrame, Bazooka.lastX, Bazooka.lastY = frame, nil, nil
@@ -715,25 +899,26 @@ Plugin.OnDragStart = function(frame, ...)
     frame:SetScript("OnUpdate", Plugin.OnUpdate)
 end
 
-Plugin.OnDragStop = function(frame, ...)
+Plugin.OnDragStop = function(frame)
     if (not Bazooka.draggedFrame) then
         return
     end
+    local self = frame.bzkPlugin
     Bazooka.draggedFrame = nil
     frame:SetScript("OnUpdate", nil)
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
     Bazooka:highlight(nil)
     if (Bazooka.locked) then
-        frame.bzkPlugin:reattach()
+        self:reattach()
         return
     end
     local bar, area, pos = Bazooka:getDropPlace(getScaledCursorPosition())
     if (bar) then
-        bar:attachPlugin(frame.bzkPlugin, area, pos)
+        bar:attachPlugin(self, area, pos)
     else
-        frame.bzkPlugin:reattach()
-        Bazooka:openStaticDialog(BzkDialogDisablePlugin, frame.bzkPlugin, frame.bzkPlugin.label)
+        self:reattach()
+        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.label)
     end
 end
 
@@ -758,7 +943,7 @@ function Plugin:getDropPlace(x, y)
 end
 
 function Plugin:highlight(flag)
-    if (flag and Bazooka.db.profile.enableHL) then
+    if (flag) then
         if (not self.hl) then
             self.hl = self.frame:CreateTexture("BazookaHL_" .. self.name, "OVERLAY")
             self.hl:SetTexture(HighlightImage)
