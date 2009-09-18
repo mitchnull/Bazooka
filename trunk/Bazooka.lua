@@ -279,7 +279,7 @@ local function getDistance2Frame(x, y, frame)
     return dx * dx + dy * dy
 end
 
-function setupTooltip(owner, ttFrame)
+local function setupTooltip(owner, ttFrame, dx, dy)
     ttFrame = ttFrame or GameTooltip
     if (not owner) then
         return ttFrame
@@ -293,9 +293,9 @@ function setupTooltip(owner, ttFrame)
     ttFrame:ClearAllPoints()
     local cx, cy = owner:GetCenter()
     if (cy < GetScreenHeight() / 2) then
-        ttFrame:SetPoint("BOTTOM", owner, "TOP")
+        ttFrame:SetPoint("BOTTOM", owner, "TOP", dx, dy)
     else
-        ttFrame:SetPoint("TOP", owner, "BOTTOM")
+        ttFrame:SetPoint("TOP", owner, "BOTTOM", dx, dy)
     end
     return ttFrame
 end
@@ -602,7 +602,7 @@ function Bar:highlight(area, pos)
     if (not area) then
         if (self.hl) then
             self.hl:Hide()
-            Bazooka.placementTip = nil
+            self.lastHLArea, self.lastHLPos = nil
             if (GameTooltip:IsOwned(self.frame)) then
                 GameTooltip:Hide()
             end
@@ -617,7 +617,8 @@ function Bar:highlight(area, pos)
         self.hl = self.hlFrame:CreateTexture("BazookaBarHL_" .. self.id, "OVERLAY")
         self.hl:SetTexture(HighlightImage)
     end
-    local center = self:getHighlightCenter(area, pos) - self.frame:GetLeft()
+    local hlcx = self:getHighlightCenter(area, pos)
+    local center = hlcx - self.frame:GetLeft()
     local dx = math.floor(self:getSpacing(area) / 2 + 0.5)
     if (dx < MinDropPlaceHLDX) then
         dx = MinDropPlaceHLDX
@@ -628,11 +629,11 @@ function Bar:highlight(area, pos)
     self.hl:SetPoint("LEFT", self.frame, "LEFT", center - dx, 0)
     self.hl:SetPoint("RIGHT", self.frame, "LEFT", center + dx, 0)
     self.hl:Show()
-    local placementTip = ("%s#%d - %s"):format(L["Bar"], self.id, L[area])
-    if (placementTip ~= Bazooka.placementTip) then
-        Bazooka.placementTip = placementTip
-        local tt = setupTooltip(self.frame)
-        tt:SetText(placementTip)
+    if (area ~= self.lastHLArea or pos ~= self.lastHLPos) then
+        self.lastHLArea, self.lastHLPos = area, pos
+        local dx = hlcx - self.frame:GetCenter()
+        local tt = setupTooltip(self.frame, nil, dx, 0)
+        tt:SetText(("%s#%d - %s"):format(L["Bar"], self.id, L[area]))
         tt:Show()
         tt:FadeOut()
     end
