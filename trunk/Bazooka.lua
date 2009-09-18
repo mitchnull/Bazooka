@@ -39,6 +39,7 @@ end
 
 local IsAltKeyDown = IsAltKeyDown
 local GetCursorPosition = GetCursorPosition
+local GetAddOnInfo = GetAddOnInfo
 local GetScreenWidth = GetScreenWidth
 local GetScreenHeight = GetScreenHeight
 local UIParent = UIParent
@@ -193,7 +194,8 @@ local defaults = {
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
                     showIcon = true,
-                    showLabel = false,
+                    showLabel = true,
+                    showTitle = true,
                     showText = true,
                 },
             },
@@ -208,6 +210,7 @@ local defaults = {
                     disableMouseInCombat = false,
                     showIcon = true,
                     showLabel = false,
+                    showTitle = true,
                     showText = false,
                 },
             },
@@ -222,6 +225,7 @@ local defaults = {
                     disableMouseInCombat = false,
                     showIcon = true,
                     showLabel = false,
+                    showTitle = false,
                     showText = true,
                 },
             },
@@ -942,7 +946,7 @@ Plugin.OnEnter = function(frame, ...)
     end
     if (Bazooka.db.profile.simpleTip and IsAltKeyDown()) then
         local tt = setupTooltip(frame)
-        tt:SetText(self.id)
+        tt:SetText(self.title)
         tt:Show()
         return
     end
@@ -1022,7 +1026,7 @@ Plugin.OnDragStop = function(frame)
         bar:attachPlugin(self, area, pos)
     else
         self:reattach()
-        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.id)
+        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.title)
     end
 end
 
@@ -1030,9 +1034,14 @@ function Plugin:New(name, dataobj, db)
     local plugin = setmetatable({}, Plugin)
     plugin.name = name
     plugin.dataobj = dataobj
-    plugin.id = dataobj.tocname and ("%s:%s"):format(dataobj.tocname, name) or name
+
+    if (dataobj.tocname) then
+        local addonName, addonTitle = GetAddOnInfo(obj.tocname or name)
+        plugin.title = addonTitle or addonName or name
+    else
+        plugin.title = name
+    end
     plugin.db = db
-    plugin.label = dataobj.label or name
     plugin:applySettings()
     return plugin
 end
@@ -1219,7 +1228,7 @@ end
 
 function Plugin:setText()
     local dataobj = self.dataobj
-    if (self.db.showLabel) then
+    if (self.db.showLabel and self.label) then
         if (self.db.showText and dataobj.text) then
             self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
         elseif (self.db.showText and dataobj.value and dataobj.suffix) then
@@ -1241,8 +1250,10 @@ function Plugin:setText()
 end
 
 function Plugin:updateLabel()
-    -- FIXME: muck around with dataobj.tocname?
-    self.label = self.dataobj.label or self.name
+    self.label = self.dataobj.label
+    if (not self.label and self.db.showTitle) then
+        self.label = self.title
+    end
     self:setText()
 end
 
