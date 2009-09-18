@@ -14,6 +14,7 @@ local VERSION = AppName .. "-r" .. ("$Revision$"):match("%d+")
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
+local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
 local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
 -- internal vars
@@ -31,7 +32,7 @@ local function makeColor(r, g, b, a)
 end
 
 local function colorToHex(color)
-    return ("%02x%02x%02x%02x"):format((color.a and color.a * 255 or 255), color.r*255, color.g*255, color.b*255)	
+    return ("%02x%02x%02x%02x"):format((color.a and color.a * 255 or 255), color.r*255, color.g*255, color.b*255)   
 end
 
 -- cached stuff
@@ -125,7 +126,7 @@ Bazooka.AttachNames = {
 local defaults = {
     profile = {
         locked = false,
-        adjustFrames = false,
+        adjustFrames = true, -- FIXME
         simpleTip = true,
         enableHL = true,
         numBars = 1,
@@ -517,6 +518,9 @@ end
 function Bar:disable()
     if (self.frame) then
         self.frame:Hide()
+        if (Jostle) then
+            Jostle:Unregister(self.frame)
+        end
     end
     for name, plugin in pairs(self.allPlugins) do
         plugin:disable()
@@ -788,24 +792,43 @@ function Bar:setRightAttachPoint(plugin, rp)
 end
 
 function Bar:applySettings()
+    local needJostleRefresh
     if (self.db.attach == "top") then
         self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
         self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, 0)
-        self.frame:SetHeight(self.db.frameHeight)
+        if (self.frame:GetHeight() ~= self.db.frameHeight) then
+            needJostleRefresh = true
+            self.frame:SetHeight(self.db.frameHeight)
+        end
+        if (Jostle) then
+            Jostle:RegisterTop(self.frame)
+        end
     elseif (self.db.attach == "bottom") then
         self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
         self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
-        self.frame:SetHeight(self.db.frameHeight)
+        if (self.frame:GetHeight() ~= self.db.frameHeight) then
+            needJostleRefresh = true
+            self.frame:SetHeight(self.db.frameHeight)
+        end
+        if (Jostle) then
+            Jostle:RegisterBottom(self.frame)
+        end
     else -- detached
         self.frame:SetPoint(self.db.point, UIParent, self.db.relPoint, self.db.x, self.db.y)
-        self.frame:SetHeight(self.db.frameHeight)
         self.frame:SetWidth(self.db.frameWidth)
+        self.frame:SetHeight(self.db.frameHeight)
+        if (Jostle) then
+            Jostle:Unregister(self.frame)
+        end
     end
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
     self:applyBGSettings()
     if (self.db.autoFade and not self.isMouseInside) then
         self.frame:SetAlpha(self.db.fadeAlpha)
+    end
+    if (Jostle and needJostleRefresh) then
+        Jostle:Refresh()
     end
 end
 
@@ -1449,6 +1472,15 @@ function Bazooka:applySettings()
     end
     for name, plugin in pairs(self.plugins) do
         plugin:applySettings()
+    end
+    if (Jostle) then
+        if (self.db.profile.adjustFrames) then
+            Jostle:EnableTopAdjusting()
+            Jostle:EnableBottomAdjusting()
+        else
+            Jostle:DisableTopAdjusting()
+            Jostle:DisableBottomAdjusting()
+        end
     end
 end
 

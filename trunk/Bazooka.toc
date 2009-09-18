@@ -6,9 +6,9 @@
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: true
 ## SavedVariables: BazookaDB
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 LibJostle-3.0
 #@do-not-package@
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 AceGUI-3.0-SharedMediaWidgets
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 AceGUI-3.0-SharedMediaWidgets LibJostle-3.0
 #@end-do-not-package@ 
 ## X-License: Public Domain
 ## X-RelSite-WoWI:
