@@ -36,6 +36,7 @@ end
 
 -- cached stuff
 
+local IsAltKeyDown = IsAltKeyDown
 local GetCursorPosition = GetCursorPosition
 local GetScreenWidth = GetScreenWidth
 local GetScreenHeight = GetScreenHeight
@@ -87,7 +88,7 @@ local EmptyPluginWidth = 1
 local NearSquared = 32 * 32
 local MinDropPlaceHLDX = 3
 local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
-local FadeOutDelay = 2.0
+local FadeOutDelay = 1.0
 local FadeOutDuration = 1.0
 local FadeInDuration = 0.5
 
@@ -174,9 +175,11 @@ local defaults = {
             },
             [1] = {
                 attach = 'top',
+                autoFade = true, -- FIXME
             },
             [2] = {
                 attach = 'bottom',
+                combatFade = true, -- FIXME
             },
         },
         plugins = {
@@ -325,16 +328,16 @@ local Bar = {
 setDeepCopyIndex(Bar)
 
 Bar.OnEnter = function(frame)
-    local self = frame.bzkBar
-    self.mouseInside = true
-    if (not self.db.combatFade or InCombatLockdown()) then
+    local self = frame.bzkBar or frame.bzkPlugin.bar
+    self.isMouseInside = true
+    if (self.db.autoFade and not (self.db.combatFade and InCombatLockdown())) then
         self:fadeIn()
     end
 end
 
 Bar.OnLeave = function(frame)
-    local self = frame.bzkBar
-    self.mouseInside = false
+    local self = frame.bzkBar or frame.bzkPlugin.bar
+    self.isMouseInside = false
     if (self.db.autoFade) then
         self:fadeOut()
     end
@@ -382,8 +385,8 @@ function Bar:New(id, db)
 end
 
 function Bar:createFadeAnim()
-        self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
-        self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
+    self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
+    self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
 end
 
 function Bar:fadeIn()
@@ -410,7 +413,7 @@ function Bar:fadeIn()
     self.fadeAnim:Play()
 end
 
-function Bar:fadeOut()
+function Bar:fadeOut(delay)
     if (self.fadeAnim) then
         self.fadeAnim:Stop()
     end
@@ -429,7 +432,7 @@ function Bar:fadeOut()
     if (not self.fadeAnim) then
         self:createFadeAnim()
     end
-    self.fadeAnim:SetStartDelay(FadeOutDelay)
+    self.fadeAnim:SetStartDelay(delay or FadeOutDelay)
     self.fadeAnim:SetDuration(FadeOutDuration * change / fullChange)
     self.fadeAnim:SetChange(-change)
     self.fadeAnim:Play()
@@ -442,7 +445,13 @@ function Bar:enable(id, db)
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
         self.frame.bzkBar = self
         self.frame:EnableMouse(true)
-        self.frame:SetClampedToSreen(true)
+        self.frame:SetClampedToScreen(true)
+        self.frame:RegisterForDrag("LeftButton")
+        self.frame:SetScript("OnEnter", Bar.OnEnter)
+        self.frame:SetScript("OnLeave", Bar.OnLeave)
+        self.frame:SetScript("OnDragStart", Bar.OnDragStart)
+        self.frame:SetScript("OnDragStop", Bar.OnDragStop)
+        self.frame:SetMovable(true)
         self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -540,8 +549,8 @@ function Bar:highlight(area, pos)
     if (not area) then
         if (self.hl) then
             self.hl:Hide()
-            if (GameTooltip:IsOwned(self.hl)) then -- FIXME: does it work?
-                print("### hiding GameTooltip")
+            Bazooka.placementTip = nil
+            if (GameTooltip:IsOwned(self.frame)) then
                 GameTooltip:Hide()
             end
         end
@@ -566,10 +575,14 @@ function Bar:highlight(area, pos)
     self.hl:SetPoint("LEFT", self.frame, "LEFT", center - dx, 0)
     self.hl:SetPoint("RIGHT", self.frame, "LEFT", center + dx, 0)
     self.hl:Show()
-    local tt = setupTooltip(self.hl)
-    tt:SetText(("%s%d[%s]"):format(self.id, L[area]))
-    tt:Show()
-    tt:FadeOut()
+    local placementTip = ("%s%d[%s]"):format(L["Bar"], self.id, L[area])
+    if (placementTip ~= Bazooka.placementTip) then
+        Bazooka.placementTip = placementTip
+        local tt = setupTooltip(self.frame)
+        tt:SetText(placementTip)
+        tt:Show()
+        tt:FadeOut()
+    end
 end
 
 function Bar:updateCenterWidth()
@@ -737,6 +750,9 @@ function Bar:applySettings()
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
     self:applyBGSettings()
+    if (self.db.autoFade and not self.isMouseInside) then
+        self.frame:SetAlpha(self.db.fadeAlpha)
+    end
 end
 
 function Bar:applyBGSettings()
@@ -845,6 +861,16 @@ Plugin.OnEnter = function(frame, ...)
     end
     -- tooltip handling
     if (self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown())) then
+        return
+    end
+    if (Bazooka.db.profile.simpleTip and IsAltKeyDown()) then
+        local tt = setupTooltip(frame)
+        if (self.dataobj.tocname) then
+            tt:SetText(("%s:%s"):format(self.dataobj.tocname, self.name))
+        else
+            tt:SetText(self.name)
+        end
+        tt:Show()
         return
     end
     local dataobj = self.dataobj
@@ -1035,12 +1061,12 @@ function Plugin:enable()
     if (not self.frame) then
         self.frame = CreateFrame("Button", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
-        self.frame:SetScript("OnEnter", Plugin.OnEnter)
-        self.frame:SetScript("OnLeave", Plugin.OnLeave)
-        self.frame:SetScript("OnClick", Plugin.OnClick)
         self.frame:RegisterForDrag("LeftButton")
         self.frame:RegisterForClicks("AnyUp")
         self.frame:SetMovable(true)
+        self.frame:SetScript("OnEnter", Plugin.OnEnter)
+        self.frame:SetScript("OnLeave", Plugin.OnLeave)
+        self.frame:SetScript("OnClick", Plugin.OnClick)
         self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
         self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
         self.frame:EnableMouse(true)
@@ -1220,7 +1246,7 @@ function Bazooka:PLAYER_REGEN_DISABLED()
     for i, bar in ipairs(self.bars) do
         bar.frame:EnableMouse(false)
         if (bar.db.combatFade) then
-            bar:fadeOut()
+            bar:fadeOut(0)
         end
     end
     for name, plugin in pairs(self.plugins) do
@@ -1236,7 +1262,7 @@ function Bazooka:PLAYER_REGEN_ENABLED()
     end
     for i, bar in ipairs(self.bars) do
         bar.frame:EnableMouse(true)
-        if (bar.db.combatFade and not bar.db.autoFade) then
+        if (bar.db.combatFade and (not bar.db.autoFade or bar.isMouseInside)) then
             bar:fadeIn()
         end
     end
