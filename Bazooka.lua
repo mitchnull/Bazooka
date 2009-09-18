@@ -79,6 +79,9 @@ local Defaults =  {
     sideSpacing = 8,
     centerSpacing = 16,
     iconTextSpacing = 2,
+    fadeOutDelay = 0.5,
+    fadeOutDuration = 0.5,
+    fadeInDuration = 0.25,
 }
 
 local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
@@ -88,11 +91,6 @@ local EmptyPluginWidth = 1
 local NearSquared = 32 * 32
 local MinDropPlaceHLDX = 3
 local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
-local FadeOutDelay = 1.0
-local FadeOutDuration = 1.0
-local FadeInDuration = 0.5
-
----------------------------------
 
 Bazooka = LibStub("AceAddon-3.0"):NewAddon(AppName, "AceEvent-3.0")
 local Bazooka = Bazooka
@@ -131,12 +129,15 @@ local defaults = {
         simpleTip = true,
         enableHL = true,
         numBars = 1,
+        fadeOutDelay = Defaults.fadeOutDelay,
+        fadeOutDuration = Defaults.fadeOutDuration,
+        fadeInDuration = Defaults.fadeInDuration,
 
         bars = {
             ["**"] = {
                 autoFade = false,
                 combatFade = false,
-                fadeAlpha = 0.2,
+                fadeAlpha = 0.4,
 
                 point = "CENTER",
                 rePoint = "CENTER",
@@ -305,6 +306,63 @@ function setupTooltip(owner, ttFrame)
     return ttFrame
 end
 
+---------------------------------
+
+-- BEGIN AlphaAnim
+-- This is a (hopefully) temporary hack to replace the blizz Alpha animation
+-- as it's broken presently.  It relies on OnUpdate being free to use!
+
+local GetTime = GetTime
+local AlphaAnim = {}
+setDeepCopyIndex(AlphaAnim)
+
+AlphaAnim.OnUpdate = function(frame, elapsed)
+    local self = frame.bzkAlphaAnim
+    local now = GetTime()
+    if (now < self.startStamp) then
+        return
+    end
+    local playTime = now - self.startStamp
+    if (playTime >= self.duration) then
+        frame:SetAlpha(self.startAlpha + self.change)
+        frame:SetScript("OnUpdate", nil)
+        return
+    end
+    frame:SetAlpha(self.startAlpha + self.change * playTime / self.duration)
+end
+
+function AlphaAnim:New(frame)
+    local self = setmetatable({}, AlphaAnim)
+    self.frame = frame
+    frame.bzkAlphaAnim = self
+    return self
+end
+
+function AlphaAnim:Play()
+    self.startStamp = GetTime() + self.startDelay
+    self.startAlpha = self.frame:GetAlpha()
+    self.frame:SetScript("OnUpdate", AlphaAnim.OnUpdate)
+end
+
+function AlphaAnim:Stop()
+    self.frame:SetScript("OnUpdate", nil)
+end
+
+function AlphaAnim:SetDuration(duration)
+    self.duration = duration
+end
+
+function AlphaAnim:SetStartDelay(delay)
+    self.startDelay = delay
+end
+
+function AlphaAnim:SetChange(change)
+    self.change = change
+end
+
+-- END AlphaAnim
+---------------------------------
+
 -- BEGIN Bar stuff
 
 local Bar = {
@@ -385,8 +443,9 @@ function Bar:New(id, db)
 end
 
 function Bar:createFadeAnim()
-    self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
-    self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
+    self.fadeAnim = AlphaAnim:New(self.frame)
+--    self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
+--   self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
 end
 
 function Bar:fadeIn()
@@ -408,7 +467,7 @@ function Bar:fadeIn()
         self:createFadeAnim()
     end
     self.fadeAnim:SetStartDelay(0)
-    self.fadeAnim:SetDuration(FadeInDuration * change / fullChange)
+    self.fadeAnim:SetDuration(Bazooka.db.profile.fadeInDuration * change / fullChange)
     self.fadeAnim:SetChange(change)
     self.fadeAnim:Play()
 end
@@ -432,8 +491,8 @@ function Bar:fadeOut(delay)
     if (not self.fadeAnim) then
         self:createFadeAnim()
     end
-    self.fadeAnim:SetStartDelay(delay or FadeOutDelay)
-    self.fadeAnim:SetDuration(FadeOutDuration * change / fullChange)
+    self.fadeAnim:SetStartDelay(delay or Bazooka.db.profile.fadeOutDelay)
+    self.fadeAnim:SetDuration(Bazooka.db.profile.fadeOutDuration * change / fullChange)
     self.fadeAnim:SetChange(-change)
     self.fadeAnim:Play()
 end
@@ -1285,7 +1344,7 @@ function Bazooka:attributeChanged(event, name, attr, value, dataobj)
             updater(plugin)
             return
         end
-        print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
+--        print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
     end
 end
 
@@ -1299,7 +1358,6 @@ end
 -- END handlers
 
 function Bazooka:init()
-    print("### init()")
     for i, bar in ipairs(self.bars) do
         bar:disable()
     end
@@ -1561,28 +1619,3 @@ CONFIGMODE_CALLBACKS[AppName] = function(action)
     end
 end
 
--- DEBUG
-function Bazooka:dump()
-    for name, plugin in pairs(self.plugins) do
-        if (plugin.db.enabled) then
-            printf("%s = { bar%d[%s][%d], width = %d }", plugin.name, plugin.db.bar, plugin.db.area, plugin.db.pos, plugin.frame:GetWidth())
-            self:showPoints(plugin.frame)
-        end
-    end
-end
-
-function Bazooka:showPoints(frame)
-    if (type(frame) ~= "table") then
-        frame = _G[frame]
-        if (type(frame) ~= "table") then
-            print("### not a table")
-            return
-        end
-    end
-    local numPoints = frame:GetNumPoints()
-    printf("### %s: (%d, %d), numPoints: %d", frame:GetName(), frame:GetWidth(), frame:GetHeight(), numPoints)
-    for i = 1, numPoints do
-        local point, relTo, relPoint, x, y = frame:GetPoint(i)
-        printf("Point%d: %s, %s, %s, %d, %d", i, point, (relTo and relTo:GetName() or "nil"), relPoint, x, y)
-    end
-end
