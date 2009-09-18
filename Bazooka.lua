@@ -924,11 +924,7 @@ Plugin.OnEnter = function(frame, ...)
     end
     if (Bazooka.db.profile.simpleTip and IsAltKeyDown()) then
         local tt = setupTooltip(frame)
-        if (self.dataobj.tocname) then
-            tt:SetText(("%s:%s"):format(self.dataobj.tocname, self.name))
-        else
-            tt:SetText(self.name)
-        end
+        tt:SetText(self.id)
         tt:Show()
         return
     end
@@ -1008,13 +1004,14 @@ Plugin.OnDragStop = function(frame)
         bar:attachPlugin(self, area, pos)
     else
         self:reattach()
-        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.label)
+        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.id)
     end
 end
 
 function Plugin:New(name, dataobj, db)
     local plugin = setmetatable({}, Plugin)
     plugin.name = name
+    plugin.id = dataobj.tocname and ("%s:%s"):format(dataobj.tocname, name) or name
     plugin.dataobj = dataobj
     plugin.db = db
     plugin:applySettings()
