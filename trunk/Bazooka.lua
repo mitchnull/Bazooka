@@ -84,6 +84,7 @@ local Defaults =  {
     fadeOutDelay = 0.5,
     fadeOutDuration = 0.5,
     fadeInDuration = 0.25,
+    shrinkThreshold = 5,
 }
 
 local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
@@ -127,7 +128,7 @@ Bazooka.AttachNames = {
 local defaults = {
     profile = {
         locked = false,
-        adjustFrames = true, -- FIXME
+        adjustFrames = true,
         simpleTip = true,
         enableHL = true,
         numBars = 1,
@@ -197,6 +198,7 @@ local defaults = {
                     showLabel = true,
                     showTitle = true,
                     showText = true,
+                    shrinkThreshold = Defaults.shrinkThreshold,
                 },
             },
             ["launcher"] = {
@@ -212,6 +214,7 @@ local defaults = {
                     showLabel = false,
                     showTitle = true,
                     showText = false,
+                    shrinkThreshold = 0,
                 },
             },
             ["data source"] = {
@@ -227,6 +230,7 @@ local defaults = {
                     showLabel = false,
                     showTitle = false,
                     showText = true,
+                    shrinkThreshold = Defaults.shrinkThreshold,
                 },
             },
         },
@@ -1036,7 +1040,7 @@ function Plugin:New(name, dataobj, db)
     plugin.dataobj = dataobj
 
     if (dataobj.tocname) then
-        local addonName, addonTitle = GetAddOnInfo(obj.tocname or name)
+        local addonName, addonTitle = GetAddOnInfo(dataobj.tocname or name)
         plugin.title = addonTitle or addonName or name
     else
         plugin.title = name
@@ -1092,7 +1096,7 @@ function Plugin:globalSettingsChanged()
         self.icon:SetWidth(self.iconSize)
         self.icon:SetHeight(self.iconSize)
     end
-    self:updateLayout()
+    self:updateLayout(true)
 end
 
 function Plugin:createIcon()
@@ -1109,7 +1113,7 @@ function Plugin:createText()
     self.text:SetFont(Defaults.fontPath, Defaults.fontSize, Defaults.fontOutline)
 end
 
-function Plugin:updateLayout()
+function Plugin:updateLayout(forced)
     local w = 0
     if (self.db.showText or self.db.showLabel) then
         local tw = self.text:GetStringWidth()
@@ -1133,7 +1137,9 @@ function Plugin:updateLayout()
     else
         w = EmptyPluginWidth
     end
-    if (w ~= self.frame:GetWidth()) then
+    local ow = self.origWidth or self.frame:GetWidth()
+    if (forced or w > ow or w < ow - self.db.shrinkThreshold) then
+        self.origWidth = w
         self.frame:SetWidth(w)
         if (self.bar and self.db.area == 'center') then
             self.bar:updateCenterWidth()
@@ -1194,7 +1200,7 @@ function Plugin:applySettings()
         self.text:Hide()
     end
     self:updateLabel()
-    self:updateLayout()
+    self:updateLayout(true)
 end
 
 function Plugin:setIcon()
