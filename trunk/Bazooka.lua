@@ -326,6 +326,7 @@ setDeepCopyIndex(Bar)
 
 Bar.OnEnter = function(frame)
     local self = frame.bzkBar
+    self.mouseInside = true
     if (not self.db.combatFade or InCombatLockdown()) then
         self:fadeIn()
     end
@@ -333,6 +334,7 @@ end
 
 Bar.OnLeave = function(frame)
     local self = frame.bzkBar
+    self.mouseInside = false
     if (self.db.autoFade) then
         self:fadeOut()
     end
@@ -439,6 +441,8 @@ function Bar:enable(id, db)
     if (not self.frame) then
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
         self.frame.bzkBar = self
+        self.frame:EnableMouse(true)
+        self.frame:SetClampedToSreen(true)
         self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -762,6 +766,7 @@ function Bar:applyBGSettings()
     bg.edgeSize = (bg.edgeFile and bg.edgeFile ~= [[Interface\None]]) and self.db.bgEdgeSize or 0
     local inset = math.floor(bg.edgeSize / 4)
     self.inset = inset
+    -- self.frame:SetClampRectInsets(inset, -inset, -inset, inset)
     bg.insets.left = inset
     bg.insets.right = inset
     bg.insets.top = inset
@@ -1212,11 +1217,33 @@ end
 
 function Bazooka:PLAYER_REGEN_DISABLED()
     self:lock()
+    for i, bar in ipairs(self.bars) do
+        bar.frame:EnableMouse(false)
+        if (bar.db.combatFade) then
+            bar:fadeOut()
+        end
+    end
+    for name, plugin in pairs(self.plugins) do
+        if (plugin.db.enabled and plugin.db.disableMouseInCombat) then
+            plugin.frame:EnableMouse(false)
+        end
+    end
 end
 
 function Bazooka:PLAYER_REGEN_ENABLED()
     if (not self.db.profile.locked) then
         self:unlock()
+    end
+    for i, bar in ipairs(self.bars) do
+        bar.frame:EnableMouse(true)
+        if (bar.db.combatFade and not bar.db.autoFade) then
+            bar:fadeIn()
+        end
+    end
+    for name, plugin in pairs(self.plugins) do
+        if (plugin.db.enabled) then
+            plugin.frame:EnableMouse(true)
+        end
     end
 end
 
