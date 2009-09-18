@@ -176,11 +176,9 @@ local defaults = {
             },
             [1] = {
                 attach = 'top',
-                autoFade = true, -- FIXME
             },
             [2] = {
                 attach = 'bottom',
-                combatFade = true, -- FIXME
             },
         },
         plugins = {
@@ -211,9 +209,6 @@ local defaults = {
                     showLabel = false,
                     showText = false,
                 },
-                ["Bazooka"] = {
-                    area = 'center',
-                },
             },
             ["data source"] = {
                 ["**"] = {
@@ -227,9 +222,6 @@ local defaults = {
                     showIcon = true,
                     showLabel = false,
                     showText = true,
-                },
-                ["uClock"] = {
-                    area = 'cright',
                 },
             },
         },
@@ -292,8 +284,10 @@ function setupTooltip(owner, ttFrame)
     if (not owner) then
         return ttFrame
     end
-    if (ttFrame:IsObjectType("GameTooltip")) then
+    if (ttFrame.SetOwner) then
         ttFrame:SetOwner(owner, "ANCHOR_NONE")
+    end
+    if (ttFrame.ClearLines) then
         ttFrame:ClearLines()
     end
     ttFrame:ClearAllPoints()
@@ -634,7 +628,7 @@ function Bar:highlight(area, pos)
     self.hl:SetPoint("LEFT", self.frame, "LEFT", center - dx, 0)
     self.hl:SetPoint("RIGHT", self.frame, "LEFT", center + dx, 0)
     self.hl:Show()
-    local placementTip = ("%s%d[%s]"):format(L["Bar"], self.id, L[area])
+    local placementTip = ("%s#%d - %s"):format(L["Bar"], self.id, L[area])
     if (placementTip ~= Bazooka.placementTip) then
         Bazooka.placementTip = placementTip
         local tt = setupTooltip(self.frame)
@@ -930,7 +924,7 @@ Plugin.OnEnter = function(frame, ...)
     end
     local dataobj = self.dataobj
     if (dataobj.tooltip) then
-        setupTooltip(dataobj.tooltip)
+        setupTooltip(frame, dataobj.tooltip)
         dataobj.tooltip:Show()
     elseif (dataobj.OnEnter) then
         dataobj.OnEnter(frame, ...)
@@ -1011,9 +1005,10 @@ end
 function Plugin:New(name, dataobj, db)
     local plugin = setmetatable({}, Plugin)
     plugin.name = name
-    plugin.id = dataobj.tocname and ("%s:%s"):format(dataobj.tocname, name) or name
     plugin.dataobj = dataobj
+    plugin.id = dataobj.tocname and ("%s:%s"):format(dataobj.tocname, name) or name
     plugin.db = db
+    plugin.label = dataobj.label or name
     plugin:applySettings()
     return plugin
 end
