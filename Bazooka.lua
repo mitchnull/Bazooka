@@ -138,8 +138,10 @@ local defaults = {
 
         bars = {
             ["**"] = {
-                autoFade = false,
-                combatFade = false,
+                fadeInCombat = false,
+                fadeOutOfCombat = false,
+                disableMouseInCombat = true,
+                disableMouseOutOfCombat = false,
                 fadeAlpha = 0.4,
 
                 point = "CENTER",
@@ -194,6 +196,7 @@ local defaults = {
                     disableTooltip = false,
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
+                    disableMouseOutOfCombat = false,
                     showIcon = true,
                     showLabel = true,
                     showTitle = true,
@@ -210,6 +213,7 @@ local defaults = {
                     disableTooltip = false,
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
+                    disableMouseOutOfCombat = false,
                     showIcon = true,
                     showLabel = false,
                     showTitle = true,
@@ -226,6 +230,7 @@ local defaults = {
                     disableTooltip = false,
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
+                    disableMouseOutOfCombat = false,
                     showIcon = true,
                     showLabel = false,
                     showTitle = false,
@@ -391,16 +396,28 @@ setDeepCopyIndex(Bar)
 Bar.OnEnter = function(frame)
     local self = frame.bzkBar or frame.bzkPlugin.bar
     self.isMouseInside = true
-    if self.db.autoFade and not (self.db.combatFade and InCombatLockdown()) then
-        self:fadeIn()
+    if InCombatLockdown() then
+        if self.db.fadeInCombat then
+            self:fadeIn()
+        end
+    else
+        if self.db.fadeOutOfCombat then
+            self:faidIn()
+        end
     end
 end
 
 Bar.OnLeave = function(frame)
     local self = frame.bzkBar or frame.bzkPlugin.bar
     self.isMouseInside = false
-    if self.db.autoFade then
-        self:fadeOut()
+    if InCombatLockdown() then
+        if self.db.fadeInCombat then
+            self:fadeOut()
+        end
+    else
+        if self.db.fadeOutOfCombat then
+            self:fadeOut()
+        end
     end
 end
 
@@ -456,14 +473,18 @@ function Bar:fadeIn()
         self.fadeAnim:Stop()
     end
     local alpha = self.frame:GetAlpha()
-    if alpha < self.db.fadeAlpha then -- better be safe
-        alpha = self.db.fadeAlpha
-        self.frame:SetAlpha(alpha)
-    end
-    local change = 1 - alpha
+    local change = 1.0 - alpha
     if change < 0.05 then
         self.frame:SetAlpha(1.0)
         return
+    end
+    if alpha < self.db.fadeAlpha then -- better be safe
+        alpha = self.db.fadeAlpha
+        change = 1.0 - alpha
+        self.frame:SetAlpha(alpha)
+        if change < 0.05 then
+            return
+        end
     end
     local fullChange = 1.0 - self.db.fadeAlpha
     if not self.fadeAnim then
@@ -480,11 +501,6 @@ function Bar:fadeOut(delay)
         self.fadeAnim:Stop()
     end
     local alpha = self.frame:GetAlpha()
-    if alpha < self.db.fadeAlpha then -- better be safe
-        alpha = self.db.fadeAlpha
-        self.frame:SetAlpha(alpha)
-        return
-    end
     local change = alpha - self.db.fadeAlpha
     if change < 0.05 then
         self.frame:SetAlpha(self.db.fadeAlpha)
@@ -832,11 +848,32 @@ function Bar:applySettings()
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
     self:applyBGSettings()
-    if self.db.autoFade and not self.isMouseInside then
-        self.frame:SetAlpha(self.db.fadeAlpha)
+    if InCombatLockdown() then
+        self:toggleMouse(not self.db.disableMouseInCombat)
+        if self.db.fadeInCombat and not self.isMouseInside then
+            self.frame:SetAlpha(self.db.fadeAlpha)
+        else
+            self.frame:SetAlpha(1.0)
+        end
+    else
+        self:toggleMouse(not self.db.disableMouseOutOfCombat)
+        if self.db.fadeOutOfCombat and not self.isMouseInside then
+            self.frame:SetAlpha(self.db.fadeAlpha)
+        else
+            self.frame:SetAlpha(1.0)
+        end
     end
     if Jostle and needJostleRefresh then
         Jostle:Refresh()
+    end
+end
+
+function Bar:toggleMouse(flag)
+    if flag then
+        self.frame:EnableMouse(true)
+    else
+        self.frame:EnableMouse(false)
+        self.isMouseInside = false
     end
 end
 
@@ -1336,14 +1373,16 @@ end
 function Bazooka:PLAYER_REGEN_DISABLED()
     self:lock()
     for i, bar in ipairs(self.bars) do
-        bar.frame:EnableMouse(false)
-        if bar.db.combatFade then
+        bar:toggleMouse(not bar.db.disableMouseInCombat)
+        if bar.db.fadeInCombat and not bar.isMouseInside then
             bar:fadeOut(0)
+        else
+            bar:fadeIn()
         end
     end
     for name, plugin in pairs(self.plugins) do
-        if plugin.db.enabled and plugin.db.disableMouseInCombat then
-            plugin.frame:EnableMouse(false)
+        if plugin.db.enabled then
+            plugin.frame:EnableMouse(not plugin.db.disableMouseInCombat)
         end
     end
 end
@@ -1353,14 +1392,16 @@ function Bazooka:PLAYER_REGEN_ENABLED()
         self:unlock()
     end
     for i, bar in ipairs(self.bars) do
-        bar.frame:EnableMouse(true)
-        if bar.db.combatFade and (not bar.db.autoFade or bar.isMouseInside) then
+        bar:toggleMouse(not bar.db.disableMouseOutOfCombat)
+        if bar.db.fadeOutOfCombat and not bar.isMouseInside then
+            bar:fadeOut(0)
+        else
             bar:fadeIn()
         end
     end
     for name, plugin in pairs(self.plugins) do
         if plugin.db.enabled then
-            plugin.frame:EnableMouse(true)
+            plugin.frame:EnableMouse(not plugin.db.disableMouseOutOfCombat)
         end
     end
 end
