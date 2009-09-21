@@ -181,9 +181,11 @@ local defaults = {
             },
             [1] = {
                 attach = 'top',
+                fadeOutOfCombat = true, -- FIXME
             },
             [2] = {
                 attach = 'bottom',
+                fadeInCombat = true, -- FIXME
             },
         },
         plugins = {
@@ -402,7 +404,7 @@ Bar.OnEnter = function(frame)
         end
     else
         if self.db.fadeOutOfCombat then
-            self:faidIn()
+            self:fadeIn()
         end
     end
 end
@@ -421,7 +423,7 @@ Bar.OnLeave = function(frame)
     end
 end
 
-Bar.OnDragStart = function(frame)
+Bar.OnDragStart = function(frame, button)
     if Bazooka.locked then
         return
     end
@@ -524,7 +526,7 @@ function Bar:enable(id, db)
         self.frame.bzkBar = self
         self.frame:EnableMouse(true)
         self.frame:SetClampedToScreen(true)
-        self.frame:RegisterForDrag("LeftButton")
+        self.frame:RegisterForDrag("LeftButton", "RightButton")
         self.frame:SetScript("OnEnter", Bar.OnEnter)
         self.frame:SetScript("OnLeave", Bar.OnLeave)
         self.frame:SetScript("OnDragStart", Bar.OnDragStart)
