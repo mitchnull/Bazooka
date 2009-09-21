@@ -431,7 +431,11 @@ Bar.OnDragStart = function(frame, button)
     updateUIScale()
     frame:SetAlpha(0.7)
     Bazooka.draggedFrame = frame
-    frame:StartMoving()
+    if button == "LeftButton" then
+        frame:StartMoving()
+    else
+        frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
+    end
 end
 
 Bar.OnDragStop = function(frame)
@@ -453,6 +457,8 @@ Bar.OnDragStop = function(frame)
                 self.db.attach = 'top'
             end
         end
+        self.db.frameWidth = self.frame:GetWidth()
+        self.db.frameHeight = self.frame:GetHeight()
     end
     self:applySettings()
 end
@@ -532,6 +538,7 @@ function Bar:enable(id, db)
         self.frame:SetScript("OnDragStart", Bar.OnDragStart)
         self.frame:SetScript("OnDragStop", Bar.OnDragStop)
         self.frame:SetMovable(true)
+        self.frame:SetResizable(true)
         self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -636,9 +643,11 @@ function Bar:highlight(area, pos)
             if GameTooltip:IsOwned(self.frame) then
                 GameTooltip:Hide()
             end
+            Bar.OnLeave(self.frame)
         end
         return
     end
+    Bar.OnEnter(self.frame)
     if not self.hl then
         self.hlFrame = CreateFrame("Frame", "BazookaBarHLF_" .. self.id, self.frame)
         self.hlFrame:SetFrameLevel(self.frame:GetFrameLevel() + 5)
@@ -867,6 +876,28 @@ function Bar:applySettings()
     end
     if Jostle and needJostleRefresh then
         Jostle:Refresh()
+    end
+end
+
+function Bar:getSizingPoint(x, y)
+    if self.db.attach == 'top' then
+        return "BOTTOM"
+    elseif self.db.attach == 'bottom' then
+        return "TOP"
+    else -- none
+        local left, bottom, width, height = self.frame:GetRect()
+        -- lazy min()...
+        local dmin, dr, db, dt , point= x - left, left + width - x, y - bottom, bottom + height - y, "LEFT"
+        if dr < dmin then
+            dmin, point = dr, "RIGHT"
+        end
+        if dt < dmin then
+            dmin, point = dt, "TOP"
+        end
+        if db < dmin then
+            dmin, point = db, "BOTTOM"
+        end
+        return point
     end
 end
 
