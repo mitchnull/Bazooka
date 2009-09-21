@@ -240,7 +240,7 @@ local defaults = {
 local function deepCopy(src)
     local res = {}
     for k, v in pairs(src) do
-        if (type(v) == 'table') then
+        if type(v) == 'table' then
             v = deepCopy(v)
         end
         res[k] = v
@@ -251,7 +251,7 @@ end
 local function setDeepCopyIndex(proto)
     proto.__index = function(t, k)
         local v = proto[k]
-        if (type(v) == 'table') then
+        if type(v) == 'table' then
             v = deepCopy(v)
         end
         t[k] = v
@@ -275,14 +275,14 @@ end
 local function getDistance2Frame(x, y, frame)
     local left, bottom, width, height = frame:GetRect()
     local dx, dy = 0, 0
-    if (left > x) then
+    if left > x then
         dx = left - x
-    elseif (x > left + width) then
+    elseif x > left + width then
         dx = x - (left + width)
     end
-    if (bottom > y) then
+    if bottom > y then
         dy = bottom - y
-    elseif (y > bottom + height) then
+    elseif y > bottom + height then
         dy = y - (bottom + height)
     end
     return dx * dx + dy * dy
@@ -290,18 +290,18 @@ end
 
 local function setupTooltip(owner, ttFrame, dx, dy)
     ttFrame = ttFrame or GameTooltip
-    if (not owner) then
+    if not owner then
         return ttFrame
     end
-    if (ttFrame.SetOwner) then
+    if ttFrame.SetOwner then
         ttFrame:SetOwner(owner, "ANCHOR_NONE")
     end
-    if (ttFrame.ClearLines) then
+    if ttFrame.ClearLines then
         ttFrame:ClearLines()
     end
     ttFrame:ClearAllPoints()
     local cx, cy = owner:GetCenter()
-    if (cy < GetScreenHeight() / 2) then
+    if cy < GetScreenHeight() / 2 then
         ttFrame:SetPoint("BOTTOM", owner, "TOP", dx, dy)
     else
         ttFrame:SetPoint("TOP", owner, "BOTTOM", dx, dy)
@@ -322,11 +322,11 @@ setDeepCopyIndex(AlphaAnim)
 AlphaAnim.OnUpdate = function(frame, elapsed)
     local self = frame.bzkAlphaAnim
     local now = GetTime()
-    if (now < self.startStamp) then
+    if now < self.startStamp then
         return
     end
     local playTime = now - self.startStamp
-    if (playTime >= self.duration) then
+    if playTime >= self.duration then
         frame:SetAlpha(self.startAlpha + self.change)
         frame:SetScript("OnUpdate", nil)
         return
@@ -391,7 +391,7 @@ setDeepCopyIndex(Bar)
 Bar.OnEnter = function(frame)
     local self = frame.bzkBar or frame.bzkPlugin.bar
     self.isMouseInside = true
-    if (self.db.autoFade and not (self.db.combatFade and InCombatLockdown())) then
+    if self.db.autoFade and not (self.db.combatFade and InCombatLockdown()) then
         self:fadeIn()
     end
 end
@@ -399,13 +399,13 @@ end
 Bar.OnLeave = function(frame)
     local self = frame.bzkBar or frame.bzkPlugin.bar
     self.isMouseInside = false
-    if (self.db.autoFade) then
+    if self.db.autoFade then
         self:fadeOut()
     end
 end
 
 Bar.OnDragStart = function(frame)
-    if (Bazooka.locked) then
+    if Bazooka.locked then
         return
     end
     local self = frame.bzkBar
@@ -416,19 +416,19 @@ Bar.OnDragStart = function(frame)
 end
 
 Bar.OnDragStop = function(frame)
-    if (not Bazooka.draggedFrame) then
+    if not Bazooka.draggedFrame then
         return
     end
     local self = frame.bzkBar
     Bazooka.draggedFrame = nil
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
-    if (not Bazooka.locked) then
-        if (self.db.attach == 'none') then
+    if not Bazooka.locked then
+        if self.db.attach == 'none' then
             self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
         else
             local cx, cy = frame:GetCenter()
-            if (cy < GetScreenHeight() / 2) then
+            if cy < GetScreenHeight() / 2 then
                 self.db.attach = 'bottom'
             else
                 self.db.attach = 'top'
@@ -452,21 +452,21 @@ function Bar:createFadeAnim()
 end
 
 function Bar:fadeIn()
-    if (self.fadeAnim) then
+    if self.fadeAnim then
         self.fadeAnim:Stop()
     end
     local alpha = self.frame:GetAlpha()
-    if (alpha < self.db.fadeAlpha) then -- better be safe
+    if alpha < self.db.fadeAlpha then -- better be safe
         alpha = self.db.fadeAlpha
         self.frame:SetAlpha(alpha)
     end
     local change = 1 - alpha
-    if (change < 0.05) then
+    if change < 0.05 then
         self.frame:SetAlpha(1.0)
         return
     end
     local fullChange = 1.0 - self.db.fadeAlpha
-    if (not self.fadeAnim) then
+    if not self.fadeAnim then
         self:createFadeAnim()
     end
     self.fadeAnim:SetStartDelay(0)
@@ -476,22 +476,22 @@ function Bar:fadeIn()
 end
 
 function Bar:fadeOut(delay)
-    if (self.fadeAnim) then
+    if self.fadeAnim then
         self.fadeAnim:Stop()
     end
     local alpha = self.frame:GetAlpha()
-    if (alpha < self.db.fadeAlpha) then -- better be safe
+    if alpha < self.db.fadeAlpha then -- better be safe
         alpha = self.db.fadeAlpha
         self.frame:SetAlpha(alpha)
         return
     end
     local change = alpha - self.db.fadeAlpha
-    if (change < 0.05) then
+    if change < 0.05 then
         self.frame:SetAlpha(self.db.fadeAlpha)
         return
     end
     local fullChange = 1.0 - self.db.fadeAlpha
-    if (not self.fadeAnim) then
+    if not self.fadeAnim then
         self:createFadeAnim()
     end
     self.fadeAnim:SetStartDelay(delay or Bazooka.db.profile.fadeOutDelay)
@@ -503,7 +503,7 @@ end
 function Bar:enable(id, db)
     self.id = id
     self.db = db
-    if (not self.frame) then
+    if not self.frame then
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
         self.frame.bzkBar = self
         self.frame:EnableMouse(true)
@@ -524,9 +524,9 @@ function Bar:enable(id, db)
 end
 
 function Bar:disable()
-    if (self.frame) then
+    if self.frame then
         self.frame:Hide()
-        if (Jostle) then
+        if Jostle then
             Jostle:Unregister(self.frame)
         end
     end
@@ -540,16 +540,16 @@ function Bar:disable()
 end
 
 function Bar:getAreaCoords(area)
-    if (area == 'left') then
+    if area == 'left' then
         local left, bottom, width, height = self.frame:GetRect()
         return left, bottom + height / 2
-    elseif (area == 'cleft') then
+    elseif area == 'cleft' then
         local left, bottom, width, height = self.centerFrame:GetRect()
         return left, bottom + height / 2
-    elseif (area == 'cright') then
+    elseif area == 'cright' then
         local left, bottom, width, height = self.centerFrame:GetRect()
         return left + width, bottom + height / 2
-    elseif (area == 'right') then
+    elseif area == 'right' then
         local left, bottom, width, height = self.frame:GetRect()
         return left + width, bottom + height / 2
     else -- center
@@ -562,15 +562,15 @@ function Bar:getDropPlace(x, y)
     local dstArea, dstPos
     local minDist = math.huge
     for area, plugins in pairs(self.plugins) do
-        if (#plugins == 0) then
+        if #plugins == 0 then
             local dist = distance2(x, y, self:getAreaCoords(area))
-            if (dist < minDist) then
+            if dist < minDist then
                 dstArea, dstPos, minDist = area, 1, dist
             end
         else
             for i, plugin in ipairs(plugins) do
                 local pos, dist = plugin:getDropPlace(x, y)
-                if (dist < minDist) then
+                if dist < minDist then
                     dstArea, dstPos, minDist = area, pos, dist
                 end
             end
@@ -580,7 +580,7 @@ function Bar:getDropPlace(x, y)
 end
 
 function Bar:getSpacing(area)
-    if (area == 'left' or area == 'right') then
+    if area == 'left' or area == 'right' then
         return self.db.sideSpacing
     else
         return self.db.centerSpacing
@@ -589,20 +589,20 @@ end
 
 function Bar:getHighlightCenter(area, pos)
     local plugins = self.plugins[area]
-    if (#plugins == 0) then
+    if #plugins == 0 then
         local x = self:getAreaCoords(area)
         return x
     end
-    if (pos < 0) then
+    if pos < 0 then
         pos = -pos
         for i, plugin in ipairs(plugins) do
-            if (pos <= plugin.db.pos) then
+            if pos <= plugin.db.pos then
                 return plugin.frame:GetRight()
             end
         end
     else
         for i, plugin in ipairs(plugins) do
-            if (pos <= plugin.db.pos) then
+            if pos <= plugin.db.pos then
                 return plugin.frame:GetLeft()
             end
         end
@@ -611,17 +611,17 @@ function Bar:getHighlightCenter(area, pos)
 end
 
 function Bar:highlight(area, pos)
-    if (not area) then
-        if (self.hl) then
+    if not area then
+        if self.hl then
             self.hl:Hide()
             self.lastHLArea, self.lastHLPos = nil
-            if (GameTooltip:IsOwned(self.frame)) then
+            if GameTooltip:IsOwned(self.frame) then
                 GameTooltip:Hide()
             end
         end
         return
     end
-    if (not self.hl) then
+    if not self.hl then
         self.hlFrame = CreateFrame("Frame", "BazookaBarHLF_" .. self.id, self.frame)
         self.hlFrame:SetFrameLevel(self.frame:GetFrameLevel() + 5)
         self.hlFrame:EnableMouse(false)
@@ -632,7 +632,7 @@ function Bar:highlight(area, pos)
     local hlcx = self:getHighlightCenter(area, pos)
     local center = hlcx - self.frame:GetLeft()
     local dx = math.floor(self:getSpacing(area) / 2 + 0.5)
-    if (dx < MinDropPlaceHLDX) then
+    if dx < MinDropPlaceHLDX then
         dx = MinDropPlaceHLDX
     end
     self.hl:ClearAllPoints()
@@ -641,7 +641,7 @@ function Bar:highlight(area, pos)
     self.hl:SetPoint("LEFT", self.frame, "LEFT", center - dx, 0)
     self.hl:SetPoint("RIGHT", self.frame, "LEFT", center + dx, 0)
     self.hl:Show()
-    if (area ~= self.lastHLArea or pos ~= self.lastHLPos) then
+    if area ~= self.lastHLArea or pos ~= self.lastHLPos then
         self.lastHLArea, self.lastHLPos = area, pos
         local dx = hlcx - self.frame:GetCenter()
         local tt = setupTooltip(self.frame, nil, dx, 0)
@@ -658,7 +658,7 @@ function Bar:updateCenterWidth()
     end
     local numGaps = #self.plugins.center + 1
     cw = cw + (numGaps * self.db.centerSpacing)
-    if (cw <= 0) then
+    if cw <= 0 then
         cw = 1
     end
     self.centerFrame:SetWidth(cw)
@@ -668,17 +668,17 @@ function Bar:detachPlugin(plugin)
     local plugins = self.plugins[plugin.db.area]
     local lp, rp, index
     for i, p in ipairs(plugins) do
-        if (index) then
+        if index then
             rp = p
             break
         end
-        if (p == plugin) then
+        if p == plugin then
             index = i
         else
             lp = p
         end
     end
-    if (not index) then
+    if not index then
         return -- this should never happen
     end
     tremove(plugins, index)
@@ -686,7 +686,7 @@ function Bar:detachPlugin(plugin)
     plugin.frame:ClearAllPoints()
     self:setRightAttachPoint(lp, rp)
     self:setLeftAttachPoint(rp, lp)
-    if (plugin.db.area == 'center') then
+    if plugin.db.area == 'center' then
         self:updateCenterWidth()
     end
 end
@@ -698,9 +698,9 @@ function Bar:attachPlugin(plugin, area, pos)
     plugin.db.area = area
     local plugins = self.plugins[area]
     local lp, rp
-    if (not pos) then
+    if not pos then
         local count = #self.plugins[area]
-        if (count > 0) then
+        if count > 0 then
             lp = plugins[count]
             plugin.db.pos = lp.db.pos + 1
         else
@@ -708,27 +708,27 @@ function Bar:attachPlugin(plugin, area, pos)
         end
         tinsert(plugins, plugin)
     else
-        if (pos < 0) then
+        if pos < 0 then
             pos = 1 - pos
         end
         plugin.db.pos = pos
         local rpi
         for i, p in ipairs(plugins) do
-            if (pos <= p.db.pos) then
-                if (not rp) then
+            if pos <= p.db.pos then
+                if not rp then
                     rp = p
                     rpi = i
                 end
-                if (pos < p.db.pos) then
+                if pos < p.db.pos then
                     break
                 end
                 pos = pos + 1
                 p.db.pos = pos
-            elseif (not rp) then
+            elseif not rp then
                 lp = p
             end
         end
-        if (rpi) then
+        if rpi then
             tinsert(plugins, rpi, plugin)
         else
             tinsert(plugins, plugin)
@@ -744,7 +744,7 @@ function Bar:attachPlugin(plugin, area, pos)
     self:setRightAttachPoint(lp, plugin)
     self:setLeftAttachPoint(rp, plugin)
     plugin:globalSettingsChanged()
-    if (area == "center") then
+    if area == "center" then
         self:updateCenterWidth()
     end
 end
@@ -754,24 +754,24 @@ function Bar:getEdgeSpacing()
 end
 
 function Bar:setLeftAttachPoint(plugin, lp)
-    if (not plugin) then
+    if not plugin then
         return
     end
     local area = plugin.db.area
-    if (area == "left") then
-        if (lp) then
+    if area == "left" then
+        if lp then
             plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.sideSpacing, 0)
         else
             plugin.frame:SetPoint("LEFT", self.frame, "LEFT", self:getEdgeSpacing(), 0)
         end
-    elseif (area == "center") then
-        if (lp) then
+    elseif area == "center" then
+        if lp then
             plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.centerSpacing, 0)
         else
             plugin.frame:SetPoint("LEFT", self.centerFrame, "LEFT", self.db.centerSpacing, 0)
         end
-    elseif (area == "cright") then
-        if (lp) then
+    elseif area == "cright" then
+        if lp then
             plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.centerSpacing, 0)
         else
             plugin.frame:SetPoint("LEFT", self.centerFrame, "RIGHT", 0, 0)
@@ -780,18 +780,18 @@ function Bar:setLeftAttachPoint(plugin, lp)
 end
 
 function Bar:setRightAttachPoint(plugin, rp)
-    if (not plugin) then
+    if not plugin then
         return
     end
     local area = plugin.db.area
-    if (area == "cleft") then
-        if (rp) then
+    if area == "cleft" then
+        if rp then
             plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.centerSpacing, 0)
         else
             plugin.frame:SetPoint("RIGHT", self.centerFrame, "LEFT", 0, 0)
         end
-    elseif (area == "right") then
-        if (rp) then
+    elseif area == "right" then
+        if rp then
             plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.sideSpacing, 0)
         else
             plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -self:getEdgeSpacing(), 0)
@@ -801,60 +801,60 @@ end
 
 function Bar:applySettings()
     local needJostleRefresh
-    if (self.db.attach == "top") then
+    if self.db.attach == "top" then
         self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
         self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, 0)
-        if (self.frame:GetHeight() ~= self.db.frameHeight) then
+        if self.frame:GetHeight() ~= self.db.frameHeight then
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
         end
-        if (Jostle) then
+        if Jostle then
             Jostle:RegisterTop(self.frame)
         end
-    elseif (self.db.attach == "bottom") then
+    elseif self.db.attach == "bottom" then
         self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
         self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
-        if (self.frame:GetHeight() ~= self.db.frameHeight) then
+        if self.frame:GetHeight() ~= self.db.frameHeight then
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
         end
-        if (Jostle) then
+        if Jostle then
             Jostle:RegisterBottom(self.frame)
         end
     else -- detached
         self.frame:SetPoint(self.db.point, UIParent, self.db.relPoint, self.db.x, self.db.y)
         self.frame:SetWidth(self.db.frameWidth)
         self.frame:SetHeight(self.db.frameHeight)
-        if (Jostle) then
+        if Jostle then
             Jostle:Unregister(self.frame)
         end
     end
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
     self:applyBGSettings()
-    if (self.db.autoFade and not self.isMouseInside) then
+    if self.db.autoFade and not self.isMouseInside then
         self.frame:SetAlpha(self.db.fadeAlpha)
     end
-    if (Jostle and needJostleRefresh) then
+    if Jostle and needJostleRefresh then
         Jostle:Refresh()
     end
 end
 
 function Bar:applyBGSettings()
-    if (not self.db.bgEnabled) then
+    if not self.db.bgEnabled then
         self.frame:SetBackdrop(nil)
         return
     end
     self.bg = self.bg or { insets = {} }
     local bg = self.bg
-    if (LSM) then
+    if LSM then
         bg.bgFile = LSM:Fetch("background", self.db.bgTexture, true)
-        if (not bg.bgFile) then
+        if not bg.bgFile then
             bg.bgFile = Defaults.bgFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
         bg.edgeFile = LSM:Fetch("border", self.db.bgBorderTexture, true)
-        if (not bg.edgeFile) then
+        if not bg.edgeFile then
             bg.edgeFile = Defaults.edgeFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
@@ -877,9 +877,9 @@ function Bar:applyBGSettings()
 end
 
 function Bar:applyFontSettings()
-    if (LSM) then
+    if LSM then
         self.dbFontPath = LSM:Fetch("font", self.db.font, true)
-        if (not self.dbFontPath) then
+        if not self.dbFontPath then
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
             self.dbFontPath = Defaults.fontPath
             return
@@ -889,16 +889,16 @@ function Bar:applyFontSettings()
 end
 
 function Bar:mediaUpdate(event, mediaType, key)
-    if (mediaType == 'background') then
-        if (key == self.db.bgTexture) then
+    if mediaType == 'background' then
+        if key == self.db.bgTexture then
             self:applyBGSettings()
         end
-    elseif (mediaType == 'border') then
-        if (key == self.db.bgBorderTexture) then
+    elseif mediaType == 'border' then
+        if key == self.db.bgBorderTexture then
             self:applyBGSettings()
         end
-    elseif (mediaType == 'font') then
-        if (key == self.db.font) then
+    elseif mediaType == 'font' then
+        if key == self.db.font then
             self:applyFontSettings()
         end
     end
@@ -938,29 +938,29 @@ setDeepCopyIndex(Plugin)
 Plugin.OnEnter = function(frame, ...)
     local self = frame.bzkPlugin
     self.bar.OnEnter(frame)
-    if (Bazooka.draggedFrame) then
+    if Bazooka.draggedFrame then
         return
     end
-    if (Bazooka.db.profile.enableHL) then
+    if Bazooka.db.profile.enableHL then
         self:highlight(true)
     end
     -- tooltip handling
-    if (self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown())) then
+    if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
         return
     end
-    if (Bazooka.db.profile.simpleTip and IsAltKeyDown()) then
+    if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
         local tt = setupTooltip(frame)
         tt:SetText(self.title)
         tt:Show()
         return
     end
     local dataobj = self.dataobj
-    if (dataobj.tooltip) then
+    if dataobj.tooltip then
         setupTooltip(frame, dataobj.tooltip)
         dataobj.tooltip:Show()
-    elseif (dataobj.OnEnter) then
+    elseif dataobj.OnEnter then
         dataobj.OnEnter(frame, ...)
-    elseif (dataobj.OnTooltipShow) then
+    elseif dataobj.OnTooltipShow then
         local tt = setupTooltip(frame)
         dataobj.OnTooltipShow(tt)
         tt:Show()
@@ -972,11 +972,11 @@ Plugin.OnLeave = function(frame, ...)
     self.bar.OnLeave(frame)
     self:highlight(nil)
     local dataobj = self.dataobj
-    if (dataobj.tooltip) then
+    if dataobj.tooltip then
         dataobj.tooltip:Hide()
-    elseif (dataobj.OnLeave) then
+    elseif dataobj.OnLeave then
         dataobj.OnLeave(frame, ...)
-    elseif (dataobj.OnTooltipShow) then
+    elseif dataobj.OnTooltipShow then
         local tt = setupTooltip()
         tt:Hide()
     end
@@ -984,21 +984,21 @@ end
 
 Plugin.OnClick = function(frame, ...)
     local self = frame.bzkPlugin
-    if (self.dataobj.OnClick) then
+    if self.dataobj.OnClick then
         self.dataobj.OnClick(frame, ...)
     end
 end
 
 Plugin.OnUpdate = function(frame)
     local x, y = getScaledCursorPosition()
-    if (x ~= Bazooka.lastX or y ~= Bazooka.lastY) then
+    if x ~= Bazooka.lastX or y ~= Bazooka.lastY then
         Bazooka.lastX, Bazooka.lastY = x, y
         Bazooka:highlight(Bazooka:getDropPlace(x, y))
     end
 end
 
 Plugin.OnDragStart = function(frame)
-    if (Bazooka.locked) then
+    if Bazooka.locked then
         return
     end
     local self = frame.bzkPlugin
@@ -1012,7 +1012,7 @@ Plugin.OnDragStart = function(frame)
 end
 
 Plugin.OnDragStop = function(frame)
-    if (not Bazooka.draggedFrame) then
+    if not Bazooka.draggedFrame then
         return
     end
     local self = frame.bzkPlugin
@@ -1021,12 +1021,12 @@ Plugin.OnDragStop = function(frame)
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
     Bazooka:highlight(nil)
-    if (Bazooka.locked) then
+    if Bazooka.locked then
         self:reattach()
         return
     end
     local bar, area, pos = Bazooka:getDropPlace(getScaledCursorPosition())
-    if (bar) then
+    if bar then
         bar:attachPlugin(self, area, pos)
     else
         self:reattach()
@@ -1039,7 +1039,7 @@ function Plugin:New(name, dataobj, db)
     plugin.name = name
     plugin.dataobj = dataobj
 
-    if (dataobj.tocname) then
+    if dataobj.tocname then
         local addonName, addonTitle = GetAddOnInfo(dataobj.tocname or name)
         plugin.title = addonTitle or addonName or name
     else
@@ -1054,7 +1054,7 @@ function Plugin:getDropPlace(x, y)
     local left, bottom, width, height = self.frame:GetRect()
     local ld = distance2(x, y, left, bottom + height / 2)
     local rd = distance2(x, y, left + width, bottom + height / 2)
-    if (ld < rd) then
+    if ld < rd then
         return self.db.pos, ld
     else
         return -self.db.pos, rd
@@ -1062,15 +1062,15 @@ function Plugin:getDropPlace(x, y)
 end
 
 function Plugin:highlight(flag)
-    if (flag) then
-        if (not self.hl) then
+    if flag then
+        if not self.hl then
             self.hl = self.frame:CreateTexture("BazookaHL_" .. self.name, "OVERLAY")
             self.hl:SetTexture(HighlightImage)
             self.hl:SetAllPoints()
         end
         self.hl:Show()
     else
-        if (self.hl) then
+        if self.hl then
             self.hl:Hide()
         end
     end
@@ -1083,16 +1083,16 @@ function Plugin:globalSettingsChanged()
     self.iconTextSpacing = bdb.iconTextSpacing
     self.iconSize = bdb.iconSize
     self.fontSize = bdb.fontSize
-    if (self.text) then
+    if self.text then
         local dbFontPath = self.bar and self.bar.dbFontPath or bdb.fontPath
         local fontPath, fontSize, fontOutline = self.text:GetFont()
         fontOutline = fontOutline or ""
-        if (dbFontPath ~= fontPath or bdb.fontSize ~= fontSize or bdb.fontOutline ~= fontOutline) then
+        if dbFontPath ~= fontPath or bdb.fontSize ~= fontSize or bdb.fontOutline ~= fontOutline then
             self.text:SetFont(dbFontPath, self.fontSize, bdb.fontOutline)
         end
         self.text:SetTextColor(bdb.textColor.r, bdb.textColor.g, bdb.textColor.b, bdb.textColor.a)
     end
-    if (self.icon) then
+    if self.icon then
         self.icon:SetWidth(self.iconSize)
         self.icon:SetHeight(self.iconSize)
     end
@@ -1115,21 +1115,21 @@ end
 
 function Plugin:updateLayout(forced)
     local w = 0
-    if (self.db.showText or self.db.showLabel) then
+    if self.db.showText or self.db.showLabel then
         local tw = self.text:GetStringWidth()
         local iw = self.db.showIcon and self.icon:GetWidth() or 0
-        if (tw > 0) then
+        if tw > 0 then
             local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
             self.text:SetPoint("LEFT", self.frame, "LEFT", offset, 0)
             w = offset + tw
-        elseif (iw > 0) then
+        elseif iw > 0 then
             w = iw
         else
             w = EmptyPluginWidth
         end
-    elseif (self.db.showIcon) then
+    elseif self.db.showIcon then
         local iw = self.icon:GetWidth()
-        if (iw > 0) then
+        if iw > 0 then
             w = iw
         else
             w = EmptyPluginWidth
@@ -1138,17 +1138,17 @@ function Plugin:updateLayout(forced)
         w = EmptyPluginWidth
     end
     local ow = self.origWidth or self.frame:GetWidth()
-    if (forced or w > ow or w < ow - self.db.shrinkThreshold) then
+    if forced or w > ow or w < ow - self.db.shrinkThreshold then
         self.origWidth = w
         self.frame:SetWidth(w)
-        if (self.bar and self.db.area == 'center') then
+        if self.bar and self.db.area == 'center' then
             self.bar:updateCenterWidth()
         end
     end
 end
 
 function Plugin:enable()
-    if (not self.frame) then
+    if not self.frame then
         self.frame = CreateFrame("Button", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
         self.frame:RegisterForDrag("LeftButton")
@@ -1165,7 +1165,7 @@ function Plugin:enable()
 end
 
 function Plugin:disable()
-    if (self.frame) then
+    if self.frame then
         self.frame:ClearAllPoints()
         self.frame:Hide()
         self.bar = nil
@@ -1173,29 +1173,29 @@ function Plugin:disable()
 end
 
 function Plugin:applySettings()
-    if (not self.db.enabled) then
+    if not self.db.enabled then
         self:detach()
         self:disable()
         return
     end
     self:enable()
-    if (self.db.showIcon) then
-        if (not self.icon) then
+    if self.db.showIcon then
+        if not self.icon then
             self:createIcon()
         end
         self:setIcon()
         self:setIconColor()
         self:setIconCoords()
         self.icon:Show()
-    elseif (self.icon) then
+    elseif self.icon then
         self.icon:Hide()
     end
-    if (self.db.showText or self.db.showLabel) then
-        if (not self.text) then
+    if self.db.showText or self.db.showLabel then
+        if not self.text then
             self:createText()
         end
         self:setText()
-    elseif (self.text) then
+    elseif self.text then
         self.text:SetFormattedText("")
         self.text:Hide()
     end
@@ -1204,7 +1204,7 @@ function Plugin:applySettings()
 end
 
 function Plugin:setIcon()
-    if (not self.db.showIcon) then
+    if not self.db.showIcon then
         return
     end
     local dataobj = self.dataobj
@@ -1213,40 +1213,40 @@ function Plugin:setIcon()
 end
 
 function Plugin:setIconColor()
-    if (not self.db.showIcon) then
+    if not self.db.showIcon then
         return
     end
     local dataobj = self.dataobj
-    if (dataobj.iconR) then
+    if dataobj.iconR then
         self.icon:SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
     end
 end
 
 function Plugin:setIconCoords()
-    if (not self.db.showIcon) then
+    if not self.db.showIcon then
         return
     end
     local dataobj = self.dataobj
-    if (dataobj.iconCoords) then
+    if dataobj.iconCoords then
         self.icon:SetTexCoord(unpack(dataobj.iconCoords))
     end
 end
 
 function Plugin:setText()
     local dataobj = self.dataobj
-    if (self.db.showLabel and self.label) then
-        if (self.db.showText and dataobj.text) then
+    if self.db.showLabel and self.label then
+        if self.db.showText and dataobj.text then
             self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
-        elseif (self.db.showText and dataobj.value and dataobj.suffix) then
+        elseif self.db.showText and dataobj.value and dataobj.suffix then
             self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.value, dataobj.suffix)
         else
             self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
         end
         self:updateLayout()
-    elseif (self.db.showText) then
-        if (dataobj.text) then
+    elseif self.db.showText then
+        if dataobj.text then
             self.text:SetFormattedText("%s", dataobj.text)
-        elseif (dataobj.value and dataobj.suffix) then
+        elseif dataobj.value and dataobj.suffix then
             self.text:SetFormattedText("%s |c%s%s|r", dataobj.value, self.suffixColorHex, dataobj.suffix)
         else
             self.text:SetFormattedText("")
@@ -1257,22 +1257,22 @@ end
 
 function Plugin:updateLabel()
     self.label = self.dataobj.label
-    if (not self.label and self.db.showTitle) then
+    if not self.label and self.db.showTitle then
         self.label = self.title
     end
     self:setText()
 end
 
 function Plugin:reattach()
-    if (self.bar) then
+    if self.bar then
         self.bar:attachPlugin(self, self.db.area, self.db.pos)
     end
 end
 
 function Plugin:detach()
-    if (self.bar) then
+    if self.bar then
         self.bar:detachPlugin(self)
-        if (self.frame) then
+        if self.frame then
             self.frame:SetFrameStrata("HIGH")
         end
     end
@@ -1305,7 +1305,7 @@ function Bazooka:OnInitialize()
     self.db.RegisterCallback(self, "OnProfileReset", "profileChanged")
     self:profileChanged()
     self:setupDummyOptions()
-    if (self.setupDBOptions) then -- trickery to make it work with a straight checkout
+    if self.setupDBOptions then -- trickery to make it work with a straight checkout
         self:setupDBOptions()
     end
     self:setupLDB()
@@ -1337,29 +1337,29 @@ function Bazooka:PLAYER_REGEN_DISABLED()
     self:lock()
     for i, bar in ipairs(self.bars) do
         bar.frame:EnableMouse(false)
-        if (bar.db.combatFade) then
+        if bar.db.combatFade then
             bar:fadeOut(0)
         end
     end
     for name, plugin in pairs(self.plugins) do
-        if (plugin.db.enabled and plugin.db.disableMouseInCombat) then
+        if plugin.db.enabled and plugin.db.disableMouseInCombat then
             plugin.frame:EnableMouse(false)
         end
     end
 end
 
 function Bazooka:PLAYER_REGEN_ENABLED()
-    if (not self.db.profile.locked) then
+    if not self.db.profile.locked then
         self:unlock()
     end
     for i, bar in ipairs(self.bars) do
         bar.frame:EnableMouse(true)
-        if (bar.db.combatFade and (not bar.db.autoFade or bar.isMouseInside)) then
+        if bar.db.combatFade and (not bar.db.autoFade or bar.isMouseInside) then
             bar:fadeIn()
         end
     end
     for name, plugin in pairs(self.plugins) do
-        if (plugin.db.enabled) then
+        if plugin.db.enabled then
             plugin.frame:EnableMouse(true)
         end
     end
@@ -1371,9 +1371,9 @@ end
 
 function Bazooka:attributeChanged(event, name, attr, value, dataobj)
     local plugin = self.plugins[name]
-    if (plugin and plugin.db.enabled) then
+    if plugin and plugin.db.enabled then
         local updater = self.updaters[attr]
-        if (updater) then
+        if updater then
             updater(plugin)
             return
         end
@@ -1382,7 +1382,7 @@ function Bazooka:attributeChanged(event, name, attr, value, dataobj)
 end
 
 function Bazooka:profileChanged()
-    if (not self.enabled) then
+    if not self.enabled then
         return
     end
     self:init()
@@ -1399,7 +1399,7 @@ function Bazooka:init()
     end
     self.numBars = 0
     local numBars = self.db.profile.numBars
-    if (not numBars or numBars <= 0) then
+    if not numBars or numBars <= 0 then
         numBars = 1
     end
     for i = 1, numBars do
@@ -1415,7 +1415,7 @@ function Bazooka:createBar()
     local id =  self.numBars
     local db = self.db.profile.bars[id]
     local bar = self.bars[id]
-    if (bar) then
+    if bar then
         bar:enable(id, db)
         bar:applySettings()
     else
@@ -1425,7 +1425,7 @@ function Bazooka:createBar()
 end
 
 function Bazooka:removeBar(bar)
-    if (self.numBars <= 1) then
+    if self.numBars <= 1 then
         return
     end
     bar:disable()
@@ -1444,7 +1444,7 @@ function Bazooka:createPlugin(name, dataobj)
     local pt = dataobj.type or ""
     local db = self.db.profile.plugins[pt][name]
     local plugin = self.plugins[name]
-    if (plugin) then
+    if plugin then
         plugin.db = db
         plugin.dataobj = dataobj
         plugin:applySettings()
@@ -1452,7 +1452,7 @@ function Bazooka:createPlugin(name, dataobj)
         plugin = Plugin:New(name, dataobj, db)
         self.plugins[name] = plugin
     end
-    if (plugin.db.enabled) then
+    if plugin.db.enabled then
         self:attachPlugin(plugin)
     end
     return plugin
@@ -1465,7 +1465,7 @@ end
 
 function Bazooka:attachPlugin(plugin)
     local bar = self.bars[plugin.db.bar]
-    if (not bar) then
+    if not bar then
         self.bars[1]:attachPlugin(plugin)
     else
         bar:attachPlugin(plugin, plugin.db.area, plugin.db.pos)
@@ -1479,7 +1479,7 @@ function Bazooka:initPlugins()
 end
 
 function Bazooka:applySettings()
-    if (not self:IsEnabled()) then
+    if not self:IsEnabled() then
         self:OnDisable()
         return
     end
@@ -1490,8 +1490,8 @@ function Bazooka:applySettings()
     for name, plugin in pairs(self.plugins) do
         plugin:applySettings()
     end
-    if (Jostle) then
-        if (self.db.profile.adjustFrames) then
+    if Jostle then
+        if self.db.profile.adjustFrames then
             Jostle:EnableTopAdjusting()
             Jostle:EnableBottomAdjusting()
         else
@@ -1513,9 +1513,9 @@ function Bazooka:unlock()
 end
 
 function Bazooka:toggleLocked(flag)
-    if (flag == nil) then flag = not self.db.profile.locked end
+    if flag == nil then flag = not self.db.profile.locked end
     self.db.profile.locked = flag
-    if (flag) then
+    if flag then
         self:lock()
     else
         self:unlock()
@@ -1527,9 +1527,9 @@ function Bazooka:setupLDB()
         type = "launcher",
         icon = Icon,
         OnClick = function(frame, button)
-            if (button == "LeftButton") then
+            if button == "LeftButton" then
                 self:toggleLocked()
-            elseif (button == "RightButton") then
+            elseif button == "RightButton" then
                 self:openConfigDialog()
             end
         end,
@@ -1548,22 +1548,22 @@ function Bazooka:getDropPlace(x, y)
     local minDist = math.huge
     for i, bar in ipairs(self.bars) do
         local area, pos, dist = bar:getDropPlace(x, y)
-        if (dist < minDist) then
+        if dist < minDist then
             dstBar, dstArea, dstPos, minDist = bar, area, pos, dist
         end
     end
-    if (minDist < NearSquared or getDistance2Frame(x, y, dstBar.frame) < NearSquared) then
+    if minDist < NearSquared or getDistance2Frame(x, y, dstBar.frame) < NearSquared then
         return dstBar, dstArea, dstPos
     end
 end
 
 function Bazooka:highlight(bar, area, pos)
 -- FIXME: re-do highlight stuff so that the plugins don't overlap the HL texture
-    if (self.hlBar and self.hlBar ~= bar) then
+    if self.hlBar and self.hlBar ~= bar then
         self.hlBar:highlight(nil)
     end
     self.hlBar = bar
-    if (bar) then
+    if bar then
         bar:highlight(area, pos)
     end
 end
@@ -1571,14 +1571,14 @@ end
 -- BEGIN LoD Options muckery
 
 function Bazooka:setupDummyOptions()
-    if (self.optionsLoaded) then
+    if self.optionsLoaded then
         return
     end
     self.dummyOpts = CreateFrame("Frame", AppName .. "DummyOptions", UIParent)
     self.dummyOpts.name = AppName
     self.dummyOpts:SetScript("OnShow", function(frame)
-        if (not self.optionsLoaded) then
-            if (not InterfaceOptionsFrame:IsVisible()) then
+        if not self.optionsLoaded then
+            if not InterfaceOptionsFrame:IsVisible() then
                 return -- wtf... Happens if you open the game map and close it with ESC
             end
             self:openConfigDialog()
@@ -1590,10 +1590,10 @@ function Bazooka:setupDummyOptions()
 end
 
 function Bazooka:loadOptions()
-    if (not self.optionsLoaded) then
+    if not self.optionsLoaded then
         self.optionsLoaded = true
         local loaded, reason = LoadAddOn(OptionsAppName)
-        if (not loaded) then
+        if not loaded then
             print("Failed to load " .. tostring(OptionsAppName) .. ": " .. tostring(reason))
         end
     end
@@ -1601,7 +1601,7 @@ end
 
 function Bazooka:openConfigDialog(opts)
     -- this function will be overwritten by the Options module when loaded
-    if (not self.optionsLoaded) then
+    if not self.optionsLoaded then
         self:loadOptions()
         return self:openConfigDialog(opts)
     end
@@ -1612,7 +1612,7 @@ end
 
 function Bazooka:openStaticDialog(dialog, frameArg, textArg1, textArg2)
     local dialogFrame = StaticPopup_Show(dialog, textArg1, textArg2)
-    if (dialogFrame) then
+    if dialogFrame then
         dialogFrame.data = frameArg
     end
 end
@@ -1626,7 +1626,7 @@ StaticPopupDialogs[BzkDialogDisablePlugin] = {
     button1 = _G.YES,
     button2 = _G.NO,
     OnAccept = function(frame)
-        if (not frame.data) then
+        if not frame.data then
             return
         end
         Bazooka:disablePlugin(frame.data)
@@ -1643,7 +1643,7 @@ StaticPopupDialogs[BzkDialogDisablePlugin] = {
 SLASH_BAZOOKA1 = "/bazooka"
 SlashCmdList["BAZOOKA"] = function(msg)
     msg = strtrim(msg or "")
-    if (msg == "locked") then
+    if msg == "locked" then
         Bazooka:toggleLocked()
     else
         Bazooka:openConfigDialog()
@@ -1654,9 +1654,9 @@ end
 
 CONFIGMODE_CALLBACKS = CONFIGMODE_CALLBACKS or {}
 CONFIGMODE_CALLBACKS[AppName] = function(action)
-    if (action == "ON") then
+    if action == "ON" then
          Bazooka:toggleLocked(false)
-    elseif (action == "OFF") then
+    elseif action == "OFF" then
          Bazooka:toggleLocked(true)
     end
 end

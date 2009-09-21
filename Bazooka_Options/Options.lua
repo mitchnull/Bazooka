@@ -25,7 +25,7 @@ local FrameStratas = {
 
 function Bazooka:openConfigDialog(opts)
     opts = opts or lastConfiguredOpts
-    if (opts) then
+    if opts then
         InterfaceOptionsFrame_OpenToCategory(opts)
     else
         InterfaceOptionsFrame_OpenToCategory(self.profiles) -- to expand our tree
@@ -86,9 +86,9 @@ do
     self.optionsLoaded = true
 
     -- remove dummy options frame, ugly hack
-    if (self.dummyOpts) then 
+    if self.dummyOpts then 
         for k, f in ipairs(INTERFACEOPTIONS_ADDONCATEGORIES) do
-            if (f == self.dummyOpts) then
+            if f == self.dummyOpts then
                 tremove(INTERFACEOPTIONS_ADDONCATEGORIES, k)
                 f:SetParent(UIParent)
                 break
@@ -109,7 +109,7 @@ do
         self.profiles = registerSubOptions('profiles', profiles)
     end
 
-    if (self.db) then -- trickery to make it work with a straight checkout
+    if self.db then -- trickery to make it work with a straight checkout
         self:setupDBOptions()
         self.setupDBOptions = nil
     end
