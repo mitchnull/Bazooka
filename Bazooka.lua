@@ -73,6 +73,8 @@ local Defaults =  {
     fontSize = 12,
     fontOutline = "",
     iconSize = 16,
+    minFrameWidth = 10,
+    minFrameHeight = 10,
     frameWidth = 256,
     frameHeight = 20,
     labelColor = makeColor(0.9, 0.9, 0.9),
@@ -546,6 +548,7 @@ function Bar:enable(id, db)
         self.frame:SetScript("OnDragStop", Bar.OnDragStop)
         self.frame:SetMovable(true)
         self.frame:SetResizable(true)
+        self.frame:SetMinResize(Defaults.minFrameWidth, Defaults.minFrameHeight)
         self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -894,17 +897,16 @@ function Bar:getSizingPoint(x, y)
     else -- none
         local left, bottom, width, height = self.frame:GetRect()
         -- lazy min()...
-        local dmin, dr, db, dt , point= x - left, left + width - x, y - bottom, bottom + height - y, "LEFT"
-        if dr < dmin then
-            dmin, point = dr, "RIGHT"
+        local dl, dr, db, dt = x - left, left + width - x, y - bottom, bottom + height - y
+        if dl <= width / 10 + 1 then
+            return "LEFT"
+        elseif dr <= width / 10 + 1 then
+            return "RIGHT"
+        elseif dt < db then
+            return "TOP"
+        else
+            return "BOTTOM"
         end
-        if dt < dmin then
-            dmin, point = dt, "TOP"
-        end
-        if db < dmin then
-            dmin, point = db, "BOTTOM"
-        end
-        return point
     end
 end
 
