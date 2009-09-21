@@ -195,6 +195,7 @@ local defaults = {
                     bar = 1,
                     area = 'left',
                     pos = nil,
+                    hideTipOnClick = true,
                     disableTooltip = false,
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
@@ -212,6 +213,7 @@ local defaults = {
                     bar = 1,
                     area = 'left',
                     pos = nil,
+                    hideTipOnClick = true,
                     disableTooltip = false,
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
@@ -229,6 +231,7 @@ local defaults = {
                     bar = 1,
                     area = 'right',
                     pos = nil,
+                    hideTipOnClick = true,
                     disableTooltip = false,
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
@@ -426,6 +429,10 @@ end
 Bar.OnDragStart = function(frame, button)
     if Bazooka.locked then
         return
+    end
+    if Bazooka.tipOwner then
+        Bazooka.tipOwner:hideTip()
+        Bazooka.tipOwner = nil
     end
     local self = frame.bzkBar
     updateUIScale()
@@ -1014,41 +1021,20 @@ Plugin.OnEnter = function(frame, ...)
     if Bazooka.db.profile.enableHL then
         self:highlight(true)
     end
-    -- tooltip handling
-    if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
-        return
-    end
-    if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
-        local tt = setupTooltip(frame)
-        tt:SetText(self.title)
-        tt:Show()
-        return
-    end
-    local dataobj = self.dataobj
-    if dataobj.tooltip then
-        setupTooltip(frame, dataobj.tooltip)
-        dataobj.tooltip:Show()
-    elseif dataobj.OnEnter then
-        dataobj.OnEnter(frame, ...)
-    elseif dataobj.OnTooltipShow then
-        local tt = setupTooltip(frame)
-        dataobj.OnTooltipShow(tt)
-        tt:Show()
-    end
+    self:showTip()
 end
 
 Plugin.OnLeave = function(frame, ...)
     local self = frame.bzkPlugin
     self.bar.OnLeave(frame)
     self:highlight(nil)
-    local dataobj = self.dataobj
-    if dataobj.tooltip then
-        dataobj.tooltip:Hide()
-    elseif dataobj.OnLeave then
-        dataobj.OnLeave(frame, ...)
-    elseif dataobj.OnTooltipShow then
-        local tt = setupTooltip()
-        tt:Hide()
+    self:hideTip()
+end
+
+Plugin.OnMouseDown = function(frame, ...)
+    local self = frame.bzkPlugin
+    if self.db.hideTipOnClick then
+        self:hideTip()
     end
 end
 
@@ -1070,6 +1056,10 @@ end
 Plugin.OnDragStart = function(frame)
     if Bazooka.locked then
         return
+    end
+    if Bazooka.tipOwner then
+        Bazooka.tipOwner:hideTip()
+        Bazooka.tipOwner = nil
     end
     local self = frame.bzkPlugin
     self:highlight(nil)
@@ -1118,6 +1108,51 @@ function Plugin:New(name, dataobj, db)
     plugin.db = db
     plugin:applySettings()
     return plugin
+end
+
+function Plugin:showTip()
+    if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
+        return
+    end
+    if Bazooka.tipOwner then
+        Bazooka.tipOwner:hideTip()
+    end
+    Bazooka.tipOwner = self
+    if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
+        self.tipType = 'simple'
+        local tt = setupTooltip(frame)
+        tt:SetText(self.title)
+        tt:Show()
+        return
+    end
+    local dataobj = self.dataobj
+    if dataobj.tooltip then
+        self.tipType = 'tooltip'
+        setupTooltip(self.frame, dataobj.tooltip)
+        dataobj.tooltip:Show()
+    elseif dataobj.OnEnter then
+        self.tipType = 'OnEnter'
+        dataobj.OnEnter(self.frame)
+    elseif dataobj.OnTooltipShow then
+        self.tipType = 'OnTooltipShow'
+        local tt = setupTooltip(self.frame)
+        dataobj.OnTooltipShow(tt)
+        tt:Show()
+    end
+end
+
+function Plugin:hideTip()
+    if not Bazooka.tipOwner then
+        return
+    end
+    if self.tipType == 'simple' or self.tipType == 'OnTooltipShow' then
+        local tt = setupTooltip()
+        tt:Hide()
+    elseif self.tipType == 'OnEnter' then
+        self.dataobj.OnLeave(self.frame)
+    elseif self.tipType == 'tooltip' then
+        self.dataobj.tooltip:Hide()
+    end
 end
 
 function Plugin:getDropPlace(x, y)
@@ -1227,6 +1262,7 @@ function Plugin:enable()
         self.frame:SetScript("OnEnter", Plugin.OnEnter)
         self.frame:SetScript("OnLeave", Plugin.OnLeave)
         self.frame:SetScript("OnClick", Plugin.OnClick)
+        self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
         self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
         self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
         self.frame:EnableMouse(true)
