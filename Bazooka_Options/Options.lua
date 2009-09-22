@@ -649,11 +649,3 @@ do
     end
 end
 
--- FIXME:
---[[
- - setText() misbehaves with showLabel/showTitle/showText changes
- - color plugin names in list if disabled
- - separate launchers?
- - add bar/area selector ?
- - 
-]]--
