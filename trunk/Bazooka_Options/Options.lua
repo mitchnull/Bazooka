@@ -7,7 +7,6 @@ local ACR = LibStub("AceConfigRegistry-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(Bazooka.OptionsAppName)
-local LL = LibStub("AceLocale-3.0"):GetLocale(Bazooka.AppName)
 
 local MinFontSize = 5
 local MaxFontSize = 30
@@ -142,14 +141,12 @@ local barOptionArgs = {
     font = {
         type = "select", dialogControl = 'LSM30_Font',
         name = L["Font"],
-        --desc = L["Font"],
         values = AceGUIWidgetLSMlists.font,
         order = 90,
     },
     fontSize = {
         type = 'range',
         name = L["Font size"],
-        --desc = L["Font size"],
         min = MinFontSize,
         max = MaxFontSize,
         step = 1,
@@ -158,7 +155,6 @@ local barOptionArgs = {
     fontOutline = {
         type = 'select',
         name = L["Font outline"],
-        --desc = L["Font outline"],
         values = FontOutlines,
         order = 110,
     },
@@ -217,7 +213,6 @@ local barOptionArgs = {
     bg = {
         type = 'group',
         name = "",
---        name = L["Background Options"],
         disabled = "isBGDisabled",
         inline = true,
         order = 200,
@@ -225,25 +220,25 @@ local barOptionArgs = {
             bgEnabled = {
                 type = 'toggle',
                 order = 1,
-                name = L["Enable Background"],
+                name = L["Enable background"],
                 disabled = false,
             },
             bgTexture = {
                 type = "select", dialogControl = 'LSM30_Background',
                 order = 11,
-                name = L["Background Texture"],
+                name = L["Background texture"],
                 values = AceGUIWidgetLSMlists.background,
             },
             bgBorderTexture = {
                 type = "select", dialogControl = 'LSM30_Border',
                 order = 12,
-                name = L["Border Texture"],
+                name = L["Border texture"],
                 values = AceGUIWidgetLSMlists.border,
             },
             bgColor = {
                 type = "color",
                 order = 13,
-                name = L["Background Color"],
+                name = L["Background color"],
                 hasAlpha = true,
                 get = "getColorOption",
                 set = "setColorOption",
@@ -251,7 +246,7 @@ local barOptionArgs = {
             bgBorderColor = {
                 type = "color",
                 order = 14,
-                name = L["Border Color"],
+                name = L["Border color"],
                 hasAlpha = true,
                 get = "getColorOption",
                 set = "setColorOption",
@@ -259,12 +254,12 @@ local barOptionArgs = {
             bgTile = {
                 type = "toggle",
                 order = 2,
-                name = L["Tile Background"],
+                name = L["Tile background"],
             },
             bgTileSize = {
                 type = "range",
                 order = 16,
-                name = L["Background Tile Size"],
+                name = L["Background tile size"],
                 desc = L["The size used to tile the background texture"],
                 min = 16, max = 256, step = 1,
                 disabled = "isTileSizeDisabled",
@@ -272,14 +267,14 @@ local barOptionArgs = {
             bgEdgeSize = {
                 type = "range",
                 order = 17,
-                name = L["Border Thickness"],
+                name = L["Border thickness"],
                 min = 1, max = 16, step = 1,
             },
         },
     },
     removeBar = {
         type = 'execute',
-        name = L["Remove Bar"],
+        name = L["Remove bar"],
         confirm = true,
         width = 'full',
         func = function(info)
@@ -335,7 +330,7 @@ local function makeBarOptions(bar)
     return {
         type = 'group',
         inline = false,
-        name = LL["Bar"] .. '#' .. bar.id,
+        name = L["Bar"] .. '#' .. bar.id,
         handler = bar,
         order = bar.id,
         args = barOptionArgs,
@@ -555,17 +550,17 @@ do
             },
             simpleTip = {
                 type = 'toggle',
-                name = L["Enable Simple Tooltips"],
+                name = L["Enable simple tooltips"],
                 order = 20,
             },
             adjustFrames = {
                 type = 'toggle',
-                name = L["Adjust Frames"],
+                name = L["Adjust frames"],
                 order = 30,
             },
             enableHL = {
                 type = 'toggle',
-                name = L["Enable Highlight"],
+                name = L["Enable highlight"],
                 order = 40,
             },
             fadeOutDelay = {
@@ -597,7 +592,7 @@ do
             },
             createBar = {
                 type = 'execute',
-                name = L["Create New Bar"],
+                name = L["Create new bar"],
                 width = 'full',
                 func = function()
                     Bazooka:createBar()
