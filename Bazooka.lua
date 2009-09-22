@@ -60,10 +60,10 @@ local GameTooltip = GameTooltip
 -- hard-coded config stuff
 
 local Defaults =  {
---  bgTexture = "Blizzard Tooltip",
---  bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
-    bgTexture = "Blizzard Dialog Background",
-    bgFile = [[Interface\DialogFrame\UI-DialogBox-Background]],
+    bgTexture = "Blizzard Tooltip",
+    bgFile = [[Interface\Tooltips\UI-Tooltip-Background]],
+--  bgTexture = "Blizzard Dialog Background",
+--  bgFile = [[Interface\DialogFrame\UI-DialogBox-Background]],
 --  edgeTexture = "Blizzard Tooltip",
 --  edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]],
     edgeTexture = "None",
@@ -75,6 +75,8 @@ local Defaults =  {
     iconSize = 16,
     minFrameWidth = 10,
     minFrameHeight = 10,
+    maxFrameWidth = 1600,
+    maxFrameHeight = 50,
     frameWidth = 256,
     frameHeight = 20,
     labelColor = makeColor(0.9, 0.9, 0.9),
@@ -99,6 +101,7 @@ local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
 
 Bazooka = LibStub("AceAddon-3.0"):NewAddon(AppName, "AceEvent-3.0")
 local Bazooka = Bazooka
+Bazooka.Defaults = Defaults
 
 Bazooka:SetDefaultModuleState(false)
 
@@ -178,16 +181,14 @@ local defaults = {
                 bgTile = false,
                 bgTileSize = 32,
                 bgEdgeSize = 16,
-                bgColor = makeColor(0, 0, 0, 0.7),
+                bgColor = makeColor(0, 0, 0),
                 bgBorderColor = makeColor(0.8, 0.6, 0.0),
             },
             [1] = {
                 attach = 'top',
-                fadeOutOfCombat = true, -- FIXME
             },
             [2] = {
                 attach = 'bottom',
-                fadeInCombat = true, -- FIXME
             },
         },
         plugins = {
@@ -225,6 +226,9 @@ local defaults = {
                     showTitle = true,
                     showText = false,
                     shrinkThreshold = 0,
+                },
+                [AppName] = {
+                    pos = 1,
                 },
             },
             ["data source"] = {
@@ -549,6 +553,7 @@ function Bar:enable(id, db)
         self.frame:SetMovable(true)
         self.frame:SetResizable(true)
         self.frame:SetMinResize(Defaults.minFrameWidth, Defaults.minFrameHeight)
+        self.frame:SetMaxResize(Defaults.maxFrameWidth, Defaults.maxFrameHeight)
         self.centerFrame = CreateFrame("Frame", "BazookaBarC_" .. id, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -650,8 +655,9 @@ function Bar:highlight(area, pos)
         if self.hl then
             self.hl:Hide()
             self.lastHLArea, self.lastHLPos = nil
-            if GameTooltip:IsOwned(self.frame) then
-                GameTooltip:Hide()
+            local tt = setupTooltip()
+            if tt:IsOwned(self.frame) then
+                tt:Hide()
             end
             Bar.OnLeave(self.frame)
         end
@@ -838,9 +844,12 @@ end
 
 function Bar:applySettings()
     local needJostleRefresh
+    self.frame:ClearAllPoints()
     if self.db.attach == "top" then
         self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
         self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, 0)
+        self.db.frameWidth = self.frame:GetWidth()
+        self.db.point, self.db.relPoint, self.db.x, self.db.y = "TOP", "TOP", 0, -10
         if self.frame:GetHeight() ~= self.db.frameHeight then
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
@@ -851,6 +860,8 @@ function Bar:applySettings()
     elseif self.db.attach == "bottom" then
         self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
         self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
+        self.db.frameWidth = self.frame:GetWidth()
+        self.db.point, self.db.relPoint, self.db.x, self.db.y = "BOTTOM", "BOTTOM", 0, 10
         if self.frame:GetHeight() ~= self.db.frameHeight then
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
@@ -946,12 +957,13 @@ function Bar:applyBGSettings()
     bg.edgeSize = (bg.edgeFile and bg.edgeFile ~= [[Interface\None]]) and self.db.bgEdgeSize or 0
     local inset = math.floor(bg.edgeSize / 4)
     self.inset = inset
-    -- self.frame:SetClampRectInsets(inset, -inset, -inset, inset)
+--    self.frame:SetClampRectInsets(inset, -inset, -inset, inset)
     bg.insets.left = inset
     bg.insets.right = inset
     bg.insets.top = inset
     bg.insets.bottom = inset
     self.frame:SetBackdrop(bg)
+    self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a)
     self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a)
 end
 
@@ -1122,7 +1134,7 @@ function Plugin:showTip()
     Bazooka.tipOwner = self
     if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
         self.tipType = 'simple'
-        local tt = setupTooltip(frame)
+        local tt = setupTooltip(self.frame)
         tt:SetText(self.title)
         tt:Show()
         return
@@ -1534,6 +1546,7 @@ function Bazooka:createBar()
         bar = Bar:New(id, db)
         self.bars[bar.id] = bar
     end
+    return bar
 end
 
 function Bazooka:removeBar(bar)
@@ -1670,7 +1683,6 @@ function Bazooka:getDropPlace(x, y)
 end
 
 function Bazooka:highlight(bar, area, pos)
--- FIXME: re-do highlight stuff so that the plugins don't overlap the HL texture
     if self.hlBar and self.hlBar ~= bar then
         self.hlBar:highlight(nil)
     end
