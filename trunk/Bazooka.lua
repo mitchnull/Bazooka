@@ -1315,6 +1315,7 @@ function Plugin:applySettings()
             self:createText()
         end
         self:setText()
+        self.text:Show()
     elseif self.text then
         self.text:SetFormattedText("")
         self.text:Hide()
