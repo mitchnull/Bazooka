@@ -479,7 +479,7 @@ function Plugin:setOption(info, value)
         if value then
             Bazooka:attachPlugin(self)
         end
-        plugin.opts.name = self:getColoredTitle()
+        self.opts.name = self:getColoredTitle()
         -- ACR:NotifyChange(Bazooka.AppName .. ".plugins")
     end
 end
