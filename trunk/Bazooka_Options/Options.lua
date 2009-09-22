@@ -468,11 +468,19 @@ local pluginOptionArgs = {
     },
 }
 
+function Plugin:getColoredTitle()
+    return self.db.enabled and self.title or "|cCCed1100" .. self.title .."|r"
+end
+
 function Plugin:setOption(info, value)
     self.db[info[#info]] = value
     self:applySettings()
-    if info[#info] == 'enabled' and value then
-        Bazooka:attachPlugin(self)
+    if info[#info] == 'enabled' then
+        if value then
+            Bazooka:attachPlugin(self)
+        end
+        plugin.opts.name = self:getColoredTitle()
+        -- ACR:NotifyChange(Bazooka.AppName .. ".plugins")
     end
 end
 
@@ -492,7 +500,7 @@ local function makePluginOptions(plugin)
     return {
         type = 'group',
         inline = false,
-        name = plugin.title,
+        name = plugin:getColoredTitle(),
         handler = plugin,
         args = pluginOptionArgs,
     }
