@@ -419,7 +419,7 @@ local pluginOptionArgs = {
         type = 'toggle',
         name = L["Show title"],
         order = 140,
-        disabled = "isDisabled",
+        disabled = "isTitleDisabled",
     },
     showText = {
         type = 'toggle',
@@ -482,6 +482,10 @@ end
 
 function Plugin:isDisabled()
     return not self.db.enabled
+end
+
+function Plugin:isTitleDisabled()
+    return not (self.db.enabled and self.db.showLabel)
 end
 
 local function makePluginOptions(plugin)
