@@ -3,7 +3,7 @@ local Bar = Bazooka.Bar
 local Plugin = Bazooka.Plugin
 local Defaults = Bazooka.Defaults
 
-local AceConfig = LibStub("AceConfig-3.0")
+local ACR = LibStub("AceConfigRegistry-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(Bazooka.OptionsAppName)
@@ -277,6 +277,16 @@ local barOptionArgs = {
             },
         },
     },
+    removeBar = {
+        type = 'execute',
+        name = L["Remove Bar"],
+        confirm = true,
+        width = 'full',
+        func = function(info)
+            Bazooka:removeBar(info.handler)
+        end,
+        order = 300,
+    },
 }
 
 local barOptions = {
@@ -360,7 +370,7 @@ function Bazooka:updateBarOptions()
         addBarOptions(bar)
         barOptions.args["bar" .. bar.id] = bar.opts
     end
-    -- FIXME: NotifyChange()
+    ACR:NotifyChange(self.AppName .. ".bars")
 end
 
 -- END Bar stuff
@@ -497,7 +507,7 @@ function Bazooka:createPlugin(...)
     local plugin = origCreatePlugin(self, ...)
     addPluginOptions(plugin)
     pluginOptions.args[plugin.name] = plugin.opts
--- FIXME: NotifyChange()
+    ACR:NotifyChange(self.AppName .. ".plugins")
     return plugin
 end
 
@@ -587,7 +597,7 @@ do
 
     local function registerSubOptions(name, opts)
         local appName = self.AppName .. "." .. name
-        AceConfig:RegisterOptionsTable(appName, opts)
+        ACR:RegisterOptionsTable(appName, opts)
         return ACD:AddToBlizOptions(appName, opts.name or name, self.AppName)
     end
 
@@ -607,7 +617,7 @@ do
         self.dummyOpts = nil
     end
 
-    AceConfig:RegisterOptionsTable(self.AppName, mainOptions)
+    ACR:RegisterOptionsTable(self.AppName, mainOptions)
     self.opts = ACD:AddToBlizOptions(self.AppName, self.AppName)
     self.barOpts = registerSubOptions('bars', barOptions)
     self.pluginOpts = registerSubOptions('plugins', pluginOptions)
