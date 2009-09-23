@@ -631,7 +631,7 @@ do
     self:updateBarOptions()
     for name, plugin in pairs(self.plugins) do
         addPluginOptions(plugin)
-        pluginOptions[name] = plugin.opts
+        pluginOptions.args[name] = plugin.opts
     end
     self.setupDBOptions = function(self)
         local profiles =  AceDBOptions:GetOptionsTable(self.db)
