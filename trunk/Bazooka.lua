@@ -14,6 +14,7 @@ local VERSION = AppName .. "-r" .. ("$Revision$"):match("%d+")
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
+local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
 local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
 local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
@@ -1437,7 +1438,9 @@ Bazooka.updaters = {
 
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults)
-    LibStub("LibDualSpec-1.0"):EnhanceDatabase(self.db, AppName)
+    if LibDualSpec then
+        LibDualSpec:EnhanceDatabase(self.db, AppName)
+    end
     self.db.RegisterCallback(self, "OnProfileChanged", "profileChanged")
     self.db.RegisterCallback(self, "OnProfileCopied", "profileChanged")
     self.db.RegisterCallback(self, "OnProfileReset", "profileChanged")
