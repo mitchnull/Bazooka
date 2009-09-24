@@ -91,8 +91,10 @@ local Defaults =  {
     shrinkThreshold = 5,
 }
 
-local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
-local UnlockedIcon = [[Interface\Icons\INV_Ammo_Bullet_03]]
+-- local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
+-- local UnlockedIcon = [[Interface\Icons\INV_Ammo_Bullet_04]]
+local Icon = [[Interface\AddOns\]] .. AppName .. [[\bzk_locked.tga]]
+local UnlockedIcon = [[Interface\AddOns\]] .. AppName .. [[\bzk_unlocked.tga]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
 local EmptyPluginWidth = 1
 local NearSquared = 32 * 32
