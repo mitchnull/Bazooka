@@ -1181,6 +1181,7 @@ function Plugin:hideTip()
     elseif self.tipType == 'tooltip' then
         self.dataobj.tooltip:Hide()
     end
+    self.tipType = nil
 end
 
 function Plugin:getDropPlace(x, y)
