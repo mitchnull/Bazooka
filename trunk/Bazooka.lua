@@ -101,13 +101,12 @@ local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
 
 Bazooka = LibStub("AceAddon-3.0"):NewAddon(AppName, "AceEvent-3.0")
 local Bazooka = Bazooka
-Bazooka.Defaults = Defaults
-
 Bazooka:SetDefaultModuleState(false)
 
 Bazooka.version = VERSION
 Bazooka.AppName = AppName
 Bazooka.OptionsAppName = OptionsAppName
+Bazooka.Defaults = Defaults
 
 Bazooka.draggedFrame = nil
 Bazooka.bars = {}
@@ -386,6 +385,7 @@ end
 
 local Bar = {
     id = nil,
+    name = nil,
     db = nil,
     frame = nil,
     centerFrame = nil,
@@ -474,6 +474,7 @@ Bar.OnDragStop = function(frame)
         self.db.frameHeight = self.frame:GetHeight()
     end
     self:applySettings()
+    Bazooka:updateBarOptions()
 end
 
 function Bar:New(id, db)
@@ -539,6 +540,7 @@ end
 
 function Bar:enable(id, db)
     self.id = id
+    self.name = Bazooka:getBarName(id)
     self.db = db
     if not self.frame then
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
@@ -688,7 +690,7 @@ function Bar:highlight(area, pos)
         self.lastHLArea, self.lastHLPos = area, pos
         local dx = hlcx - self.frame:GetCenter()
         local tt = setupTooltip(self.frame, nil, dx, 0)
-        tt:SetText(("%s#%d - %s"):format(L["Bar"], self.id, L[area]))
+        tt:SetText(("%s - %s"):format(self.name, L[area]))
         tt:Show()
         tt:FadeOut()
     end
@@ -839,6 +841,17 @@ function Bar:setRightAttachPoint(plugin, rp)
         else
             plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -self:getEdgeSpacing(), 0)
         end
+    end
+end
+
+function Bar:setId(id)
+    if id == self.id then
+        return
+    end
+    self.id = id
+    self.name = Bazooka:getBarName(id)
+    for name, plugin in pairs(self.allPlugins) do
+        plugin.db.bar = id
     end
 end
 
@@ -1102,6 +1115,7 @@ Plugin.OnDragStop = function(frame)
     local bar, area, pos = Bazooka:getDropPlace(getScaledCursorPosition())
     if bar then
         bar:attachPlugin(self, area, pos)
+        Bazooka:updatePluginOptions()
     else
         self:reattach()
         Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.title)
@@ -1439,6 +1453,8 @@ function Bazooka:OnEnable(first)
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
     LDB.RegisterCallback(self, "LibDataBroker_AttributeChanged", "attributeChanged")
+    -- our updates get lost between :init() and RegisterCallback()
+    self:attributeChanged("LibDataBroker_AttributeChanged", AppName, 'icon', self.ldb.icon, self.ldb)
 end
 
 function Bazooka:OnDisable()
@@ -1491,7 +1507,8 @@ function Bazooka:PLAYER_REGEN_ENABLED()
 end
 
 function Bazooka:dataObjectCreated(event, name, dataobj)
-    local plugin = self:createPlugin(name, dataobj)
+    self:createPlugin(name, dataobj)
+    self:updatePluginOptions()
 end
 
 function Bazooka:attributeChanged(event, name, attr, value, dataobj)
@@ -1515,6 +1532,10 @@ end
 
 -- END handlers
 
+function Bazooka:getBarName(id)
+    return L["Bar#%d"]:format(id)
+end
+
 function Bazooka:init()
     for i, bar in ipairs(self.bars) do
         bar:disable()
@@ -1530,13 +1551,20 @@ function Bazooka:init()
     for i = 1, numBars do
         self:createBar()
     end
-    self:initPlugins()
+    for name, dataobj in LDB:DataObjectIterator() do
+        self:createPlugin(name, dataobj)
+    end
     self:applySettings()
+    self:updateMainOptions()
+    self:updateBarOptions()
+    self:updatePluginOptions()
 end
 
 function Bazooka:createBar()
     self.numBars = self.numBars + 1
-    self.db.profile.numBars = self.numBars
+    if self.numBars > self.db.profile.numBars then
+        self.db.profile.numBars = self.numBars
+    end
     local id =  self.numBars
     local db = self.db.profile.bars[id]
     local bar = self.bars[id]
@@ -1554,16 +1582,20 @@ function Bazooka:removeBar(bar)
     if self.numBars <= 1 then
         return
     end
+    for name, plugin in pairs(bar.allPlugins) do
+        plugin.db.bar, plugin.db.area, plugin.db.pos = 1, 'left', nil
+        Bazooka:disablePlugin(plugin)
+    end
     bar:disable()
     self.numBars = self.numBars - 1
     self.db.profile.numBars = self.numBars
     for i = bar.id, self.numBars do
         self.db.profile.bars[i] = self.db.profile.bars[i + 1]
         self.bars[i] = self.bars[i + 1]
+        self.bars[i]:setId(i)
     end
     self.db.profile.bars[self.numBars + 1] = nil
     self.bars[self.numBars + 1] = nil
-    self:init()
 end
 
 function Bazooka:createPlugin(name, dataobj)
@@ -1581,6 +1613,7 @@ function Bazooka:createPlugin(name, dataobj)
     if plugin.db.enabled then
         self:attachPlugin(plugin)
     end
+    self:updatePluginOptions()
     return plugin
 end
 
@@ -1598,24 +1631,20 @@ function Bazooka:attachPlugin(plugin)
     end
 end
 
-function Bazooka:initPlugins()
-    for name, dataobj in LDB:DataObjectIterator() do
-        self:dataObjectCreated(nil, name, dataobj)
-    end
-end
-
 function Bazooka:applySettings()
     if not self:IsEnabled() then
         self:OnDisable()
         return
     end
     self:toggleLocked(self.db.profile.locked == true)
-    for i, bar in ipairs(self.bars) do
-        bar:applySettings()
+    --[[
+    for i = 1, self.numBars do
+        self.bars[i]:applySettings()
     end
     for name, plugin in pairs(self.plugins) do
         plugin:applySettings()
     end
+    ]]--
     if Jostle then
         if self.db.profile.adjustFrames then
             Jostle:EnableTopAdjusting()
@@ -1639,7 +1668,12 @@ function Bazooka:unlock()
 end
 
 function Bazooka:toggleLocked(flag)
-    if flag == nil then flag = not self.db.profile.locked end
+    if flag == nil then
+        flag = not self.db.profile.locked
+    end
+    if flag ~= self.db.profile.locked then
+        self:updateMainOptions()
+    end
     self.db.profile.locked = flag
     if flag then
         self:lock()
@@ -1755,6 +1789,7 @@ StaticPopupDialogs[BzkDialogDisablePlugin] = {
             return
         end
         Bazooka:disablePlugin(frame.data)
+        Bazooka:updatePluginOptions()
     end,
     timeout = 0,
     whileDead = 1,
@@ -1762,6 +1797,17 @@ StaticPopupDialogs[BzkDialogDisablePlugin] = {
 }
 
 -- END LoD Options muckery
+
+-- Stubs for Bazooka_Options
+
+function Bazooka:updateMainOptions()
+end
+
+function Bazooka:updateBarOptions()
+end
+
+function Bazooka:updatePluginOptions()
+end
 
 -- register slash command
 

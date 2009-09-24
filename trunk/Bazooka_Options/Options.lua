@@ -29,6 +29,10 @@ local FrameStratas = {
     ["LOW"] = L["Low"],
 }
 
+local BarNames = {
+    [1] = Bazooka:getBarName(1),
+}
+
 local function getColor(dbcolor)
     return dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a
 end
@@ -54,13 +58,6 @@ end
 function Bazooka:setOption(info, value)
     self.db.profile[info[#info]] = value
     self:applySettings()
-end
-
-local function dummy()
-end
-
-local function yes()
-    return true
 end
 
 -- BEGIN Bar stuff
@@ -275,10 +272,17 @@ local barOptionArgs = {
     removeBar = {
         type = 'execute',
         name = L["Remove bar"],
-        confirm = true,
+        confirm = function(info)
+            return L["Remove %s?"]:format(info.handler.name)
+        end,
         width = 'full',
         func = function(info)
             Bazooka:removeBar(info.handler)
+            Bazooka:updateBarOptions()
+            Bazooka:updatePluginOptions()
+        end,
+        disabled = function()
+            return Bazooka.numBars <= 1
         end,
         order = 300,
     },
@@ -326,44 +330,29 @@ function Bar:getColorOption(info)
     return getColor(self.db[info[#info]])
 end
 
-local function makeBarOptions(bar)
-    return {
-        type = 'group',
-        inline = false,
-        name = L["Bar"] .. '#' .. bar.id,
-        handler = bar,
-        order = bar.id,
-        args = barOptionArgs,
-    }
-end
-
-local function addBarOptions(bar)
-    if not bar.opts then
-        bar.opts = makeBarOptions(bar)
+function Bar:addOptions()
+    if not self.opts then
+        self.opts = {
+            type = 'group',
+            inline = false,
+            handler = self,
+            args = barOptionArgs,
+        }
     end
-    bar.opts.handler = bar
-end
-
-local origCreateBar = Bazooka.createBar
-function Bazooka:createBar(...)
-    local bar = origCreateBar(self, ...)
-    addBarOptions(bar)
-    self:updateBarOptions()
-    return bar
-end
-
-local origRemoveBar = Bazooka.removeBar
-function Bazooka:removeBar(...)
-    origRemoveBar(self, ...)
-    self:updateBarOptions()
+    self.opts.order = self.id
+    self.opts.name = self.name
 end
 
 function Bazooka:updateBarOptions()
+    while #BarNames > self.numBars do
+        BarNames[#BarNames] = nil
+    end
     wipe(barOptions.args)
     for i = 1, self.numBars do
         local bar = self.bars[i]
-        addBarOptions(bar)
+        bar:addOptions()
         barOptions.args["bar" .. bar.id] = bar.opts
+        BarNames[i] = bar.name
     end
     ACR:NotifyChange(self.AppName .. ".bars")
 end
@@ -395,20 +384,17 @@ local pluginOptionArgs = {
             return false
         end,
     },
---    bar = 1,
---    area = 'left',
---    pos = nil,
     showIcon = {
         type = 'toggle',
         name = L["Show icon"],
-        order = 120,
         disabled = "isDisabled",
+        order = 120,
     },
     showLabel = {
         type = 'toggle',
         name = L["Show label"],
-        order = 130,
         disabled = "isDisabled",
+        order = 130,
     },
     showTitle = {
         type = 'toggle',
@@ -419,47 +405,73 @@ local pluginOptionArgs = {
     showText = {
         type = 'toggle',
         name = L["Show text"],
-        order = 150,
         disabled = "isDisabled",
+        order = 150,
     },
     hideTipOnClick = {
         type = 'toggle',
         name = L["Hide tooltip on click"],
-        order = 200,
         disabled = "isDisabled",
+        order = 200,
     },
     disableTooltip = {
         type = 'toggle',
         name = L["Disable tooltip"],
-        order = 200,
         disabled = "isDisabled",
+        order = 200,
     },
     disableTooltipInCombat = {
         type = 'toggle',
         name = L["Disable tooltip in combat"],
-        order = 210,
         disabled = "isDisabled",
+        order = 210,
     },
     disableMouseInCombat = {
         type = 'toggle',
         name = L["Disable mouse in combat"],
-        order = 220,
         disabled = "isDisabled",
+        order = 220,
     },
     disableMouseOutOfCombat = {
         type = 'toggle',
         name = L["Disable mouse out of combat"],
-        order = 230,
         disabled = "isDisabled",
+        order = 230,
     },
     shrinkThreshold = {
         type = 'range',
         name = L["Shrink threshold"],
-        order = 300,
+        disabled = "isDisabled",
         min = 0,
         max = 100,
         step = 1,
+        order = 300,
+    },
+    bar = {
+        type = 'select',
+        name = L["Bar"],
         disabled = "isDisabled",
+        values = BarNames,
+        set = function(info, value)
+            local plugin = info.handler
+            plugin:detach()
+            plugin.db.bar = value
+            Bazooka:attachPlugin(plugin)
+        end,
+        order = 310,
+    },
+    area = {
+        type = 'select',
+        name = L["Area"],
+        disabled = "isDisabled",
+        values = Bazooka.AreaNames,
+        set = function(info, value)
+            local plugin = info.handler
+            plugin:detach()
+            plugin.db.area = value
+            Bazooka:attachPlugin(plugin)
+        end,
+        order = 320,
     },
 }
 
@@ -491,39 +503,31 @@ function Plugin:isTitleDisabled()
     return not (self.db.enabled and self.db.showLabel)
 end
 
-local function makePluginOptions(plugin)
-    return {
-        type = 'group',
-        inline = false,
-        name = plugin:getColoredTitle(),
-        handler = plugin,
-        args = pluginOptionArgs,
-    }
-end
-
-local function addPluginOptions(plugin)
-    if not plugin.opts then
-        plugin.opts = makePluginOptions(plugin)
+function Plugin:addOptions()
+    if not self.opts then
+        self.opts = {
+            type = 'group',
+            inline = false,
+            handler = self,
+            args = pluginOptionArgs,
+        }
     end
-    plugin.opts.handler = plugin
-    return plugin
+    self.opts.name = self:getColoredTitle()
 end
 
-local origCreatePlugin = Bazooka.createPlugin
-function Bazooka:createPlugin(...)
-    local plugin = origCreatePlugin(self, ...)
-    addPluginOptions(plugin)
-    pluginOptions.args[plugin.name] = plugin.opts
+function Bazooka:updatePluginOptions()
+    wipe(pluginOptions.args)
+    for name, plugin in pairs(self.plugins) do
+        plugin:addOptions()
+        pluginOptions.args[name] = plugin.opts
+    end
     ACR:NotifyChange(self.AppName .. ".plugins")
-    return plugin
 end
 
 -- END Plugin stuff
 
-local origProfileChanged = Bazooka.profileChanged
-function Bazooka:profileChanged(...)
-    origProfileChanged(self, ...)
-    self:updateBarOptions()
+function Bazooka:updateMainOptions()
+    ACR:NotifyChange(self.AppName)
 end
 
 do
@@ -596,6 +600,7 @@ do
                 width = 'full',
                 func = function()
                     Bazooka:createBar()
+                    Bazooka:updateBarOptions()
                 end,
                 order = 100,
             },
@@ -629,10 +634,7 @@ do
     self.barOpts = registerSubOptions('bars', barOptions)
     self.pluginOpts = registerSubOptions('plugins', pluginOptions)
     self:updateBarOptions()
-    for name, plugin in pairs(self.plugins) do
-        addPluginOptions(plugin)
-        pluginOptions.args[name] = plugin.opts
-    end
+    self:updatePluginOptions()
     self.setupDBOptions = function(self)
         local profiles =  AceDBOptions:GetOptionsTable(self.db)
         LibStub("LibDualSpec-1.0"):EnhanceOptions(profiles, self.db)
