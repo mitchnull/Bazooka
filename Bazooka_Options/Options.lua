@@ -7,6 +7,7 @@ local ACR = LibStub("AceConfigRegistry-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(Bazooka.OptionsAppName)
+local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
 
 local MinFontSize = 5
 local MaxFontSize = 30
@@ -647,7 +648,9 @@ do
     self:updatePluginOptions()
     self.setupDBOptions = function(self)
         local profiles =  AceDBOptions:GetOptionsTable(self.db)
-        LibStub("LibDualSpec-1.0"):EnhanceOptions(profiles, self.db)
+        if LibDualSpec then
+            LibDualSpec:EnhanceOptions(profiles, self.db)
+        end
         profiles.disabled = function()
             lastConfiguredOpts = self.profiles
             return false
