@@ -110,6 +110,24 @@ local barOptionArgs = {
         width = 'full',
         order = 50,
     },
+    frameWidth = {
+        type = 'range',
+        name = L["Width"],
+        disabled = "isFrameWidthDisabled",
+        min = Defaults.minFrameWidth,
+        max = Defaults.maxFrameWidth,
+        step = 1,
+        order = 55,
+    },
+    frameHeight = {
+        type = 'range',
+        name = L["Height"],
+        min = Defaults.minFrameHeight,
+        max = Defaults.maxFrameHeight,
+        step = 1,
+        order = 56,
+    },
+
     sideSpacing = {
         type = 'range',
         name = L["Side spacing"],
@@ -135,6 +153,11 @@ local barOptionArgs = {
         order = 80,
     },
 
+    pluginStyleHeader = {
+        type = 'header',
+        name = L["Plugin display settings"],
+        order = 89,
+    },
     font = {
         type = "select", dialogControl = 'LSM30_Font',
         name = L["Font"],
@@ -189,24 +212,11 @@ local barOptionArgs = {
         set = "setColorOption",
     },
 
-    frameWidth = {
-        type = 'range',
-        name = L["Width"],
-        disabled = "isFrameWidthDisabled",
-        min = Defaults.minFrameWidth,
-        max = Defaults.maxFrameWidth,
-        step = 1,
-        order = 160,
+    bgHeader = {
+        type = 'header',
+        name = L["Background settings"],
+        order = 199,
     },
-    frameHeight = {
-        type = 'range',
-        name = L["Height"],
-        min = Defaults.minFrameHeight,
-        max = Defaults.maxFrameHeight,
-        step = 1,
-        order = 170,
-    },
-
     bg = {
         type = 'group',
         name = "",
