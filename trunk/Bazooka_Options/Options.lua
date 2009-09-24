@@ -324,8 +324,13 @@ function Bar:isTileSizeDisabled()
 end
 
 function Bar:setOption(info, value)
-    self.db[info[#info]] = value
-    self:applySettings()
+    local name = info[#info]
+    self.db[name] = value
+    if name == 'sideSpacing' or name == 'centerSpacing' then
+        self:updateLayout()
+    else
+        self:applySettings()
+    end
 end
 
 function Bar:getOption(info)

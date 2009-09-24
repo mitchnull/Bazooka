@@ -847,6 +847,13 @@ function Bar:setRightAttachPoint(plugin, rp)
     end
 end
 
+function Bar:updateLayout()
+    for name, plugin in pairs(self.allPlugins) do
+        plugin:detach()
+        plugin:reattach()
+    end
+end
+
 function Bar:setId(id)
     if id == self.id then
         return
