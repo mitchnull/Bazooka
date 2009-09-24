@@ -3,6 +3,7 @@
 local L = LibStub("AceLocale-3.0"):NewLocale("Bazooka_Options", "enUS", true)
 
 L["Adjust frames"] = "Adjust frames"
+L["Area"] = "Area"
 L["Attach point"] = "Attach point"
 L["Background color"] = "Background color"
 L["Background texture"] = "Background texture"
@@ -45,6 +46,7 @@ L["None"] = "None"
 L["Normal"] = "Normal"
 L["Plugins"] = "Plugins"
 L["Remove bar"] = "Remove bar"
+L["Remove %s?"] = "Remove %s?"
 L["Show icon"] = "Show icon"
 L["Show label"] = "Show label"
 L["Show text"] = "Show text"

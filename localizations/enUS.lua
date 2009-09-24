@@ -7,6 +7,7 @@ L["|cffeda55fLeft Click|r to lock/unlock frames"] = "|cffeda55fLeft Click|r to l
 L["|cffeda55fRight Click|r to open the configuration window"] = "|cffeda55fRight Click|r to open the configuration window"
 L["Disable %s plugin?"] = "Disable %s plugin?"
 L["Bar"] = "Bar"
+L["Bar#%d"] = "Bar#%d"
 L["left"] = "Left"
 L["cleft"] = "Center-Left"
 L["center"] = "Center"
