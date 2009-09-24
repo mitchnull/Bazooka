@@ -1187,10 +1187,15 @@ function Plugin:hideTip()
         local tt = setupTooltip()
         tt:Hide()
     elseif self.tipType == 'OnEnter' then
-        self.dataobj.OnLeave(self.frame)
+        if self.dataobj.OnLeave then
+            self.dataobj.OnLeave(self.frame)
+        end
     elseif self.tipType == 'tooltip' then
-        self.dataobj.tooltip:Hide()
+        if self.dataobj.tooltip then
+            self.dataobj.tooltip:Hide()
+        end
     end
+    Bazooka.tipOwner = nil
     self.tipType = nil
 end
 
