@@ -1176,6 +1176,11 @@ function Plugin:showTip()
         local tt = setupTooltip(self.frame)
         dataobj.OnTooltipShow(tt)
         tt:Show()
+    elseif Bazooka.db.profile.simpleTip then
+        self.tipType = 'simple'
+        local tt = setupTooltip(self.frame)
+        tt:SetText(self.title)
+        tt:Show()
     end
 end
 
