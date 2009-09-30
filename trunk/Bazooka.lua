@@ -23,10 +23,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
-local function printf(fmt, ...)
-    print(fmt:format(...))
-end
-
 local function makeColor(r, g, b, a)
     a = a or 1.0
     return { ["r"] = r, ["g"] = g, ["b"] = b, ["a"] = a }
@@ -784,13 +780,7 @@ function Bar:attachPlugin(plugin, area, pos)
     end
     self.allPlugins[plugin.name] = plugin
     plugin.frame:SetParent(self.frame)
-    plugin.frame:ClearAllPoints()
-    plugin.frame:SetPoint("TOP", self.frame, "TOP")
-    plugin.frame:SetPoint("BOTTOM", self.frame, "BOTTOM")
-    self:setLeftAttachPoint(plugin, lp)
-    self:setRightAttachPoint(plugin, rp)
-    self:setRightAttachPoint(lp, plugin)
-    self:setLeftAttachPoint(rp, plugin)
+    self:setAttachPoints(lp, plugin, rp)
     plugin:globalSettingsChanged()
     if area == "center" then
         self:updateCenterWidth()
@@ -847,11 +837,23 @@ function Bar:setRightAttachPoint(plugin, rp)
     end
 end
 
+function Bar:setAttachPoints(lp, plugin, rp)
+    plugin.frame:ClearAllPoints()
+    plugin.frame:SetPoint("TOP", self.frame, "TOP")
+    plugin.frame:SetPoint("BOTTOM", self.frame, "BOTTOM")
+    self:setLeftAttachPoint(plugin, lp)
+    self:setRightAttachPoint(plugin, rp)
+    self:setRightAttachPoint(lp, plugin)
+    self:setLeftAttachPoint(rp, plugin)
+end
+
 function Bar:updateLayout()
-    for name, plugin in pairs(self.allPlugins) do
-        plugin:detach()
-        plugin:reattach()
+    for area, plugins in pairs(self.plugins) do
+        for i, plugin in ipairs(plugins) do
+            self:setAttachPoints(plugins[i - 1], plugin, plugins[i + 1])
+        end
     end
+    self:updateCenterWidth()
 end
 
 function Bar:setId(id)
