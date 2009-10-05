@@ -1456,7 +1456,7 @@ Bazooka.updaters = {
 -- BEGIN AceAddon stuff
 
 function Bazooka:OnInitialize()
-    self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults)
+    self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults, true)
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
     end
