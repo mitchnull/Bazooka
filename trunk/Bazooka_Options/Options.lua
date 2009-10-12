@@ -191,7 +191,6 @@ local barOptionArgs = {
     labelColor = {
         type = 'color',
         name = L["Label color"],
-        hasAlpha = true,
         order = 130,
         get = "getColorOption",
         set = "setColorOption",
@@ -199,7 +198,6 @@ local barOptionArgs = {
     textColor = {
         type = 'color',
         name = L["Text color"],
-        hasAlpha = true,
         order = 140,
         get = "getColorOption",
         set = "setColorOption",
@@ -207,10 +205,18 @@ local barOptionArgs = {
     suffixColor = {
         type = 'color',
         name = L["Suffix color"],
-        hasAlpha = true,
         order = 150,
         get = "getColorOption",
         set = "setColorOption",
+    },
+    pluginOpacity = {
+        type = 'range',
+        name = L["Opacity"],
+        order = 155,
+        min = 0,
+        max = 1.0,
+        isPercent = true,
+        step = 0.01,
     },
 
     bgHeader = {

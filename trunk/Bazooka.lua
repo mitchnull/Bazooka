@@ -24,7 +24,6 @@ local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
 local function makeColor(r, g, b, a)
-    a = a or 1.0
     return { ["r"] = r, ["g"] = g, ["b"] = b, ["a"] = a }
 end
 
@@ -79,6 +78,7 @@ local Defaults =  {
     labelColor = makeColor(0.9, 0.9, 0.9),
     textColor = makeColor(1.0, 0.82, 0),
     suffixColor = makeColor(0, 0.82, 0),
+    pluginOpacity = 1.0,
     sideSpacing = 8,
     centerSpacing = 16,
     iconTextSpacing = 2,
@@ -165,6 +165,7 @@ local defaults = {
                 labelColor = Defaults.labelColor,
                 textColor = Defaults.textColor,
                 suffixColor = Defaults.suffixColor,
+                pluginOpacity = Defaults.pluginOpacity,
                 
                 attach = 'none',
 
@@ -179,8 +180,8 @@ local defaults = {
                 bgTile = false,
                 bgTileSize = 32,
                 bgEdgeSize = 16,
-                bgColor = makeColor(0, 0, 0),
-                bgBorderColor = makeColor(0.8, 0.6, 0.0),
+                bgColor = makeColor(0, 0, 0, 1.0),
+                bgBorderColor = makeColor(0.8, 0.6, 0.0, 1.0),
             },
             [1] = {
                 attach = 'top',
@@ -1224,8 +1225,11 @@ function Plugin:highlight(flag)
             self.hl:SetTexture(HighlightImage)
             self.hl:SetAllPoints()
         end
+        self.frame:SetAlpha(1.0)
         self.hl:Show()
     else
+        local bdb = self.bar and self.bar.db or Defaults
+        self.frame:SetAlpha(bdb.pluginOpacity)
         if self.hl then
             self.hl:Hide()
         end
@@ -1252,6 +1256,7 @@ function Plugin:globalSettingsChanged()
         self.icon:SetWidth(self.iconSize)
         self.icon:SetHeight(self.iconSize)
     end
+    self.frame:SetAlpha(bdb.pluginOpacity)
     self:updateLayout(true)
 end
 
