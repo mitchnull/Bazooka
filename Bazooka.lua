@@ -97,6 +97,7 @@ local EmptyPluginWidth = 1
 local NearSquared = 32 * 32
 local MinDropPlaceHLDX = 3
 local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
+local MaxTweakPts = 5
 
 Bazooka = LibStub("AceAddon-3.0"):NewAddon(AppName, "AceEvent-3.0")
 local Bazooka = Bazooka
@@ -151,6 +152,11 @@ local defaults = {
                 rePoint = "CENTER",
                 x = 0,
                 y = 0,
+
+                tweakLeft = 0,
+                tweakRight = 0,
+                tweakTop = 0,
+                tweakBottom = 0,
 
                 sideSpacing = Defaults.sideSpacing,
                 centerSpacing = Defaults.centerSpacing,
@@ -547,6 +553,7 @@ function Bar:enable(id, db)
         self.frame.bzkBar = self
         self.frame:EnableMouse(true)
         self.frame:SetClampedToScreen(true)
+        self.frame:SetClampRectInsets(MaxTweakPts, -MaxTweakPts, -MaxTweakPts, MaxTweakPts)
         self.frame:RegisterForDrag("LeftButton", "RightButton")
         self.frame:SetScript("OnEnter", Bar.OnEnter)
         self.frame:SetScript("OnLeave", Bar.OnLeave)
@@ -872,10 +879,10 @@ function Bar:applySettings()
     local needJostleRefresh
     self.frame:ClearAllPoints()
     if self.db.attach == "top" then
-        self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
-        self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, 0)
+        self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", self.db.tweakLeft, self.db.tweakTop)
+        self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", self.db.tweakRight, self.db.tweakTop)
         self.db.frameWidth = self.frame:GetWidth()
-        self.db.point, self.db.relPoint, self.db.x, self.db.y = "TOP", "TOP", 0, -10
+        self.db.point, self.db.relPoint, self.db.x, self.db.y = "TOP", "TOP", 0, self.db.tweakTop
         if self.frame:GetHeight() ~= self.db.frameHeight then
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
@@ -884,10 +891,10 @@ function Bar:applySettings()
             Jostle:RegisterTop(self.frame)
         end
     elseif self.db.attach == "bottom" then
-        self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 0, 0)
-        self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", 0, 0)
+        self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakBottom)
+        self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakBottom)
         self.db.frameWidth = self.frame:GetWidth()
-        self.db.point, self.db.relPoint, self.db.x, self.db.y = "BOTTOM", "BOTTOM", 0, 10
+        self.db.point, self.db.relPoint, self.db.x, self.db.y = "BOTTOM", "BOTTOM", 0, self.db.tweakBottom
         if self.frame:GetHeight() ~= self.db.frameHeight then
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
@@ -896,6 +903,9 @@ function Bar:applySettings()
             Jostle:RegisterBottom(self.frame)
         end
     else -- detached
+        if self.db.frameWidth == 0 then
+            self.db.frameWidth = GetScreenWidth() - self.db.tweakLeft + self.db.tweakRight
+        end
         self.frame:SetPoint(self.db.point, UIParent, self.db.relPoint, self.db.x, self.db.y)
         self.frame:SetWidth(self.db.frameWidth)
         self.frame:SetHeight(self.db.frameHeight)
@@ -983,7 +993,6 @@ function Bar:applyBGSettings()
     bg.edgeSize = (bg.edgeFile and bg.edgeFile ~= [[Interface\None]]) and self.db.bgEdgeSize or 0
     local inset = math.floor(bg.edgeSize / 4)
     self.inset = inset
---    self.frame:SetClampRectInsets(inset, -inset, -inset, inset)
     bg.insets.left = inset
     bg.insets.right = inset
     bg.insets.top = inset
