@@ -493,9 +493,8 @@ if EnableOpacityWorkaround then
             self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha)
             self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a * alpha)
         end
-        local pluginAlpha = self.db.pluginOpacity
         for name, plugin in pairs(self.allPlugins) do
-            plugin.frame:SetAlpha(pluginAlpha)
+            plugin.frame:SetAlpha(plugin.frame:GetAlpha())
         end
     end
 
