@@ -20,6 +20,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
 -- internal vars
 
+-- Remove all related ifs when the opacity setting for embedded icons gets fixed
+local EnableOpacityWorkaround = true
 local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
@@ -483,6 +485,25 @@ Bar.OnDragStop = function(frame)
     Bazooka:updateBarOptions()
 end
 
+if EnableOpacityWorkaround then
+    Bar.setAlphaByParts = function(frame, alpha)
+        frame.bzkAlpha = alpha
+        local self = frame.bzkBar
+        if self.db.bgEnabled then
+            self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha)
+            self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a * alpha)
+        end
+        local pluginAlpha = self.db.pluginOpacity
+        for name, plugin in pairs(self.allPlugins) do
+            plugin.frame:SetAlpha(pluginAlpha)
+        end
+    end
+
+    Bar.getAlphaByParts = function(frame)
+        return frame.bzkAlpha
+    end
+end
+
 function Bar:New(id, db)
     local bar = setmetatable({}, Bar)
     bar:enable(id, db)
@@ -551,6 +572,10 @@ function Bar:enable(id, db)
     if not self.frame then
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
         self.frame.bzkBar = self
+        if EnableOpacityWorkaround then
+            self.frame.SetAlpha = Bar.setAlphaByParts
+            self.frame.GetAlpha = Bar.getAlphaByParts
+        end
         self.frame:EnableMouse(true)
         self.frame:SetClampedToScreen(true)
         self.frame:SetClampRectInsets(MaxTweakPts, -MaxTweakPts, -MaxTweakPts, MaxTweakPts)
@@ -1144,6 +1169,26 @@ Plugin.OnDragStop = function(frame)
     end
 end
 
+if EnableOpacityWorkaround then
+    Plugin.setAlphaByParts = function(frame, alpha)
+        frame.bzkAlpha = alpha
+        local self = frame.bzkPlugin
+        if self.bar then
+            alpha = alpha * self.bar.frame:GetAlpha()
+        end
+        if self.icon then
+            self.icon:SetAlpha(alpha)
+        end
+        if self.text then
+            self.text:SetAlpha(alpha)
+        end
+    end
+
+    Plugin.getAlphaByParts = function(frame)
+        return frame.bzkAlpha
+    end
+end
+
 function Plugin:New(name, dataobj, db)
     local plugin = setmetatable({}, Plugin)
     plugin.name = name
@@ -1321,6 +1366,10 @@ function Plugin:enable()
     if not self.frame then
         self.frame = CreateFrame("Button", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
+        if EnableOpacityWorkaround then
+            self.frame.SetAlpha = Plugin.setAlphaByParts
+            self.frame.GetAlpha = Plugin.getAlphaByParts
+        end
         self.frame:RegisterForDrag("LeftButton")
         self.frame:RegisterForClicks("AnyUp")
         self.frame:SetMovable(true)
