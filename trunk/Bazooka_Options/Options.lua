@@ -286,6 +286,39 @@ local barOptionArgs = {
             },
         },
     },
+    tweaksHeader = {
+        type = 'header',
+        name = L["Tweak anchor positions"],
+        order = 209,
+    },
+    tweakLeft = {
+        type = 'input',
+        name = L["Left"],
+        validate = "isTweakValid",
+        disabled = "isTweakDisabled",
+        order = 210,
+    },
+    tweakRight = {
+        type = 'input',
+        name = L["Right"],
+        validate = "isTweakValid",
+        disabled = "isTweakDisabled",
+        order = 211,
+    },
+    tweakTop = {
+        type = 'input',
+        name = L["Top"],
+        validate = "isTweakValid",
+        disabled = "isTweakDisabled",
+        order = 212,
+    },
+    tweakBottom = {
+        type = 'input',
+        name = L["Bottom"],
+        validate = "isTweakValid",
+        disabled = "isTweakDisabled",
+        order = 213,
+    },
     removeBar = {
         type = 'execute',
         name = L["Remove bar"],
@@ -316,6 +349,20 @@ local barOptions = {
     args = {
     },
 }
+
+function Bar:isTweakDisabled(info)
+    if self.db.attach == 'none' then
+        return true
+    elseif self.db.attach == 'top' then
+        return info[#info] == 'tweakBottom'
+    elseif self.db.attach == 'bottom' then
+        return info[#info] == 'tweakTop'
+    end
+end
+
+function Bar:isTweakValid(info, value)
+    return tonumber(value) ~= nil
+end
 
 function Bar:isBGDisabled()
     return not self.db.bgEnabled
