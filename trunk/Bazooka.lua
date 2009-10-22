@@ -80,7 +80,8 @@ local Defaults =  {
     textColor = makeColor(1.0, 0.82, 0),
     suffixColor = makeColor(0, 0.82, 0),
     pluginOpacity = 1.0,
-    sideSpacing = 8,
+    leftSpacing = 8,
+    rightSpacing = 8,
     centerSpacing = 16,
     iconTextSpacing = 2,
     fadeOutDelay = 0.5,
@@ -159,7 +160,8 @@ local defaults = {
                 tweakTop = 0,
                 tweakBottom = 0,
 
-                sideSpacing = Defaults.sideSpacing,
+                leftSpacing = Defaults.leftSpacing,
+                rightSpacing = Defaults.rightSpacing,
                 centerSpacing = Defaults.centerSpacing,
                 iconTextSpacing = Defaults.iconTextSpacing,
 
@@ -661,8 +663,10 @@ function Bar:getDropPlace(x, y)
 end
 
 function Bar:getSpacing(area)
-    if area == 'left' or area == 'right' then
-        return self.db.sideSpacing
+    if area == 'left' then
+        return self.db.leftSpacing
+    elseif area == 'right' then
+        return self.db.rightSpacing
     else
         return self.db.centerSpacing
     end
@@ -825,9 +829,9 @@ function Bar:setLeftAttachPoint(plugin, lp)
     local area = plugin.db.area
     if area == "left" then
         if lp then
-            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.sideSpacing, 0)
+            plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.leftSpacing, 0)
         else
-            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", (self.inset + self.db.sideSpacing), 0)
+            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", (self.inset + self.db.leftSpacing), 0)
         end
     elseif area == "center" then
         if lp then
@@ -857,9 +861,9 @@ function Bar:setRightAttachPoint(plugin, rp)
         end
     elseif area == "right" then
         if rp then
-            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.sideSpacing, 0)
+            plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.rightSpacing, 0)
         else
-            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -(self.inset + self.db.sideSpacing), 0)
+            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -(self.inset + self.db.rightSpacing), 0)
         end
     end
 end
@@ -900,10 +904,10 @@ function Bar:updateWidth()
         local numCenterPlugins = #self.plugins.cleft + #self.plugins.center + #self.plugins.cright
         if numCenterPlugins > 0 then
             local lw =
-                sumPluginsWidth(self.plugins.left) + self.db.sideSpacing * #self.plugins.left +
+                sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * #self.plugins.left +
                 sumPluginsWidth(self.plugins.cleft) + self.db.centerSpacing * #self.plugins.cleft
             local rw =
-                sumPluginsWidth(self.plugins.right) + self.db.sideSpacing * #self.plugins.right +
+                sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
                 sumPluginsWidth(self.plugins.cright) + self.db.centerSpacing * #self.plugins.cright
             if lw > rw then
                 w = w + lw + self.centerFrame:GetWidth()
@@ -913,18 +917,18 @@ function Bar:updateWidth()
         elseif #self.plugins.left > 0 then
             if #self.plugins.right > 0 then
                 w = w +
-                    sumPluginsWidth(self.plugins.left) + self.db.sideSpacing * #self.plugins.left +
-                    sumPluginsWidth(self.plugins.right) + self.db.sideSpacing * #self.plugins.right +
+                    sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * #self.plugins.left +
+                    sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
                     self.db.centerSpacing
             else
                 w = w +
-                    sumPluginsWidth(self.plugins.left) + self.db.sideSpacing * #self.plugins.left +
-                    self.db.sideSpacing -- note to self: rightSpacing
+                    sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * #self.plugins.left +
+                    self.db.rightSpacing
             end
         elseif #self.plugins.right > 0 then
             w = w +
-                sumPluginsWidth(self.plugins.right) + self.db.sideSpacing * #self.plugins.right +
-                self.db.sideSpacing -- note to self: leftSpacing
+                sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
+                self.db.leftSpacing
         else
             w = self.db.frameWidth
         end
