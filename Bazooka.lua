@@ -1670,6 +1670,15 @@ function Bazooka:profileChanged()
     if not self.enabled then
         return
     end
+    -- remove this sometime in the future
+    for i = 1, self.db.profile.numBars do
+        local bdb = self.db.profile.bars[i]
+        if bdb.sideSpacing then
+            bdb.leftSpacing = bdb.sideSpacing
+            bdb.rightSpacing = bdb.sideSpacing
+            bdb.sideSpacing = nil
+        end
+    end
     self:init()
 end
 
