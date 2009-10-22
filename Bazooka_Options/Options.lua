@@ -136,13 +136,21 @@ local barOptionArgs = {
         width = 'full',
     },
 
-    sideSpacing = {
+    leftSpacing = {
         type = 'range',
-        name = L["Side spacing"],
+        name = L["Left spacing"],
         min = 0,
         max = 50,
         step = 1,
         order = 60,
+    },
+    rightSpacing = {
+        type = 'range',
+        name = L["Right spacing"],
+        min = 0,
+        max = 50,
+        step = 1,
+        order = 61,
     },
     centerSpacing = {
         type = 'range',
@@ -386,7 +394,7 @@ end
 function Bar:setOption(info, value)
     local name = info[#info]
     self.db[name] = value
-    if name == 'sideSpacing' or name == 'centerSpacing' or name == 'fitToContentWidth' then
+    if name == 'leftSpacing' or name == 'rightSpacing' or name == 'centerSpacing' or name == 'fitToContentWidth' then
         self:updateLayout()
     else
         self:applySettings()
