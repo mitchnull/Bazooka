@@ -128,6 +128,13 @@ local barOptionArgs = {
         step = 1,
         order = 56,
     },
+    fitToContentWidth = {
+        type = 'toggle',
+        name = L["Fit to content width"],
+        disabled = "isFrameWidthDisabled",
+        order = 57,
+        width = 'full',
+    },
 
     sideSpacing = {
         type = 'range',
@@ -379,7 +386,7 @@ end
 function Bar:setOption(info, value)
     local name = info[#info]
     self.db[name] = value
-    if name == 'sideSpacing' or name == 'centerSpacing' then
+    if name == 'sideSpacing' or name == 'centerSpacing' or name == 'fitToContentWidth' then
         self:updateLayout()
     else
         self:applySettings()
