@@ -48,7 +48,6 @@ local tremove = tremove
 local tostring = tostring
 local print = print
 local pairs = pairs
-local ipairs = ipairs
 local type = type
 local unpack = unpack
 local wipe = wipe
@@ -650,8 +649,8 @@ function Bar:getDropPlace(x, y)
                 dstArea, dstPos, minDist = area, 1, dist
             end
         else
-            for i, plugin in ipairs(plugins) do
-                local pos, dist = plugin:getDropPlace(x, y)
+            for i = 1, #plugins do
+                local pos, dist = plugins[i]:getDropPlace(x, y)
                 if dist < minDist then
                     dstArea, dstPos, minDist = area, pos, dist
                 end
@@ -677,13 +676,15 @@ function Bar:getHighlightCenter(area, pos)
     end
     if pos < 0 then
         pos = -pos
-        for i, plugin in ipairs(plugins) do
+        for i = 1, #plugins do
+            local plugin = plugins[i]
             if pos <= plugin.db.pos then
                 return plugin.frame:GetRight()
             end
         end
     else
-        for i, plugin in ipairs(plugins) do
+        for i = 1, #plugins do
+            local plugin = plugins[i]
             if pos <= plugin.db.pos then
                 return plugin.frame:GetLeft()
             end
@@ -739,7 +740,8 @@ end
 function Bar:detachPlugin(plugin)
     local plugins = self.plugins[plugin.db.area]
     local lp, rp, index
-    for i, p in ipairs(plugins) do
+    for i = 1, #plugins do
+        local p = plugins[i]
         if index then
             rp = p
             break
@@ -785,7 +787,8 @@ function Bar:attachPlugin(plugin, area, pos)
         end
         plugin.db.pos = pos
         local rpi
-        for i, p in ipairs(plugins) do
+        for i = 1, #plugins do
+            local p = plugins[i]
             if pos <= p.db.pos then
                 if not rp then
                     rp = p
@@ -873,8 +876,8 @@ end
 
 function Bar:updateLayout()
     for area, plugins in pairs(self.plugins) do
-        for i, plugin in ipairs(plugins) do
-            self:setAttachPoints(plugins[i - 1], plugin, plugins[i + 1])
+        for i = 1, #plugins do
+            self:setAttachPoints(plugins[i - 1], plugins[i], plugins[i + 1])
         end
     end
     self:updateCenterWidth()
@@ -1595,8 +1598,8 @@ function Bazooka:OnDisable()
     self.enabled = false
     self:UnregisterAllEvents()
     LDB.UnregisterAllCallbacks(self)
-    for i, bar in ipairs(self.bars) do
-        bar.frame:Hide()
+    for i = 1, #self.bars do
+        self.bars[i].frame:Hide()
     end
 end
 
@@ -1606,7 +1609,8 @@ end
 
 function Bazooka:PLAYER_REGEN_DISABLED()
     self:lock()
-    for i, bar in ipairs(self.bars) do
+    for i = 1, #self.bars do
+        local bar = self.bars[i]
         bar:toggleMouse(not bar.db.disableMouseInCombat)
         if bar.db.fadeInCombat and not bar.isMouseInside then
             bar:fadeOut(0)
@@ -1625,7 +1629,8 @@ function Bazooka:PLAYER_REGEN_ENABLED()
     if not self.db.profile.locked then
         self:unlock()
     end
-    for i, bar in ipairs(self.bars) do
+    for i = 1, #self.bars do
+        local bar = self.bars[i]
         bar:toggleMouse(not bar.db.disableMouseOutOfCombat)
         if bar.db.fadeOutOfCombat and not bar.isMouseInside then
             bar:fadeOut(0)
@@ -1671,8 +1676,8 @@ function Bazooka:getBarName(id)
 end
 
 function Bazooka:init()
-    for i, bar in ipairs(self.bars) do
-        bar:disable()
+    for i = 1, #self.bars do
+        self.bars[i]:disable()
     end
     for name, plugin in pairs(self.plugins) do
         plugin:disable()
@@ -1840,7 +1845,8 @@ end
 function Bazooka:getDropPlace(x, y)
     local dstBar, dstArea, dstPos
     local minDist = math.huge
-    for i, bar in ipairs(self.bars) do
+    for i = 1, #self.bars do
+        local bar = self.bars[i]
         local area, pos, dist = bar:getDropPlace(x, y)
         if dist < minDist then
             dstBar, dstArea, dstPos, minDist = bar, area, pos, dist
