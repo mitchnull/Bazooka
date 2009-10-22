@@ -176,6 +176,7 @@ local defaults = {
                 pluginOpacity = Defaults.pluginOpacity,
                 
                 attach = 'none',
+                fitToContentWidth = false,
 
                 strata = "MEDIUM",
 
@@ -390,6 +391,14 @@ end
 ---------------------------------
 
 -- BEGIN Bar stuff
+
+local function sumPluginsWidth(plugins)
+    local w = 0
+    for i = 1, #plugins do
+        w = w + plugins[i].frame:GetWidth()
+    end
+    return w
+end
 
 local Bar = {
     id = nil,
@@ -727,19 +736,6 @@ function Bar:highlight(area, pos)
     end
 end
 
-function Bar:updateCenterWidth()
-    local cw = 0
-    for i, p in ipairs(self.plugins.center) do
-        cw = cw + p.frame:GetWidth()
-    end
-    local numGaps = #self.plugins.center + 1
-    cw = cw + (numGaps * self.db.centerSpacing)
-    if cw <= 0 then
-        cw = 1
-    end
-    self.centerFrame:SetWidth(cw)
-end
-
 function Bar:detachPlugin(plugin)
     local plugins = self.plugins[plugin.db.area]
     local lp, rp, index
@@ -819,10 +815,6 @@ function Bar:attachPlugin(plugin, area, pos)
     end
 end
 
-function Bar:getEdgeSpacing()
-    return self.db.sideSpacing + self.inset
-end
-
 function Bar:setLeftAttachPoint(plugin, lp)
     if not plugin then
         return
@@ -832,7 +824,7 @@ function Bar:setLeftAttachPoint(plugin, lp)
         if lp then
             plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.sideSpacing, 0)
         else
-            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", self:getEdgeSpacing(), 0)
+            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", (self.inset + self.db.sideSpacing), 0)
         end
     elseif area == "center" then
         if lp then
@@ -864,7 +856,7 @@ function Bar:setRightAttachPoint(plugin, rp)
         if rp then
             plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.sideSpacing, 0)
         else
-            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -self:getEdgeSpacing(), 0)
+            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -(self.inset + self.db.sideSpacing), 0)
         end
     end
 end
@@ -886,6 +878,58 @@ function Bar:updateLayout()
         end
     end
     self:updateCenterWidth()
+    self:updateWidth()
+end
+
+function Bar:updateCenterWidth()
+    local cw = sumPluginsWidth(self.plugins.center)
+    local numGaps = #self.plugins.center + 1
+    cw = cw + (numGaps * self.db.centerSpacing)
+    if cw <= 0 then
+        cw = 1
+    end
+    self.centerFrame:SetWidth(cw)
+end
+
+function Bar:updateWidth()
+    if self.db.fitToContentWidth and self.db.attach == 'none' then
+        local w = 2 * self.inset
+        local numCenterPlugins = #self.plugins.cleft + #self.plugins.center + #self.plugins.cright
+        if numCenterPlugins > 0 then
+            local lw =
+                sumPluginsWidth(self.plugins.left) + self.db.sideSpacing * #self.plugins.left +
+                sumPluginsWidth(self.plugins.cleft) + self.db.centerSpacing * #self.plugins.cleft
+            local rw =
+                sumPluginsWidth(self.plugins.right) + self.db.sideSpacing * #self.plugins.right +
+                sumPluginsWidth(self.plugins.cright) + self.db.centerSpacing * #self.plugins.cright
+            if lw > rw then
+                w = w + lw + self.centerFrame:GetWidth()
+            else
+                w = w + rw + self.centerFrame:GetWidth()
+            end
+        elseif #self.plugins.left > 0 then
+            if #self.plugins.right > 0 then
+                w = w +
+                    sumPluginsWidth(self.plugins.left) + self.db.sideSpacing * #self.plugins.left +
+                    sumPluginsWidth(self.plugins.right) + self.db.sideSpacing * #self.plugins.right +
+                    self.db.centerSpacing
+            else
+                w = w +
+                    sumPluginsWidth(self.plugins.left) + self.db.sideSpacing * #self.plugins.left +
+                    self.db.sideSpacing -- note to self: rightSpacing
+            end
+        elseif #self.plugins.right > 0 then
+            w = w +
+                sumPluginsWidth(self.plugins.right) + self.db.sideSpacing * #self.plugins.right +
+                self.db.sideSpacing -- note to self: leftSpacing
+        else
+            w = self.db.frameWidth
+        end
+        if w < Defaults.minFrameWidth then
+            w = Defaults.minFrameWidth
+        end
+        self.frame:SetWidth(w)
+    end
 end
 
 function Bar:setId(id)
@@ -1355,8 +1399,11 @@ function Plugin:updateLayout(forced)
     if forced or w > ow or w < ow - self.db.shrinkThreshold then
         self.origWidth = w
         self.frame:SetWidth(w)
-        if self.bar and self.db.area == 'center' then
-            self.bar:updateCenterWidth()
+        if self.bar then
+            if self.db.area == 'center' then
+                self.bar:updateCenterWidth()
+            end
+            self.bar:updateWidth()
         end
     end
 end
