@@ -560,7 +560,7 @@ local pluginOptionArgs = {
 }
 
 function Plugin:getColoredTitle()
-    return self.db.enabled and self.title or "|cCCed1100" .. self.title .."|r"
+    return self.db.enabled and self.title or "|cffed1100" .. self.title .."|r"
 end
 
 function Plugin:setOption(info, value)
