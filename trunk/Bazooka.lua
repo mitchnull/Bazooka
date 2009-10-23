@@ -767,6 +767,7 @@ function Bar:detachPlugin(plugin)
     if plugin.db.area == 'center' then
         self:updateCenterWidth()
     end
+    self:updateWidth()
 end
 
 function Bar:attachPlugin(plugin, area, pos)
@@ -910,9 +911,9 @@ function Bar:updateWidth()
                 sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
                 sumPluginsWidth(self.plugins.cright) + self.db.centerSpacing * #self.plugins.cright
             if lw > rw then
-                w = w + lw + self.centerFrame:GetWidth()
+                w = w + lw + lw + self.centerFrame:GetWidth()
             else
-                w = w + rw + self.centerFrame:GetWidth()
+                w = w + rw + rw + self.centerFrame:GetWidth()
             end
         elseif #self.plugins.left > 0 then
             if #self.plugins.right > 0 then
