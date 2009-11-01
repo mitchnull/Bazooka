@@ -30,9 +30,13 @@ local FrameStratas = {
     ["LOW"] = L["Low"],
 }
 
+local BulkHandler = {}
+
 local BarNames = {
     [1] = Bazooka:getBarName(1),
 }
+
+local PluginNames = {}
 
 local function getColor(dbcolor)
     return dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a
@@ -439,6 +443,7 @@ function Bazooka:updateBarOptions()
         BarNames[i] = bar.name
     end
     ACR:NotifyChange(self.AppName .. ".bars")
+    ACR:NotifyChange(self.AppName .. ".bulk-config")
 end
 
 -- END Bar stuff
@@ -604,11 +609,95 @@ function Bazooka:updatePluginOptions()
     for name, plugin in pairs(self.plugins) do
         plugin:addOptions()
         pluginOptions.args[name] = plugin.opts
+        PluginNames[name] = plugin.opts.name
     end
     ACR:NotifyChange(self.AppName .. ".plugins")
+    ACR:NotifyChange(self.AppName .. ".bulk-config")
 end
 
 -- END Plugin stuff
+
+-- BEGIN Bulk config stuff
+
+local function getBulkSection(info)
+    return info[1]
+end
+
+function BulkHandler:setOption(info, value, value2)
+    Bazooka.db.global[getBulkSection(info)][info[#info]] = value
+end
+
+function BulkHandler:getOption(info)
+    return Bazooka.db.global[getBulkSection(info)][info[#info]]
+end
+
+function BulkHandler:setColorOption(info, r, g, b, a)
+    setColor(self:getOption(info), r, g, b, a)
+end
+
+function BulkHandler:getColorOption(info)
+    return getColor(self:getOption(info))
+end
+
+function BulkHandler:setMultiOption(info, sel, value)
+    self:getOption(info)[sel] = value
+end
+
+function BulkHandler:getMultiOption(info, sel)
+    return self:getOption(info)[sel]
+end
+
+local bulkConfigOptions = {
+    type = 'group',
+    handler = BulkHandler,
+    childGroups = 'tab',
+    inline = true,
+    name = "Bulk Config - FIXME",
+    get = "getOption",
+    set = "setOption",
+    order = 10,
+    args = {
+        bars = {
+            type = 'group',
+            name = L["Bars"],
+            order = 10,
+            args = {
+                selection = {
+                    type = 'multiselect',
+                    name = L["Bars"],
+                    values = BarNames,
+                    order = 9999,
+                    get = "getMultiOption",
+                    set = "setMultiOption",
+                },
+            },
+        },
+        plugins = {
+            type = 'group',
+            name = L["Plugins"],
+            order = 20,
+            args = {
+                selection = {
+                    type = 'multiselect',
+                    name = L["Plugins"],
+                    values = PluginNames,
+                    order = 9999,
+                    get = "getMultiOption",
+                    set = "setMultiOption",
+                },
+            },
+        },
+    },
+}
+
+--[[
+TODO:
+copyOptions(barOptionArgs, bulkConfigOptions.args.bars.args)
+copyOptions(pluginOptionArgs, bulkConfigOptions.args.plugins.args)
+- fix db.globals.* (use common defaults or something)
+]]--
+
+-- END Bulk config stuff
 
 function Bazooka:updateMainOptions()
     ACR:NotifyChange(self.AppName)
@@ -717,6 +806,7 @@ do
     self.opts = ACD:AddToBlizOptions(self.AppName, self.AppName)
     self.barOpts = registerSubOptions('bars', barOptions)
     self.pluginOpts = registerSubOptions('plugins', pluginOptions)
+    self.bulkConfigOpts = registerSubOptions('bulk-config', bulkConfigOptions)
     self:updateBarOptions()
     self:updatePluginOptions()
     self.setupDBOptions = function(self)
