@@ -134,9 +134,13 @@ Bazooka.AttachNames = {
 local defaults = {
     global = {
         plugins = {
+            options = {}, -- FIXME: = Defaults.plugins
+            selectedOptions = {},
             selection = {},
         },
         bars = {
+            options = {}, -- FIXME: = Defaults.bars
+            selectedOptions = {},
             selection = {},
         },
     },
@@ -151,7 +155,7 @@ local defaults = {
         fadeInDuration = Defaults.fadeInDuration,
 
         bars = {
-            ["**"] = {
+            ["**"] = { -- FIXME: = Defaults.bars
                 fadeInCombat = false,
                 fadeOutOfCombat = false,
                 disableMouseInCombat = true,
@@ -209,7 +213,7 @@ local defaults = {
             },
         },
         plugins = {
-            ["*"] = {
+            ["*"] = { -- FIXME: = Defaults.plugins
                 ["**"] = {
                     enabled = false,
                     bar = 1,
