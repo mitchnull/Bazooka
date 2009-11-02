@@ -14,6 +14,7 @@ local MaxFontSize = 30
 local MinIconSize = 5
 local MaxIconSize = 40
 
+local BulkEnabledPrefix = "bulk_"
 local lastConfiguredOpts -- stupid hack to remember last open config frame
 
 local _
@@ -501,7 +502,7 @@ local pluginOptionArgs = {
         type = 'toggle',
         name = L["Hide tooltip on click"],
         disabled = "isDisabled",
-        order = 200,
+        order = 190,
     },
     disableTooltip = {
         type = 'toggle',
@@ -632,11 +633,11 @@ function BulkHandler:getOption(info)
 end
 
 function BulkHandler:setColorOption(info, r, g, b, a)
-    setColor(self:getOption(info), r, g, b, a)
+    setColor(self:getOption(info) or {}, r, g, b, a) -- ### FIXME
 end
 
 function BulkHandler:getColorOption(info)
-    return getColor(self:getOption(info))
+    return getColor(self:getOption(info) or {}) -- ### FIXME
 end
 
 function BulkHandler:setMultiOption(info, sel, value)
@@ -645,6 +646,18 @@ end
 
 function BulkHandler:getMultiOption(info, sel)
     return self:getOption(info)[sel]
+end
+
+function BulkHandler:isSettingDisabled(info)
+    return not Bazooka.db.global[getBulkSection(info)][BulkEnabledPrefix .. info[#info]]
+end
+
+function BulkHandler:applyBulkBarSettings()
+    print("### TODO: Bulk-setting bars")
+end
+
+function BulkHandler:applyBulkPluginSettings()
+    print("### TODO: Bulk-setting plugins")
 end
 
 local bulkConfigOptions = {
@@ -656,6 +669,10 @@ local bulkConfigOptions = {
     get = "getOption",
     set = "setOption",
     order = 10,
+    disabled = function()
+        lastConfiguredOpts = Bazooka.bulkConfigOpts
+        return false
+    end,
     args = {
         bars = {
             type = 'group',
@@ -666,9 +683,16 @@ local bulkConfigOptions = {
                     type = 'multiselect',
                     name = L["Bars"],
                     values = BarNames,
-                    order = 9999,
+                    order = 9991,
                     get = "getMultiOption",
                     set = "setMultiOption",
+                },
+                apply = {
+                    type = 'execute',
+                    name = 'Apply - FIXME',
+                    func = "applyBulkBarSettings",
+                    confirm = true,
+                    order = 9999,
                 },
             },
         },
@@ -681,9 +705,16 @@ local bulkConfigOptions = {
                     type = 'multiselect',
                     name = L["Plugins"],
                     values = PluginNames,
-                    order = 9999,
+                    order = 9991,
                     get = "getMultiOption",
                     set = "setMultiOption",
+                },
+                apply = {
+                    type = 'execute',
+                    name = 'Apply - FIXME',
+                    func = "applyBulkPluginSettings",
+                    confirm = true,
+                    order = 9999,
                 },
             },
         },
@@ -704,6 +735,44 @@ function Bazooka:updateMainOptions()
 end
 
 do
+    local function createBulkConfigOpts(src, dst)
+        for key, value in pairs(src) do
+            if value.type ~= 'execute' then
+                local copy = {}
+                dst[key] = copy
+                for k, v in pairs(value) do
+                    copy[k] = v
+                end
+                copy.type = value.type
+                if value.type == 'color' then
+                    copy.get = "getColorOption"
+                    copy.set = "setColorOption"
+                else
+                    copy.get = nil
+                    copy.set = nil
+                end
+                if value.type == 'group' then
+                    copy.args = {}
+                    createBulkConfigOpts(value.args, copy.args)
+                end
+                copy.disabled = nil
+                copy.order = value.order * 10
+                copy.disabled = "isSettingDisabled"
+                copy.width = nil
+                if value.type ~= 'header' then
+                    dst[BulkEnabledPrefix .. key] = {
+                        type = 'toggle',
+                        name = "",
+                        order = value.order * 10 - 1,
+                    }
+                end
+            end
+        end
+    end
+
+    createBulkConfigOpts(barOptionArgs, bulkConfigOptions.args.bars.args)
+    createBulkConfigOpts(pluginOptionArgs, bulkConfigOptions.args.plugins.args)
+
     local self = Bazooka
 
     local mainOptions = {
