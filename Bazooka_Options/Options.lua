@@ -1,3 +1,4 @@
+-- FIXME: localization of new stuff, remove "debug" flag from enUS
 local Bazooka = Bazooka
 local Bar = Bazooka.Bar
 local Plugin = Bazooka.Plugin
@@ -15,6 +16,7 @@ local MinIconSize = 5
 local MaxIconSize = 40
 
 local BulkEnabledPrefix = "bulk_"
+local BEPLEN = strlen(BulkEnabledPrefix)
 local lastConfiguredOpts -- stupid hack to remember last open config frame
 
 local _
@@ -624,12 +626,12 @@ local function getBulkSection(info)
     return info[1]
 end
 
-function BulkHandler:setOption(info, value, value2)
-    Bazooka.db.global[getBulkSection(info)][info[#info]] = value
+function BulkHandler:setOption(info, value)
+    Bazooka.db.global[getBulkSection(info)].options[info[#info]] = value
 end
 
 function BulkHandler:getOption(info)
-    return Bazooka.db.global[getBulkSection(info)][info[#info]]
+    return Bazooka.db.global[getBulkSection(info)].options[info[#info]]
 end
 
 function BulkHandler:setColorOption(info, r, g, b, a)
@@ -648,16 +650,71 @@ function BulkHandler:getMultiOption(info, sel)
     return self:getOption(info)[sel]
 end
 
+function BulkHandler:setSelection(info, sel, value)
+    Bazooka.db.global[getBulkSection(info)].selection[sel] = value
+end
+
+function BulkHandler:getSelection(info, sel)
+    return Bazooka.db.global[getBulkSection(info)].selection[sel]
+end
+
+function BulkHandler:getSelectedOption(info)
+    local name = strsub(info[#info], BEPLEN + 1)
+    return Bazooka.db.global[getBulkSection(info)].selectedOptions[name]
+end
+
+function BulkHandler:setSelectedOption(info, value)
+    local name = strsub(info[#info], BEPLEN + 1)
+    Bazooka.db.global[getBulkSection(info)].selectedOptions[name] = value
+end
+
 function BulkHandler:isSettingDisabled(info)
-    return not Bazooka.db.global[getBulkSection(info)][BulkEnabledPrefix .. info[#info]]
+    return not Bazooka.db.global[getBulkSection(info)].selectedOptions[info[#info]]
 end
 
 function BulkHandler:applyBulkBarSettings()
     print("### TODO: Bulk-setting bars")
+    for id, selected in pairs(Bazooka.db.global.bars.selection) do
+        if selected then
+            local bar = Bazooka.bars[id]
+            if bar then
+                print("### TODO: Bulk-setting bar#" .. id)
+            end
+        end
+    end
 end
 
 function BulkHandler:applyBulkPluginSettings()
     print("### TODO: Bulk-setting plugins")
+    for name, selected in pairs(Bazooka.db.global.plugins.selection) do
+        if selected then
+            local plugin = Bazooka.plugins[name]
+            if plugin then 
+                print("### TODO: Bulk-setting plugin: " .. name)
+            end
+        end
+    end
+end
+
+function BulkHandler:isApplyDisabled(info)
+    
+    for key, value in pairs(Bazooka.db.global[getBulkSection(info)].selection) do
+        if value then
+            for key, value in pairs(Bazooka.db.global[getBulkSection(info)].selectedOptions) do
+                if value then
+                    return false
+                end
+            end
+            break
+        end
+    end
+    return true
+end
+
+function BulkHandler:resetSelections(info)
+    local section = Bazooka.db.global[getBulkSection(info)]
+    wipe(section.selection)
+    wipe(section.selectedOptions)
 end
 
 local bulkConfigOptions = {
@@ -665,7 +722,7 @@ local bulkConfigOptions = {
     handler = BulkHandler,
     childGroups = 'tab',
     inline = true,
-    name = "Bulk Config - FIXME",
+    name = L["Bulk Configuration"],
     get = "getOption",
     set = "setOption",
     order = 10,
@@ -683,15 +740,23 @@ local bulkConfigOptions = {
                     type = 'multiselect',
                     name = L["Bars"],
                     values = BarNames,
-                    order = 9991,
-                    get = "getMultiOption",
-                    set = "setMultiOption",
+                    order = 9992,
+                    get = "getSelection",
+                    set = "setSelection",
                 },
                 apply = {
                     type = 'execute',
-                    name = 'Apply - FIXME',
+                    name = L["Apply"],
+                    confirm = function() return L["Apply selected options to selected bars?"] end,
                     func = "applyBulkBarSettings",
-                    confirm = true,
+                    disabled = "isApplyDisabled",
+                    order = 9998,
+                },
+                reset = {
+                    type = 'execute',
+                    name = L["Reset"],
+                    confirm = function() return L["Reset selections?"] end,
+                    func = "resetSelections",
                     order = 9999,
                 },
             },
@@ -705,15 +770,23 @@ local bulkConfigOptions = {
                     type = 'multiselect',
                     name = L["Plugins"],
                     values = PluginNames,
-                    order = 9991,
-                    get = "getMultiOption",
-                    set = "setMultiOption",
+                    order = 9992,
+                    get = "getSelection",
+                    set = "setSelection",
                 },
                 apply = {
                     type = 'execute',
-                    name = 'Apply - FIXME',
+                    name = L["Apply"],
+                    confirm = function() return L["Apply selected options to selected plugins?"] end,
                     func = "applyBulkPluginSettings",
-                    confirm = true,
+                    disabled = "isApplyDisabled",
+                    order = 9998,
+                },
+                reset = {
+                    type = 'execute',
+                    name = L["Reset"],
+                    confirm = function() return L["Reset selections?"] end,
+                    func = "resetSelections",
                     order = 9999,
                 },
             },
@@ -747,23 +820,27 @@ do
                 if value.type == 'color' then
                     copy.get = "getColorOption"
                     copy.set = "setColorOption"
+                elseif value.type == 'multiselect' then
+                    copy.get = "getMultiOption"
+                    copy.set = "setMultiOption"
                 else
                     copy.get = nil
                     copy.set = nil
                 end
-                if value.type == 'group' then
-                    copy.args = {}
-                    createBulkConfigOpts(value.args, copy.args)
-                end
-                copy.disabled = nil
                 copy.order = value.order * 10
                 copy.disabled = "isSettingDisabled"
                 copy.width = nil
-                if value.type ~= 'header' then
+                if value.type == 'group' then
+                    copy.args = {}
+                    createBulkConfigOpts(value.args, copy.args)
+                    copy.disabled = nil
+                elseif value.type ~= 'header' then
                     dst[BulkEnabledPrefix .. key] = {
                         type = 'toggle',
-                        name = "",
-                        order = value.order * 10 - 1,
+                        name = L["Apply"],
+                        get = "getSelectedOption",
+                        set = "setSelectedOption",
+                        order = value.order * 10 + 1,
                     }
                 end
             end
