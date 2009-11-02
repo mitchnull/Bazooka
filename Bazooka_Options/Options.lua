@@ -14,6 +14,7 @@ local MaxFontSize = 30
 local MinIconSize = 5
 local MaxIconSize = 40
 
+local BulkEnabledPrefix = "bulk_"
 local lastConfiguredOpts -- stupid hack to remember last open config frame
 
 local _
@@ -30,9 +31,13 @@ local FrameStratas = {
     ["LOW"] = L["Low"],
 }
 
+local BulkHandler = {}
+
 local BarNames = {
     [1] = Bazooka:getBarName(1),
 }
+
+local PluginNames = {}
 
 local function getColor(dbcolor)
     return dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a
@@ -439,6 +444,7 @@ function Bazooka:updateBarOptions()
         BarNames[i] = bar.name
     end
     ACR:NotifyChange(self.AppName .. ".bars")
+    ACR:NotifyChange(self.AppName .. ".bulk-config")
 end
 
 -- END Bar stuff
@@ -496,7 +502,7 @@ local pluginOptionArgs = {
         type = 'toggle',
         name = L["Hide tooltip on click"],
         disabled = "isDisabled",
-        order = 200,
+        order = 190,
     },
     disableTooltip = {
         type = 'toggle',
@@ -604,17 +610,169 @@ function Bazooka:updatePluginOptions()
     for name, plugin in pairs(self.plugins) do
         plugin:addOptions()
         pluginOptions.args[name] = plugin.opts
+        PluginNames[name] = plugin.opts.name
     end
     ACR:NotifyChange(self.AppName .. ".plugins")
+    ACR:NotifyChange(self.AppName .. ".bulk-config")
 end
 
 -- END Plugin stuff
+
+-- BEGIN Bulk config stuff
+
+local function getBulkSection(info)
+    return info[1]
+end
+
+function BulkHandler:setOption(info, value, value2)
+    Bazooka.db.global[getBulkSection(info)][info[#info]] = value
+end
+
+function BulkHandler:getOption(info)
+    return Bazooka.db.global[getBulkSection(info)][info[#info]]
+end
+
+function BulkHandler:setColorOption(info, r, g, b, a)
+    setColor(self:getOption(info) or {}, r, g, b, a) -- ### FIXME
+end
+
+function BulkHandler:getColorOption(info)
+    return getColor(self:getOption(info) or {}) -- ### FIXME
+end
+
+function BulkHandler:setMultiOption(info, sel, value)
+    self:getOption(info)[sel] = value
+end
+
+function BulkHandler:getMultiOption(info, sel)
+    return self:getOption(info)[sel]
+end
+
+function BulkHandler:isSettingDisabled(info)
+    return not Bazooka.db.global[getBulkSection(info)][BulkEnabledPrefix .. info[#info]]
+end
+
+function BulkHandler:applyBulkBarSettings()
+    print("### TODO: Bulk-setting bars")
+end
+
+function BulkHandler:applyBulkPluginSettings()
+    print("### TODO: Bulk-setting plugins")
+end
+
+local bulkConfigOptions = {
+    type = 'group',
+    handler = BulkHandler,
+    childGroups = 'tab',
+    inline = true,
+    name = "Bulk Config - FIXME",
+    get = "getOption",
+    set = "setOption",
+    order = 10,
+    disabled = function()
+        lastConfiguredOpts = Bazooka.bulkConfigOpts
+        return false
+    end,
+    args = {
+        bars = {
+            type = 'group',
+            name = L["Bars"],
+            order = 10,
+            args = {
+                selection = {
+                    type = 'multiselect',
+                    name = L["Bars"],
+                    values = BarNames,
+                    order = 9991,
+                    get = "getMultiOption",
+                    set = "setMultiOption",
+                },
+                apply = {
+                    type = 'execute',
+                    name = 'Apply - FIXME',
+                    func = "applyBulkBarSettings",
+                    confirm = true,
+                    order = 9999,
+                },
+            },
+        },
+        plugins = {
+            type = 'group',
+            name = L["Plugins"],
+            order = 20,
+            args = {
+                selection = {
+                    type = 'multiselect',
+                    name = L["Plugins"],
+                    values = PluginNames,
+                    order = 9991,
+                    get = "getMultiOption",
+                    set = "setMultiOption",
+                },
+                apply = {
+                    type = 'execute',
+                    name = 'Apply - FIXME',
+                    func = "applyBulkPluginSettings",
+                    confirm = true,
+                    order = 9999,
+                },
+            },
+        },
+    },
+}
+
+--[[
+TODO:
+copyOptions(barOptionArgs, bulkConfigOptions.args.bars.args)
+copyOptions(pluginOptionArgs, bulkConfigOptions.args.plugins.args)
+- fix db.globals.* (use common defaults or something)
+]]--
+
+-- END Bulk config stuff
 
 function Bazooka:updateMainOptions()
     ACR:NotifyChange(self.AppName)
 end
 
 do
+    local function createBulkConfigOpts(src, dst)
+        for key, value in pairs(src) do
+            if value.type ~= 'execute' then
+                local copy = {}
+                dst[key] = copy
+                for k, v in pairs(value) do
+                    copy[k] = v
+                end
+                copy.type = value.type
+                if value.type == 'color' then
+                    copy.get = "getColorOption"
+                    copy.set = "setColorOption"
+                else
+                    copy.get = nil
+                    copy.set = nil
+                end
+                if value.type == 'group' then
+                    copy.args = {}
+                    createBulkConfigOpts(value.args, copy.args)
+                end
+                copy.disabled = nil
+                copy.order = value.order * 10
+                copy.disabled = "isSettingDisabled"
+                copy.width = nil
+                if value.type ~= 'header' then
+                    dst[BulkEnabledPrefix .. key] = {
+                        type = 'toggle',
+                        name = "",
+                        order = value.order * 10 - 1,
+                    }
+                end
+            end
+        end
+    end
+
+    createBulkConfigOpts(barOptionArgs, bulkConfigOptions.args.bars.args)
+    createBulkConfigOpts(pluginOptionArgs, bulkConfigOptions.args.plugins.args)
+
     local self = Bazooka
 
     local mainOptions = {
@@ -717,6 +875,7 @@ do
     self.opts = ACD:AddToBlizOptions(self.AppName, self.AppName)
     self.barOpts = registerSubOptions('bars', barOptions)
     self.pluginOpts = registerSubOptions('plugins', pluginOptions)
+    self.bulkConfigOpts = registerSubOptions('bulk-config', bulkConfigOptions)
     self:updateBarOptions()
     self:updatePluginOptions()
     self.setupDBOptions = function(self)

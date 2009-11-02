@@ -132,6 +132,14 @@ Bazooka.AttachNames = {
 -- Default DB stuff
 
 local defaults = {
+    global = {
+        plugins = {
+            selection = {},
+        },
+        bars = {
+            selection = {},
+        },
+    },
     profile = {
         locked = false,
         adjustFrames = true,
