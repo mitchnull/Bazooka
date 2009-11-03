@@ -672,25 +672,44 @@ function BulkHandler:isSettingDisabled(info)
     return not getBulkSection(info).selectedOptions[info[#info]]
 end
 
+local function applyBulkSettings(section, target)
+    for k, v in pairs(section.selectedOptions) do
+        if v then
+            if type(section.options[k]) == 'table' then
+                local src = section.options[k]
+                local dst = target.db[k]
+                for kk, vv in pairs(src) do
+                    dst[kk] = vv
+                end
+            else
+                target.db[k] = section.options[k]
+            end
+        end
+    end
+    target:applySettings()
+end
+
 function BulkHandler:applyBulkBarSettings()
-    print("### TODO: Bulk-setting bars")
-    for id, selected in pairs(Bazooka.db.global.bars.selection) do
+    local section = Bazooka.db.global.bars
+    for id, selected in pairs(section.selection) do
         if selected then
             local bar = Bazooka.bars[id]
             if bar then
-                print("### TODO: Bulk-setting bar#" .. id)
+                print("### Bulk-setting bar#" .. id)
+                applyBulkSettings(section, bar)
             end
         end
     end
 end
 
 function BulkHandler:applyBulkPluginSettings()
-    print("### TODO: Bulk-setting plugins")
-    for name, selected in pairs(Bazooka.db.global.plugins.selection) do
+    local section = Bazooka.db.global.plugins
+    for name, selected in pairs(section.selection) do
         if selected then
             local plugin = Bazooka.plugins[name]
             if plugin then 
                 print("### TODO: Bulk-setting plugin: " .. name)
+                applyBulkSettings(section, plugin)
             end
         end
     end
