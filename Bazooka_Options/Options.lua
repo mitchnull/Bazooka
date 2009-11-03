@@ -697,7 +697,6 @@ function BulkHandler:applyBulkPluginSettings()
 end
 
 function BulkHandler:isApplyDisabled(info)
-    
     for key, value in pairs(getBulkSection(info).selection) do
         if value then
             for key, value in pairs(getBulkSection(info).selectedOptions) do
@@ -711,7 +710,21 @@ function BulkHandler:isApplyDisabled(info)
     return true
 end
 
-function BulkHandler:resetSelections(info)
+function BulkHandler:isClearDisabled(info)
+    for key, value in pairs(getBulkSection(info).selection) do
+        if value then
+            return false
+        end
+    end
+    for key, value in pairs(getBulkSection(info).selectedOptions) do
+        if value then
+            return false
+        end
+    end
+    return true
+end
+
+function BulkHandler:clearSelections(info)
     local section = getBulkSection(info)
     wipe(section.selection)
     wipe(section.selectedOptions)
@@ -752,11 +765,12 @@ local bulkConfigOptions = {
                     disabled = "isApplyDisabled",
                     order = 9998,
                 },
-                reset = {
+                clear = {
                     type = 'execute',
-                    name = L["Reset"],
-                    confirm = function() return L["Reset selections?"] end,
-                    func = "resetSelections",
+                    name = L["Clear"],
+                    confirm = function() return L["Clear selections?"] end,
+                    func = "clearSelections",
+                    disabled = "isClearDisabled",
                     order = 9999,
                 },
             },
@@ -782,11 +796,12 @@ local bulkConfigOptions = {
                     disabled = "isApplyDisabled",
                     order = 9998,
                 },
-                reset = {
+                clear = {
                     type = 'execute',
-                    name = L["Reset"],
-                    confirm = function() return L["Reset selections?"] end,
-                    func = "resetSelections",
+                    name = L["Clear"],
+                    confirm = function() return L["Clear selections?"] end,
+                    func = "clearSelections",
+                    disabled = "isClearDisabled",
                     order = 9999,
                 },
             },
