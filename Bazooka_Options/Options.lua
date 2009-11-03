@@ -623,15 +623,15 @@ end
 -- BEGIN Bulk config stuff
 
 local function getBulkSection(info)
-    return info[1]
+    return Bazooka.db.global[info[1]]
 end
 
 function BulkHandler:setOption(info, value)
-    Bazooka.db.global[getBulkSection(info)].options[info[#info]] = value
+    getBulkSection(info).options[info[#info]] = value
 end
 
 function BulkHandler:getOption(info)
-    return Bazooka.db.global[getBulkSection(info)].options[info[#info]]
+    return getBulkSection(info).options[info[#info]]
 end
 
 function BulkHandler:setColorOption(info, r, g, b, a)
@@ -651,25 +651,25 @@ function BulkHandler:getMultiOption(info, sel)
 end
 
 function BulkHandler:setSelection(info, sel, value)
-    Bazooka.db.global[getBulkSection(info)].selection[sel] = value
+    getBulkSection(info).selection[sel] = value
 end
 
 function BulkHandler:getSelection(info, sel)
-    return Bazooka.db.global[getBulkSection(info)].selection[sel]
+    return getBulkSection(info).selection[sel]
 end
 
 function BulkHandler:getSelectedOption(info)
     local name = strsub(info[#info], BEPLEN + 1)
-    return Bazooka.db.global[getBulkSection(info)].selectedOptions[name]
+    return getBulkSection(info).selectedOptions[name]
 end
 
 function BulkHandler:setSelectedOption(info, value)
     local name = strsub(info[#info], BEPLEN + 1)
-    Bazooka.db.global[getBulkSection(info)].selectedOptions[name] = value
+    getBulkSection(info).selectedOptions[name] = value
 end
 
 function BulkHandler:isSettingDisabled(info)
-    return not Bazooka.db.global[getBulkSection(info)].selectedOptions[info[#info]]
+    return not getBulkSection(info).selectedOptions[info[#info]]
 end
 
 function BulkHandler:applyBulkBarSettings()
@@ -698,9 +698,9 @@ end
 
 function BulkHandler:isApplyDisabled(info)
     
-    for key, value in pairs(Bazooka.db.global[getBulkSection(info)].selection) do
+    for key, value in pairs(getBulkSection(info).selection) do
         if value then
-            for key, value in pairs(Bazooka.db.global[getBulkSection(info)].selectedOptions) do
+            for key, value in pairs(getBulkSection(info).selectedOptions) do
                 if value then
                     return false
                 end
@@ -712,7 +712,7 @@ function BulkHandler:isApplyDisabled(info)
 end
 
 function BulkHandler:resetSelections(info)
-    local section = Bazooka.db.global[getBulkSection(info)]
+    local section = getBulkSection(info)
     wipe(section.selection)
     wipe(section.selectedOptions)
 end
