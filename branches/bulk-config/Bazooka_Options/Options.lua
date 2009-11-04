@@ -70,6 +70,10 @@ end
 
 -- BEGIN Bar stuff
 
+local function isTweakValid(info, value)
+    return tonumber(value) ~= nil
+end
+
 local barOptionArgs = {
     attach = {
         type = 'select',
@@ -316,28 +320,28 @@ local barOptionArgs = {
     tweakLeft = {
         type = 'input',
         name = L["Left"],
-        validate = "isTweakValid",
+        validate = isTweakValid,
         disabled = "isTweakDisabled",
         order = 210,
     },
     tweakRight = {
         type = 'input',
         name = L["Right"],
-        validate = "isTweakValid",
+        validate = isTweakValid,
         disabled = "isTweakDisabled",
         order = 211,
     },
     tweakTop = {
         type = 'input',
         name = L["Top"],
-        validate = "isTweakValid",
+        validate = isTweakValid,
         disabled = "isTweakDisabled",
         order = 212,
     },
     tweakBottom = {
         type = 'input',
         name = L["Bottom"],
-        validate = "isTweakValid",
+        validate = isTweakValid,
         disabled = "isTweakDisabled",
         order = 213,
     },
@@ -380,10 +384,6 @@ function Bar:isTweakDisabled(info)
     elseif self.db.attach == 'bottom' then
         return info[#info] == 'tweakTop'
     end
-end
-
-function Bar:isTweakValid(info, value)
-    return tonumber(value) ~= nil
 end
 
 function Bar:isBGDisabled()
@@ -568,7 +568,11 @@ local pluginOptionArgs = {
 }
 
 function Plugin:getColoredTitle()
-    return self.db.enabled and self.title or "|cffed1100" .. self.title .."|r"
+    if self.db.enabled then
+        return self.title
+    else
+        return "|cffed1100" .. self.title .."|r"
+    end
 end
 
 function Plugin:setOption(info, value)
@@ -579,7 +583,6 @@ function Plugin:setOption(info, value)
             Bazooka:attachPlugin(self)
         end
         self.opts.name = self:getColoredTitle()
-        -- ACR:NotifyChange(Bazooka.AppName .. ".plugins")
     end
 end
 
