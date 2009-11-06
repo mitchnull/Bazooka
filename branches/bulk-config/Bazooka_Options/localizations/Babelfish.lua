@@ -30,14 +30,14 @@ local baseLocale = "enUS"
 	-- DO NOT INCLUDE the base locale here!
 ]]
 local locale = {
-	"deDE",
-	"frFR",
-	"esES",
-	"esMX",
-	"zhCN",
-	"zhTW",
-	"koKR",
-	"ruRU"
+--	"deDE",
+--	"frFR",
+--	"esES",
+--	"esMX",
+--	"zhCN",
+--	"zhTW",
+--	"koKR",
+--	"ruRU"
 }
 -- CODE --
 
