@@ -1,4 +1,6 @@
 -- FIXME: localization of new stuff, remove "debug" flag from enUS
+-- TODO: select all / clear selection
+-- FIXME: do not store selection and setting-enabled flag in db
 local Bazooka = Bazooka
 local Bar = Bazooka.Bar
 local Plugin = Bazooka.Plugin
@@ -16,6 +18,7 @@ local MinIconSize = 5
 local MaxIconSize = 40
 
 local BulkEnabledPrefix = "bulk_"
+local BulkSeparatorPrefix = "bulks_"
 local BEPLEN = strlen(BulkEnabledPrefix)
 local lastConfiguredOpts -- stupid hack to remember last open config frame
 
@@ -544,12 +547,6 @@ local pluginOptionArgs = {
         name = L["Bar"],
         disabled = "isDisabled",
         values = BarNames,
-        set = function(info, value)
-            local plugin = info.handler
-            plugin:detach()
-            plugin.db.bar = value
-            Bazooka:attachPlugin(plugin)
-        end,
         order = 310,
     },
     area = {
@@ -557,32 +554,21 @@ local pluginOptionArgs = {
         name = L["Area"],
         disabled = "isDisabled",
         values = Bazooka.AreaNames,
-        set = function(info, value)
-            local plugin = info.handler
-            plugin:detach()
-            plugin.db.area = value
-            Bazooka:attachPlugin(plugin)
-        end,
         order = 320,
     },
 }
 
-function Plugin:getColoredTitle()
-    if self.db.enabled then
-        return self.title
-    else
-        return "|cffed1100" .. self.title .."|r"
-    end
+function Plugin:updateColoredTitle()
+    local ct = self.db.enabled and self.title or "|cffed1100" .. self.title .."|r"
+    self.opts.name = ct
+    PluginNames[self.name] = ct
 end
 
 function Plugin:setOption(info, value)
     self.db[info[#info]] = value
     self:applySettings()
     if info[#info] == 'enabled' then
-        if value then
-            Bazooka:attachPlugin(self)
-        end
-        self.opts.name = self:getColoredTitle()
+        self:updateColoredTitle()
     end
 end
 
@@ -607,7 +593,7 @@ function Plugin:addOptions()
             args = pluginOptionArgs,
         }
     end
-    self.opts.name = self:getColoredTitle()
+    self:updateColoredTitle()
 end
 
 function Bazooka:updatePluginOptions()
@@ -615,7 +601,6 @@ function Bazooka:updatePluginOptions()
     for name, plugin in pairs(self.plugins) do
         plugin:addOptions()
         pluginOptions.args[name] = plugin.opts
-        PluginNames[name] = plugin.opts.name
     end
     ACR:NotifyChange(self.AppName .. ".plugins")
     ACR:NotifyChange(self.AppName .. ".bulk-config")
@@ -625,28 +610,47 @@ end
 
 -- BEGIN Bulk config stuff
 
+local function getOptParam(info, param)
+    local options = info.options
+    local res = options[param]
+    for i = 1, #info do
+        options = options.args[info[i]]
+        res = options[param] or res
+    end
+    return res
+end
+
 local function getBulkSection(info)
     return Bazooka.db.global[info[1]]
 end
 
 function BulkHandler:setOption(info, value)
     getBulkSection(info).options[info[#info]] = value
+    if Bazooka.db.global.autoApply then
+        self:autoApply(info, value)
+    end
 end
 
 function BulkHandler:getOption(info)
     return getBulkSection(info).options[info[#info]]
 end
 
-function BulkHandler:setColorOption(info, r, g, b, a)
-    setColor(self:getOption(info) or {}, r, g, b, a) -- ### FIXME
+function BulkHandler:setColorOption(info, ...)
+    setColor(self:getOption(info), ...)
+    if Bazooka.db.global.autoApply then
+        self:autoApply(info, ...)
+    end
 end
 
 function BulkHandler:getColorOption(info)
-    return getColor(self:getOption(info) or {}) -- ### FIXME
+    return getColor(self:getOption(info))
 end
 
 function BulkHandler:setMultiOption(info, sel, value)
     self:getOption(info)[sel] = value
+    if Bazooka.db.global.autoApply then
+        self:autoApply(info, sel, value)
+    end
 end
 
 function BulkHandler:getMultiOption(info, sel)
@@ -662,17 +666,32 @@ function BulkHandler:getSelection(info, sel)
 end
 
 function BulkHandler:getSelectedOption(info)
+    if Bazooka.db.global.autoApply then
+        return nil
+    end
     local name = strsub(info[#info], BEPLEN + 1)
-    return getBulkSection(info).selectedOptions[name]
+    return getBulkSection(info).selectedOptions[name] == true
 end
 
 function BulkHandler:setSelectedOption(info, value)
     local name = strsub(info[#info], BEPLEN + 1)
-    getBulkSection(info).selectedOptions[name] = value
+    if Bazooka.db.global.autoApply then
+        local origName = info[#info]
+        info[#info] = name
+        local getter = getOptParam(info, 'get')
+        if getter == "getMultiOption" then
+            -- TODO
+        else
+            self:autoApply(info, self[getter](self, info))
+        end
+        info[#info] = origName
+    else
+        getBulkSection(info).selectedOptions[name] = (value == true)
+    end
 end
 
 function BulkHandler:isSettingDisabled(info)
-    return not getBulkSection(info).selectedOptions[info[#info]]
+    return not (Bazooka.db.global.autoApply or getBulkSection(info).selectedOptions[info[#info]])
 end
 
 local function applyBulkSettings(section, target)
@@ -681,6 +700,7 @@ local function applyBulkSettings(section, target)
             if type(section.options[k]) == 'table' then
                 local src = section.options[k]
                 local dst = target.db[k]
+                wipe(dst)
                 for kk, vv in pairs(src) do
                     dst[kk] = vv
                 end
@@ -698,8 +718,8 @@ function BulkHandler:applyBulkBarSettings()
         if selected then
             local bar = Bazooka.bars[id]
             if bar then
-                print("### Bulk-setting bar#" .. id)
                 applyBulkSettings(section, bar)
+                bar:updateLayout()
             end
         end
     end
@@ -711,8 +731,34 @@ function BulkHandler:applyBulkPluginSettings()
         if selected then
             local plugin = Bazooka.plugins[name]
             if plugin then 
-                print("### TODO: Bulk-setting plugin: " .. name)
                 applyBulkSettings(section, plugin)
+                if section.selectedOptions['enabled'] then
+                    plugin:updateColoredTitle()
+                end
+            end
+        end
+    end
+end
+
+function BulkHandler:autoApply(info, ...)
+    local setter = getOptParam(info, 'set')
+    local section = getBulkSection(info)
+    if section == Bazooka.db.global.bars then
+        for id, selected in pairs(section.selection) do
+            if selected then
+                local bar = Bazooka.bars[id]
+                if bar then
+                    bar[setter](bar, info, ...)
+                end
+            end
+        end
+    elseif section == Bazooka.db.global.plugins then
+        for name, selected in pairs(section.selection) do
+            if selected then
+                local plugin = Bazooka.plugins[name]
+                if plugin then 
+                    plugin[setter](plugin, info, ...)
+                end
             end
         end
     end
@@ -766,6 +812,13 @@ local bulkConfigOptions = {
         return false
     end,
     args = {
+        autoApply = {
+            type = 'toggle',
+            name = L["Auto apply"],
+            order = 5,
+            set = function(info, value) Bazooka.db.global.autoApply = value end,
+            get = function(info) return Bazooka.db.global.autoApply end,
+        },
         bars = {
             type = 'group',
             name = L["Bars"],
@@ -773,11 +826,16 @@ local bulkConfigOptions = {
             args = {
                 selection = {
                     type = 'multiselect',
-                    name = L["Bars"],
+                    name = L["Selection"],
                     values = BarNames,
-                    order = 9992,
+                    order = 2,
                     get = "getSelection",
                     set = "setSelection",
+                },
+                settings = {
+                    type = 'header',
+                    name = L["Settings"],
+                    order = 3,
                 },
                 apply = {
                     type = 'execute',
@@ -804,11 +862,16 @@ local bulkConfigOptions = {
             args = {
                 selection = {
                     type = 'multiselect',
-                    name = L["Plugins"],
+                    name = L["Selection"],
                     values = PluginNames,
-                    order = 9992,
+                    order = 2,
                     get = "getSelection",
                     set = "setSelection",
+                },
+                settings = {
+                    type = 'header',
+                    name = L["Settings"],
+                    order = 3,
                 },
                 apply = {
                     type = 'execute',
@@ -830,13 +893,6 @@ local bulkConfigOptions = {
         },
     },
 }
-
---[[
-TODO:
-copyOptions(barOptionArgs, bulkConfigOptions.args.bars.args)
-copyOptions(pluginOptionArgs, bulkConfigOptions.args.plugins.args)
-- fix db.globals.* (use common defaults or something)
-]]--
 
 -- END Bulk config stuff
 
@@ -874,10 +930,18 @@ do
                 elseif value.type ~= 'header' then
                     dst[BulkEnabledPrefix .. key] = {
                         type = 'toggle',
+                        tristate = true,
                         name = L["Apply"],
                         get = "getSelectedOption",
                         set = "setSelectedOption",
+                        arg = copy.set,
                         order = value.order * 10 + 1,
+                    }
+                    dst[BulkSeparatorPrefix .. key] = {
+                        type = 'description',
+                        name = "",
+                        width = 'full',
+                        order = value.order * 10 + 2,
                     }
                 end
             end
