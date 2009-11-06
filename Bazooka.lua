@@ -773,6 +773,7 @@ end
 function Bar:attachPlugin(plugin, area, pos)
     area = area or "left"
     plugin.bar = self
+    plugin.area = area
     plugin.db.bar = self.id
     plugin.db.area = area
     local plugins = self.plugins[area]
@@ -1474,6 +1475,10 @@ function Plugin:applySettings()
         self.text:SetFormattedText("")
         self.text:Hide()
     end
+    if not self.bar or self.bar.id ~= self.db.bar or self.area ~= self.db.area then
+        self:detach()
+        Bazooka:attachPlugin(self)
+    end
     self:updateLabel()
     self:updateLayout(true)
 end
@@ -1762,9 +1767,6 @@ function Bazooka:createPlugin(name, dataobj)
     else
         plugin = Plugin:New(name, dataobj, db)
         self.plugins[name] = plugin
-    end
-    if plugin.db.enabled then
-        self:attachPlugin(plugin)
     end
     self:updatePluginOptions()
     return plugin
