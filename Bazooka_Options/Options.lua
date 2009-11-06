@@ -778,24 +778,23 @@ function BulkHandler:isApplyDisabled(info)
     return true
 end
 
-function BulkHandler:isClearDisabled(info)
-    for key, value in pairs(getBulkSection(info).selection) do
-        if value then
-            return false
-        end
-    end
-    for key, value in pairs(getBulkSection(info).selectedOptions) do
-        if value then
-            return false
-        end
-    end
-    return true
-end
-
-function BulkHandler:clearSelections(info)
+function BulkHandler:clearSettings(info)
     local section = getBulkSection(info)
     wipe(section.selection)
     wipe(section.selectedOptions)
+end
+
+function BulkHandler:clearSelection(info)
+    local section = getBulkSection(info)
+    wipe(section.selection)
+end
+
+function BulkHandler:selectAll(info)
+    -- FIXME: this doesn't really work now, but I want to reorg this stuff anyway
+    local section = getBulkSection(info)
+    for k, v in pairs(section.selection) do
+        section.selection[k] = true
+    end
 end
 
 local bulkConfigOptions = {
@@ -832,10 +831,22 @@ local bulkConfigOptions = {
                     get = "getSelection",
                     set = "setSelection",
                 },
+                selectAll = {
+                    type = 'execute',
+                    name = L["Select All"],
+                    func = "selectAll",
+                    order = 3,
+                },
+                clearSelection = {
+                    type = 'execute',
+                    name = L["Clear"],
+                    func = "clearSelection",
+                    order = 4,
+                },
                 settings = {
                     type = 'header',
                     name = L["Settings"],
-                    order = 3,
+                    order = 5,
                 },
                 apply = {
                     type = 'execute',
@@ -845,12 +856,10 @@ local bulkConfigOptions = {
                     disabled = "isApplyDisabled",
                     order = 9998,
                 },
-                clear = {
+                clearSettings = {
                     type = 'execute',
                     name = L["Clear"],
-                    confirm = function() return L["Clear selections?"] end,
-                    func = "clearSelections",
-                    disabled = "isClearDisabled",
+                    func = "clearSettings",
                     order = 9999,
                 },
             },
@@ -868,10 +877,22 @@ local bulkConfigOptions = {
                     get = "getSelection",
                     set = "setSelection",
                 },
+                selectAll = {
+                    type = 'execute',
+                    name = L["Select All"],
+                    func = "selectAll",
+                    order = 3,
+                },
+                clearSelection = {
+                    type = 'execute',
+                    name = L["Clear"],
+                    func = "clearSelection",
+                    order = 4,
+                },
                 settings = {
                     type = 'header',
                     name = L["Settings"],
-                    order = 3,
+                    order = 5,
                 },
                 apply = {
                     type = 'execute',
@@ -884,9 +905,7 @@ local bulkConfigOptions = {
                 clear = {
                     type = 'execute',
                     name = L["Clear"],
-                    confirm = function() return L["Clear selections?"] end,
-                    func = "clearSelections",
-                    disabled = "isClearDisabled",
+                    func = "clearSettings",
                     order = 9999,
                 },
             },
