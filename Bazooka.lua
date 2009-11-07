@@ -67,31 +67,83 @@ local Defaults =  {
     edgeFile = [[Interface\None]],
     fontName = "Friz Quadrata TT",
     fontPath = GameFontNormal:GetFont(),
-    fontSize = 12,
-    fontOutline = "",
-    iconSize = 16,
     minFrameWidth = 10,
     minFrameHeight = 10,
     maxFrameWidth = 1600,
     maxFrameHeight = 50,
-    frameWidth = 256,
-    frameHeight = 20,
-    labelColor = makeColor(0.9, 0.9, 0.9),
-    textColor = makeColor(1.0, 0.82, 0),
-    suffixColor = makeColor(0, 0.82, 0),
-    pluginOpacity = 1.0,
+
+    fadeOutDelay = 0.5,
+    fadeOutDuration = 0.5,
+    fadeInDuration = 0.25,
+}
+
+local BarDefaults = {
+    fadeInCombat = false,
+    fadeOutOfCombat = false,
+    disableMouseInCombat = true,
+    disableMouseOutOfCombat = false,
+    fadeAlpha = 0.4,
+
+    point = "CENTER",
+    rePoint = "CENTER",
+    x = 0,
+    y = 0,
+
+    tweakLeft = 0,
+    tweakRight = 0,
+    tweakTop = 0,
+    tweakBottom = 0,
+
     leftSpacing = 8,
     rightSpacing = 8,
     centerSpacing = 16,
     iconTextSpacing = 2,
-    fadeOutDelay = 0.5,
-    fadeOutDuration = 0.5,
-    fadeInDuration = 0.25,
+
+    font = Defaults.fontName,
+    fontSize = 12,
+    fontOutline = "",
+
+    iconSize = 16,
+
+    labelColor = makeColor(0.9, 0.9, 0.9),
+    textColor = makeColor(1.0, 0.82, 0),
+    suffixColor = makeColor(0, 0.82, 0),
+    pluginOpacity = 1.0,
+    
+    attach = 'none',
+    fitToContentWidth = false,
+
+    strata = "MEDIUM",
+
+    frameWidth = 256,
+    frameHeight = 20,
+
+    bgEnabled = true,
+    bgTexture = Defaults.bgTexture,
+    bgBorderTexture = Defaults.edgeTexture,
+    bgTile = false,
+    bgTileSize = 32,
+    bgEdgeSize = 16,
+    bgColor = makeColor(0, 0, 0, 1.0),
+    bgBorderColor = makeColor(0.8, 0.6, 0.0, 1.0),
+}
+local PluginDefaults = {
+    enabled = true,
+    bar = 1,
+    area = 'left',
+    pos = nil,
+    hideTipOnClick = true,
+    disableTooltip = false,
+    disableTooltipInCombat = true,
+    disableMouseInCombat = false,
+    disableMouseOutOfCombat = false,
+    showIcon = true,
+    showLabel = true,
+    showTitle = true,
+    showText = true,
     shrinkThreshold = 5,
 }
 
--- local Icon = [[Interface\Icons\INV_Gizmo_SuperSapperCharge]]
--- local UnlockedIcon = [[Interface\Icons\INV_Ammo_Bullet_04]]
 local Icon = [[Interface\AddOns\]] .. AppName .. [[\bzk_locked.tga]]
 local UnlockedIcon = [[Interface\AddOns\]] .. AppName .. [[\bzk_unlocked.tga]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
@@ -132,6 +184,10 @@ Bazooka.AttachNames = {
 -- Default DB stuff
 
 local defaults = {
+    global = {
+        plugins = PluginDefaults,
+        bars = BarDefaults,
+    },
     profile = {
         locked = false,
         adjustFrames = true,
@@ -143,56 +199,7 @@ local defaults = {
         fadeInDuration = Defaults.fadeInDuration,
 
         bars = {
-            ["**"] = {
-                fadeInCombat = false,
-                fadeOutOfCombat = false,
-                disableMouseInCombat = true,
-                disableMouseOutOfCombat = false,
-                fadeAlpha = 0.4,
-
-                point = "CENTER",
-                rePoint = "CENTER",
-                x = 0,
-                y = 0,
-
-                tweakLeft = 0,
-                tweakRight = 0,
-                tweakTop = 0,
-                tweakBottom = 0,
-
-                leftSpacing = Defaults.leftSpacing,
-                rightSpacing = Defaults.rightSpacing,
-                centerSpacing = Defaults.centerSpacing,
-                iconTextSpacing = Defaults.iconTextSpacing,
-
-                font = Defaults.fontName,
-                fontSize = Defaults.fontSize,
-                fontOutline = Defaults.fontOutline,
-
-                iconSize = Defaults.iconSize,
-
-                labelColor = Defaults.labelColor,
-                textColor = Defaults.textColor,
-                suffixColor = Defaults.suffixColor,
-                pluginOpacity = Defaults.pluginOpacity,
-                
-                attach = 'none',
-                fitToContentWidth = false,
-
-                strata = "MEDIUM",
-
-                frameWidth = Defaults.frameWidth,
-                frameHeight = Defaults.frameHeight,
-
-                bgEnabled = true,
-                bgTexture = Defaults.bgTexture,
-                bgBorderTexture = Defaults.edgeTexture,
-                bgTile = false,
-                bgTileSize = 32,
-                bgEdgeSize = 16,
-                bgColor = makeColor(0, 0, 0, 1.0),
-                bgBorderColor = makeColor(0.8, 0.6, 0.0, 1.0),
-            },
+            ["**"] = BarDefaults,
             [1] = {
                 attach = 'top',
             },
@@ -202,22 +209,7 @@ local defaults = {
         },
         plugins = {
             ["*"] = {
-                ["**"] = {
-                    enabled = false,
-                    bar = 1,
-                    area = 'left',
-                    pos = nil,
-                    hideTipOnClick = true,
-                    disableTooltip = false,
-                    disableTooltipInCombat = true,
-                    disableMouseInCombat = false,
-                    disableMouseOutOfCombat = false,
-                    showIcon = true,
-                    showLabel = true,
-                    showTitle = true,
-                    showText = true,
-                    shrinkThreshold = Defaults.shrinkThreshold,
-                },
+                ["**"] = PluginDefaults,
             },
             ["launcher"] = {
                 ["**"] = {
@@ -255,7 +247,7 @@ local defaults = {
                     showLabel = false,
                     showTitle = false,
                     showText = true,
-                    shrinkThreshold = Defaults.shrinkThreshold,
+                    shrinkThreshold = PluginDefaults.shrinkThreshold,
                 },
             },
         },
@@ -773,6 +765,7 @@ end
 function Bar:attachPlugin(plugin, area, pos)
     area = area or "left"
     plugin.bar = self
+    plugin.area = area
     plugin.db.bar = self.id
     plugin.db.area = area
     local plugins = self.plugins[area]
@@ -1127,11 +1120,11 @@ local Plugin = {
     text = nil,
     label = nil,
     hl = nil,
-    iconSize = Defaults.iconSize,
-    iconTextSpacing = Defaults.iconTextSpacing,
-    fontSize = Defaults.fontSize,
-    labelColorHex = colorToHex(Defaults.labelColor),
-    suffixColorHex = colorToHex(Defaults.suffixColor),
+    iconSize = BarDefaults.iconSize,
+    iconTextSpacing = BarDefaults.iconTextSpacing,
+    fontSize = BarDefaults.fontSize,
+    labelColorHex = colorToHex(BarDefaults.labelColor),
+    suffixColorHex = colorToHex(BarDefaults.suffixColor),
 
 }
 
@@ -1247,7 +1240,7 @@ function Plugin:New(name, dataobj, db)
 
     if dataobj.tocname then
         local addonName, addonTitle = GetAddOnInfo(dataobj.tocname or name)
-        plugin.title = addonTitle or addonName or name
+        plugin.title = name .. '[' .. (addonTitle or addonName) .. ']'
     else
         plugin.title = name
     end
@@ -1333,7 +1326,7 @@ function Plugin:highlight(flag)
         self.frame:SetAlpha(1.0)
         self.hl:Show()
     else
-        local bdb = self.bar and self.bar.db or Defaults
+        local bdb = self.bar and self.bar.db or BarDefaults
         self.frame:SetAlpha(bdb.pluginOpacity)
         if self.hl then
             self.hl:Hide()
@@ -1342,7 +1335,7 @@ function Plugin:highlight(flag)
 end
 
 function Plugin:globalSettingsChanged()
-    local bdb = self.bar and self.bar.db or Defaults
+    local bdb = self.bar and self.bar.db or BarDefaults
     self.labelColorHex = colorToHex(bdb.labelColor)
     self.suffixColorHex = colorToHex(bdb.suffixColor)
     self.iconTextSpacing = bdb.iconTextSpacing
@@ -1368,7 +1361,7 @@ end
 function Plugin:createIcon()
     self.icon = self.frame:CreateTexture("BazookaPluginIcon_" .. self.name, "ARTWORK")
     self.icon:ClearAllPoints()
-    local iconSize = Defaults.iconSize
+    local iconSize = BarDefaults.iconSize
     self.icon:SetWidth(iconSize)
     self.icon:SetHeight(iconSize)
     self.icon:SetPoint("LEFT", self.frame, "LEFT", 0, 0)
@@ -1376,7 +1369,7 @@ end
 
 function Plugin:createText()
     self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
-    self.text:SetFont(Defaults.fontPath, Defaults.fontSize, Defaults.fontOutline)
+    self.text:SetFont(Defaults.fontPath, BarDefaults.fontSize, BarDefaults.fontOutline)
 end
 
 function Plugin:updateLayout(forced)
@@ -1473,6 +1466,10 @@ function Plugin:applySettings()
     elseif self.text then
         self.text:SetFormattedText("")
         self.text:Hide()
+    end
+    if not self.bar or self.bar.id ~= self.db.bar or self.area ~= self.db.area then
+        self:detach()
+        Bazooka:attachPlugin(self)
     end
     self:updateLabel()
     self:updateLayout(true)
@@ -1763,9 +1760,6 @@ function Bazooka:createPlugin(name, dataobj)
         plugin = Plugin:New(name, dataobj, db)
         self.plugins[name] = plugin
     end
-    if plugin.db.enabled then
-        self:attachPlugin(plugin)
-    end
     self:updatePluginOptions()
     return plugin
 end
@@ -1790,14 +1784,6 @@ function Bazooka:applySettings()
         return
     end
     self:toggleLocked(self.db.profile.locked == true)
-    --[[
-    for i = 1, self.numBars do
-        self.bars[i]:applySettings()
-    end
-    for name, plugin in pairs(self.plugins) do
-        plugin:applySettings()
-    end
-    ]]--
     if Jostle then
         if self.db.profile.adjustFrames then
             Jostle:EnableTopAdjusting()
