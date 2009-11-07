@@ -185,16 +185,8 @@ Bazooka.AttachNames = {
 
 local defaults = {
     global = {
-        plugins = {
-            options = PluginDefaults,
-            selectedOptions = {},
-            selection = {},
-        },
-        bars = {
-            options = BarDefaults,
-            selectedOptions = {},
-            selection = {},
-        },
+        plugins = PluginDefaults,
+        bars = BarDefaults,
     },
     profile = {
         locked = false,
