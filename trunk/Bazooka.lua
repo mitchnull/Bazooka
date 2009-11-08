@@ -137,6 +137,7 @@ local PluginDefaults = {
     disableTooltipInCombat = true,
     disableMouseInCombat = false,
     disableMouseOutOfCombat = false,
+    forceHideTip = false,
     showIcon = true,
     showLabel = true,
     showTitle = true,
@@ -222,6 +223,7 @@ local defaults = {
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
                     disableMouseOutOfCombat = false,
+                    forceHideTip = false,
                     showIcon = true,
                     showLabel = false,
                     showTitle = true,
@@ -243,6 +245,7 @@ local defaults = {
                     disableTooltipInCombat = true,
                     disableMouseInCombat = false,
                     disableMouseOutOfCombat = false,
+                    forceHideTip = false,
                     showIcon = true,
                     showLabel = false,
                     showTitle = false,
@@ -447,7 +450,7 @@ Bar.OnDragStart = function(frame, button)
         return
     end
     if Bazooka.tipOwner then
-        Bazooka.tipOwner:hideTip()
+        Bazooka.tipOwner:hideTip(true)
         Bazooka.tipOwner = nil
     end
     local self = frame.bzkBar
@@ -1152,7 +1155,7 @@ end
 Plugin.OnMouseDown = function(frame, ...)
     local self = frame.bzkPlugin
     if self.db.hideTipOnClick then
-        self:hideTip()
+        self:hideTip(true)
     end
 end
 
@@ -1176,7 +1179,7 @@ Plugin.OnDragStart = function(frame)
         return
     end
     if Bazooka.tipOwner then
-        Bazooka.tipOwner:hideTip()
+        Bazooka.tipOwner:hideTip(true)
         Bazooka.tipOwner = nil
     end
     local self = frame.bzkPlugin
@@ -1250,11 +1253,15 @@ function Plugin:New(name, dataobj, db)
 end
 
 function Plugin:showTip()
+    if Bazooka.checkForceHide then
+        Bazooka.checkForceHide:forceHideFrames(UIParent:GetChildren())
+        Bazooka.checkForceHide = nil
+    end
     if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
         return
     end
     if Bazooka.tipOwner then
-        Bazooka.tipOwner:hideTip()
+        Bazooka.tipOwner:hideTip(true)
     end
     Bazooka.tipOwner = self
     if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
@@ -1285,7 +1292,23 @@ function Plugin:showTip()
     end
 end
 
-function Plugin:hideTip()
+-- hides frames that are not Bazooka's but are anchored to our frame
+-- useage: plugin:forceHideFrames(UIParent:GetChildren())
+function Plugin:forceHideFrames(frame, ...)
+    if not frame then
+        return
+    end
+    if not frame.bzkPlugin then
+        -- we assume that if the frame is anchored to us, it's _only_ anchored to us
+        local _, relativeTo = frame:GetPoint()
+        if relativeTo == self.frame then
+            frame:Hide()
+        end
+    end
+    return self:forceHideFrames(...)
+end
+
+function Plugin:hideTip(force)
     if not Bazooka.tipOwner then
         return
     end
@@ -1299,6 +1322,13 @@ function Plugin:hideTip()
     elseif self.tipType == 'tooltip' then
         if self.dataobj.tooltip then
             self.dataobj.tooltip:Hide()
+        end
+    end
+    if self.db.forceHideTip then
+        if force then
+            self:forceHideFrames(UIParent:GetChildren())
+        else
+            Bazooka.checkForceHide = self
         end
     end
     Bazooka.tipOwner = nil
