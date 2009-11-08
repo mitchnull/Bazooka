@@ -528,6 +528,13 @@ local pluginOptionArgs = {
         disabled = "isDisabled",
         order = 230,
     },
+    forceHideTip = {
+        type = 'toggle',
+        name = L["Force Hide Tooltip"],
+        desc = L["Force hiding the tooltip. It's a hack and might cause unwanted side-effects. Only enable if the plugin's tooltip doesn't behave as expected."],
+        disabled = "isDisabled",
+        order = 240,
+    },
     shrinkThreshold = {
         type = 'range',
         name = L["Shrink threshold"],
