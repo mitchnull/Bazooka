@@ -145,13 +145,29 @@ local barOptionArgs = {
         width = 'full',
     },
 
+    leftMargin = {
+        type = 'range',
+        name = L["Left margin"],
+        min = 0,
+        max = 50,
+        step = 1,
+        order = 60,
+    },
+    rightMargin = {
+        type = 'range',
+        name = L["Right margin"],
+        min = 0,
+        max = 50,
+        step = 1,
+        order = 61,
+    },
     leftSpacing = {
         type = 'range',
         name = L["Left spacing"],
         min = 0,
         max = 50,
         step = 1,
-        order = 60,
+        order = 62,
     },
     rightSpacing = {
         type = 'range',
@@ -159,7 +175,7 @@ local barOptionArgs = {
         min = 0,
         max = 50,
         step = 1,
-        order = 61,
+        order = 63,
     },
     centerSpacing = {
         type = 'range',

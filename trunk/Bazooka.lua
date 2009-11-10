@@ -94,6 +94,8 @@ local BarDefaults = {
     tweakTop = 0,
     tweakBottom = 0,
 
+    leftMargin = 8,
+    rightMargin = 8,
     leftSpacing = 8,
     rightSpacing = 8,
     centerSpacing = 16,
@@ -828,7 +830,7 @@ function Bar:setLeftAttachPoint(plugin, lp)
         if lp then
             plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.leftSpacing, 0)
         else
-            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", (self.inset + self.db.leftSpacing), 0)
+            plugin.frame:SetPoint("LEFT", self.frame, "LEFT", (self.inset + self.db.leftMargin), 0)
         end
     elseif area == "center" then
         if lp then
@@ -860,7 +862,7 @@ function Bar:setRightAttachPoint(plugin, rp)
         if rp then
             plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.rightSpacing, 0)
         else
-            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -(self.inset + self.db.rightSpacing), 0)
+            plugin.frame:SetPoint("RIGHT", self.frame, "RIGHT", -(self.inset + self.db.rightMargin), 0)
         end
     end
 end
@@ -895,16 +897,24 @@ function Bar:updateCenterWidth()
     self.centerFrame:SetWidth(cw)
 end
 
+local function numSideGaps(numPlugins)
+    if numPlugins == 0 then
+        return 0
+    else
+        return numPlugins - 1
+    end
+end
+
 function Bar:updateWidth()
     if self.db.fitToContentWidth and self.db.attach == 'none' then
         local w = 2 * self.inset
         local numCenterPlugins = #self.plugins.cleft + #self.plugins.center + #self.plugins.cright
         if numCenterPlugins > 0 then
             local lw =
-                sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * #self.plugins.left +
+                sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * numSideGaps(#self.plugins.left) + self.db.leftMargin +
                 sumPluginsWidth(self.plugins.cleft) + self.db.centerSpacing * #self.plugins.cleft
             local rw =
-                sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
+                sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * numSideGaps(#self.plugins.right) + self.db.rightMargin +
                 sumPluginsWidth(self.plugins.cright) + self.db.centerSpacing * #self.plugins.cright
             if lw > rw then
                 w = w + lw + lw + self.centerFrame:GetWidth()
@@ -914,18 +924,18 @@ function Bar:updateWidth()
         elseif #self.plugins.left > 0 then
             if #self.plugins.right > 0 then
                 w = w +
-                    sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * #self.plugins.left +
-                    sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
+                    sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * numSideGaps(#self.plugins.left) + self.db.leftMargin +
+                    sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * numSideGaps(#self.plugins.right) + self.db.rightMargin +
                     self.db.centerSpacing
             else
                 w = w +
-                    sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * #self.plugins.left +
-                    self.db.rightSpacing
+                    sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * numSideGaps(#self.plugins.left) + self.db.leftMargin +
+                    self.db.rightMargin
             end
         elseif #self.plugins.right > 0 then
             w = w +
-                sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * #self.plugins.right +
-                self.db.leftSpacing
+                sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * numSideGaps(#self.plugins.right) + self.db.rightMargin +
+                self.db.leftMargin
         else
             w = self.db.frameWidth
         end
@@ -1697,15 +1707,6 @@ end
 function Bazooka:profileChanged()
     if not self.enabled then
         return
-    end
-    -- remove this sometime in the future
-    for i = 1, self.db.profile.numBars do
-        local bdb = self.db.profile.bars[i]
-        if bdb.sideSpacing then
-            bdb.leftSpacing = bdb.sideSpacing
-            bdb.rightSpacing = bdb.sideSpacing
-            bdb.sideSpacing = nil
-        end
     end
     self:init()
 end
