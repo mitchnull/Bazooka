@@ -1074,7 +1074,10 @@ function Bar:applyBGSettings()
     bg.tileSize = self.db.bgTileSize
     bg.edgeSize = (bg.edgeFile and bg.edgeFile ~= [[Interface\None]]) and self.db.bgEdgeSize or 0
     local inset = math.floor(bg.edgeSize / 4)
-    self.inset = inset
+    if inset ~= self.inset then
+        self.inset = inset
+        self:updateLayout()
+    end
     bg.insets.left = inset
     bg.insets.right = inset
     bg.insets.top = inset

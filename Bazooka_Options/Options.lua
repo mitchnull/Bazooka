@@ -21,6 +21,12 @@ local lastConfiguredOpts -- stupid hack to remember last open config frame
 
 local _
 
+local pairs = pairs
+local wipe = wipe
+local tonumber = tonumber
+local strsub = strsub
+local type = type
+
 local FontOutlines = {
     [""] = L["None"],
     ["OUTLINE"] = L["Normal"],
@@ -412,10 +418,19 @@ function Bar:isTileSizeDisabled()
     return not (self.db.bgEnabled and self.db.bgTile)
 end
 
+local UpdateLayoutOptions = {
+    leftMargin = true,
+    rightMargin = true,
+    leftSpacing = true,
+    rightSpacing = true,
+    centerSpacing = true,
+    fitToContentWidth = true,
+}
+
 function Bar:setOption(info, value)
     local name = info[#info]
     self.db[name] = value
-    if name == 'leftSpacing' or name == 'rightSpacing' or name == 'centerSpacing' or name == 'fitToContentWidth' then
+    if UpdateLayoutOptions[name] then
         self:updateLayout()
     else
         self:applySettings()
