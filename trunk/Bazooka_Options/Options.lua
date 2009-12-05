@@ -39,6 +39,11 @@ local FrameStratas = {
     ["LOW"] = L["Low"],
 }
 
+local TextureTypes = {
+    ["background"] = L["Background"],
+    ["statusbar"] = L["Statusbar"],
+}
+
 local BarNames = {
     [1] = Bazooka:getBarName(1),
 }
@@ -283,21 +288,60 @@ local barOptionArgs = {
                 name = L["Enable background"],
                 disabled = false,
             },
-            bgTexture = {
-                type = "select", dialogControl = 'LSM30_Background',
+            sep_Enabled = {
+                type = 'description',
+                name = "",
+                width = 'full',
+                order = 2,
+            },
+            bgTextureType = {
+                type = "select",
                 order = 11,
+                name = L["Texture type"],
+                values = TextureTypes,
+            },
+            bgTexture_background = {
+                type = "select", dialogControl = 'LSM30_Background',
+                order = 12,
                 name = L["Background texture"],
                 values = AceGUIWidgetLSMlists.background,
+                hidden = "isBGTextureBackgroundHidden",
+            },
+            bgTexture_statusbar = {
+                type = "select", dialogControl = 'LSM30_Statusbar',
+                order = 13,
+                name = L["Background texture"],
+                values = AceGUIWidgetLSMlists.statusbar,
+                hidden = "isBGTextureStatusbarHidden",
+            },
+            bgTile = {
+                type = "toggle",
+                order = 14,
+                name = L["Tile background"],
+            },
+            bgTileSize = {
+                type = "range",
+                order = 15,
+                name = L["Background tile size"],
+                desc = L["The size used to tile the background texture"],
+                min = 16, max = 256, step = 1,
+                disabled = "isTileSizeDisabled",
             },
             bgBorderTexture = {
                 type = "select", dialogControl = 'LSM30_Border',
-                order = 12,
+                order = 16,
                 name = L["Border texture"],
                 values = AceGUIWidgetLSMlists.border,
             },
+            bgEdgeSize = {
+                type = "range",
+                order = 17,
+                name = L["Border thickness"],
+                min = 1, max = 16, step = 1,
+            },
             bgColor = {
                 type = "color",
-                order = 13,
+                order = 18,
                 name = L["Background color"],
                 hasAlpha = true,
                 get = "getColorOption",
@@ -305,30 +349,11 @@ local barOptionArgs = {
             },
             bgBorderColor = {
                 type = "color",
-                order = 14,
+                order = 19,
                 name = L["Border color"],
                 hasAlpha = true,
                 get = "getColorOption",
                 set = "setColorOption",
-            },
-            bgTile = {
-                type = "toggle",
-                order = 2,
-                name = L["Tile background"],
-            },
-            bgTileSize = {
-                type = "range",
-                order = 16,
-                name = L["Background tile size"],
-                desc = L["The size used to tile the background texture"],
-                min = 16, max = 256, step = 1,
-                disabled = "isTileSizeDisabled",
-            },
-            bgEdgeSize = {
-                type = "range",
-                order = 17,
-                name = L["Border thickness"],
-                min = 1, max = 16, step = 1,
             },
         },
     },
@@ -418,6 +443,14 @@ function Bar:isTileSizeDisabled()
     return not (self.db.bgEnabled and self.db.bgTile)
 end
 
+function Bar:isBGTextureStatusbarHidden()
+    return self.db.bgTextureType ~= 'statusbar'
+end
+
+function Bar:isBGTextureBackgroundHidden()
+    return self.db.bgTextureType ~= 'background'
+end
+
 local UpdateLayoutOptions = {
     leftMargin = true,
     rightMargin = true,
@@ -429,6 +462,9 @@ local UpdateLayoutOptions = {
 
 function Bar:setOption(info, value)
     local name = info[#info]
+    if name:find("bgTexture_") == 1 then
+        name = "bgTexture"
+    end
     self.db[name] = value
     if UpdateLayoutOptions[name] then
         self:updateLayout()
@@ -438,7 +474,11 @@ function Bar:setOption(info, value)
 end
 
 function Bar:getOption(info)
-    return self.db[info[#info]]
+    local name = info[#info]
+    if name:find("bgTexture_") == 1 then
+        name = "bgTexture"
+    end
+    return self.db[name]
 end
 
 function Bar:setColorOption(info, r, g, b, a)
@@ -829,6 +869,12 @@ function BarBulkHandler:autoApply(info, ...)
         if selected then
             local bar = Bazooka.bars[id]
             if bar then
+                local name = info[#info]
+                if name:find("bgTexture_") == 1 then
+                    -- erm, it's a hack...
+                    local textureType = name:sub(("bgTexture_"):len() + 1)
+                    bar.db.bgTextureType = textureType
+                end
                 bar[setter](bar, info, ...)
             end
         end
@@ -974,9 +1020,13 @@ function Bazooka:updateMainOptions()
 end
 
 do
+    local skipTypes = {
+        ["execute"] = true,
+        ["description"] = true,
+    }
     local function createBulkConfigOpts(src, dst)
         for key, value in pairs(src) do
-            if value.type ~= 'execute' then
+            if not skipTypes[value.type] then
                 local copy = {}
                 dst[key] = copy
                 for k, v in pairs(value) do
@@ -996,6 +1046,7 @@ do
                 copy.order = value.order * 10
                 copy.disabled = "isSettingDisabled"
                 copy.width = nil
+                copy.hidden = nil
                 if value.type == 'group' then
                     copy.args = {}
                     createBulkConfigOpts(value.args, copy.args)

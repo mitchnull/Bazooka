@@ -121,6 +121,7 @@ local BarDefaults = {
     frameHeight = 20,
 
     bgEnabled = true,
+    bgTextureType = 'background',
     bgTexture = Defaults.bgTexture,
     bgBorderTexture = Defaults.edgeTexture,
     bgTile = false,
@@ -1056,7 +1057,7 @@ function Bar:applyBGSettings()
     self.bg = self.bg or { insets = {} }
     local bg = self.bg
     if LSM then
-        bg.bgFile = LSM:Fetch("background", self.db.bgTexture, true)
+        bg.bgFile = LSM:Fetch(self.db.bgTextureType, self.db.bgTexture, true)
         if not bg.bgFile then
             bg.bgFile = Defaults.bgFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
@@ -1100,7 +1101,7 @@ function Bar:applyFontSettings()
 end
 
 function Bar:mediaUpdate(event, mediaType, key)
-    if mediaType == 'background' then
+    if mediaType == 'background' or mediaType == 'statusbar' then
         if key == self.db.bgTexture then
             self:applyBGSettings()
         end
