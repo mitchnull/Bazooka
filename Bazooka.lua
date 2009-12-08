@@ -84,10 +84,10 @@ local BarDefaults = {
     disableMouseOutOfCombat = false,
     fadeAlpha = 0.4,
 
-    point = "CENTER",
-    rePoint = "CENTER",
+    point = "TOP",
+    relPoint = "TOP",
     x = 0,
-    y = 0,
+    y = -50,
 
     tweakLeft = 0,
     tweakRight = 0,
@@ -1781,6 +1781,14 @@ function Bazooka:removeBar(bar)
         self.bars[i]:setId(i)
     end
     self.db.profile.bars[self.numBars + 1] = nil
+    -- hackish way to get back default overrides
+    local t = self.db.profile.bars[self.numBars + 1]
+    if defaults.profile.bars[self.numBars + 1] then
+        for k, v in pairs(defaults.profile.bars[self.numBars + 1]) do
+            t[k] = v
+        end
+    end
+
     self.bars[self.numBars + 1] = nil
 end
 
