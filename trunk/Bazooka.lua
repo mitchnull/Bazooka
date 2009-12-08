@@ -740,7 +740,7 @@ function Bar:highlight(area, pos)
 end
 
 function Bar:detachPlugin(plugin)
-    local plugins = self.plugins[plugin.db.area]
+    local plugins = self.plugins[plugin.area]
     local lp, rp, index
     for i = 1, #plugins do
         local p = plugins[i]
@@ -762,9 +762,10 @@ function Bar:detachPlugin(plugin)
     plugin.frame:ClearAllPoints()
     self:setRightAttachPoint(lp, rp)
     self:setLeftAttachPoint(rp, lp)
-    if plugin.db.area == 'center' then
+    if plugin.area == 'center' then
         self:updateCenterWidth()
     end
+    plugin.area = nil
     self:updateWidth()
 end
 
@@ -826,7 +827,7 @@ function Bar:setLeftAttachPoint(plugin, lp)
     if not plugin then
         return
     end
-    local area = plugin.db.area
+    local area = plugin.area
     if area == "left" then
         if lp then
             plugin.frame:SetPoint("LEFT", lp.frame, "RIGHT", self.db.leftSpacing, 0)
@@ -852,7 +853,7 @@ function Bar:setRightAttachPoint(plugin, rp)
     if not plugin then
         return
     end
-    local area = plugin.db.area
+    local area = plugin.area
     if area == "cleft" then
         if rp then
             plugin.frame:SetPoint("RIGHT", rp.frame, "LEFT", -self.db.centerSpacing, 0)
@@ -1445,7 +1446,7 @@ function Plugin:updateLayout(forced)
         self.origWidth = w
         self.frame:SetWidth(w)
         if self.bar then
-            if self.db.area == 'center' then
+            if self.area == 'center' then
                 self.bar:updateCenterWidth()
             end
             self.bar:updateWidth()
