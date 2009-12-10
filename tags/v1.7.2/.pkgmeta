@@ -1,0 +1,52 @@
+package-as: Bazooka
+
+externals:
+    libs/LibStub-1.0:
+        url: svn://svn.wowace.com/wow/libstub/mainline/trunk
+        tag: latest
+    libs/CallbackHandler-1.0:
+        url: svn://svn.wowace.com/wow/callbackhandler/mainline/trunk/CallbackHandler-1.0
+        tag: latest
+    libs/Ace3/AceAddon-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceAddon-3.0
+        tag: latest
+    libs/Ace3/AceEvent-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceEvent-3.0
+        tag: latest
+    libs/Ace3/AceDB-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDB-3.0
+        tag: latest
+    libs/Ace3/AceLocale-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceLocale-3.0
+        tag: latest
+    libs/LibSharedMedia-3.0:
+        url: svn://svn.wowace.com/wow/libsharedmedia-3-0/mainline/trunk/LibSharedMedia-3.0
+        tag: latest
+    libs/LibDualSpec-1.0: 
+        url: git://git.wowace.com/wow/libdualspec-1-0/mainline.git
+        tag: latest
+    libs/LibJostle-3.0:
+        url: svn://svn.wowace.com/wow/libjostle-3-0/mainline/trunk
+
+    Bazooka_Options/libs/Ace3/AceGUI-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceGUI-3.0
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceConfig-3.0/AceConfigRegistry-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfig-3.0/AceConfigRegistry-3.0
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceConfig-3.0/AceConfigDialog-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfig-3.0/AceConfigDialog-3.0
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceDBOptions-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDBOptions-3.0
+        tag: latest
+    Bazooka_Options/libs/AceGUI-3.0-SharedMediaWidgets:
+        url: svn://svn.wowace.com/wow/ace-gui-3-0-shared-media-widgets/mainline/trunk/AceGUI-3.0-SharedMediaWidgets
+        tag: latest
+
+move-folders:
+    Bazooka/Bazooka_Options: Bazooka_Options
+
+tools-used:
+    - libdatabroker-1-1
+
