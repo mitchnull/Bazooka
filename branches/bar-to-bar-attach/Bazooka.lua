@@ -607,9 +607,6 @@ end
 function Bar:disable()
     if self.frame then
         self.frame:Hide()
-        if Jostle then
-            Jostle:Unregister(self.frame)
-        end
     end
     for name, plugin in pairs(self.allPlugins) do
         plugin:disable()
@@ -971,9 +968,6 @@ function Bar:applySettings()
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
         end
-        if Jostle then
-            Jostle:RegisterTop(self.frame)
-        end
     elseif self.db.attach == "bottom" then
         self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakBottom)
         self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakBottom)
@@ -983,9 +977,6 @@ function Bar:applySettings()
             needJostleRefresh = true
             self.frame:SetHeight(self.db.frameHeight)
         end
-        if Jostle then
-            Jostle:RegisterBottom(self.frame)
-        end
     else -- detached
         if self.db.frameWidth == 0 then
             self.db.frameWidth = GetScreenWidth() - self.db.tweakLeft + self.db.tweakRight
@@ -993,9 +984,6 @@ function Bar:applySettings()
         self.frame:SetPoint(self.db.point, UIParent, self.db.relPoint, self.db.x, self.db.y)
         self.frame:SetWidth(self.db.frameWidth)
         self.frame:SetHeight(self.db.frameHeight)
-        if Jostle then
-            Jostle:Unregister(self.frame)
-        end
     end
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
@@ -1015,9 +1003,7 @@ function Bar:applySettings()
             self.frame:SetAlpha(1.0)
         end
     end
-    if Jostle and needJostleRefresh then
-        Jostle:Refresh()
-    end
+    Bazooka:updateAnchors()
 end
 
 function Bar:getSizingPoint(x, y)
@@ -1616,6 +1602,24 @@ Bazooka.updaters = {
 
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults, true)
+
+    self.TopAnchor = CreateFrame("Frame", AppName .. "TopAnchor", UIParent)
+    self.TopAnchor:SetHeight(1)
+    self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, 0)
+    self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+
+    self.BottomAnchor = CreateFrame("Frame", AppName .. "BottomAnchor", UIParent)
+    self.BottomAnchor:SetHeight(1)
+    self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, 0)
+    self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+
+    if Jostle then
+        Jostle:RegisterTop(self.TopAnchor)
+        Jostle:RegisterBottom(self.BottomAnchor)
+    end
+
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
     end
@@ -1832,10 +1836,45 @@ function Bazooka:applySettings()
         if self.db.profile.adjustFrames then
             Jostle:EnableTopAdjusting()
             Jostle:EnableBottomAdjusting()
+            self:updateAnchors()
         else
             Jostle:DisableTopAdjusting()
             Jostle:DisableBottomAdjusting()
         end
+    end
+end
+
+function Bazooka:updateAnchors()
+    local needJostleRefresh = false
+    local topTop, topBottom, bottomTop, bottomBottom
+    for i = 1, self.numBars do 
+        local bar = self.bars[i]
+        local top = bar.db.tweakTop
+        local bottom = bar.frame:GetBottom()
+        if bar.db.attach == 'top' then
+            if not topTop or topTop < top then
+                topTop = top
+            end
+            if not topBottom or topBottom > bottom then
+                topBottom = bottom
+            end
+        elseif bar.db.attach == 'bottom' then
+            if not bottomTop or bottomTop < top then
+                bottomTop = top
+            end
+            if not bottomBottom or bottomBottom > bottom then
+                bottomBottom = bottom
+            end
+        end
+    end
+    self.TopAnchor:ClearAllPoints()
+    if not topTop then
+        self.TopAnchor:SetHeight(1)
+        self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, 0)
+    end
+    if not bottomTop then
+        self.BottomAnchor:SetHeight(1)
+        self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, 0)
     end
 end
 
