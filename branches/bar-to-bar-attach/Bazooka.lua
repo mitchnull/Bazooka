@@ -46,6 +46,7 @@ local InCombatLockdown = InCombatLockdown
 local tinsert = tinsert
 local tremove = tremove
 local tostring = tostring
+local tonumber = tonumber
 local print = print
 local pairs = pairs
 local type = type
@@ -617,6 +618,32 @@ function Bar:disable()
     end
 end
 
+function Bar:getTopBottom()
+    if self.db.attach == 'top' then
+        if self.parent then
+            local top, bottom, pt, pb = self.parent:getTopBottom()
+            local mt = pb + tonumber(self.db.tweakTop)
+            local mb = mt - self.db.frameHeight
+            return math.max(top, mt), math.min(bottom, mb), mt, mb
+        else
+            local mt = tonumber(self.db.tweakTop)
+            local mb = mt - self.db.frameHeight
+            return mt, mb, mt, mb
+        end
+    elseif self.db.attach == 'bottom' then
+        if self.parent then
+            local top, bottom, pt, pb = self.parent:getTopBottom()
+            local mb = pt + tonumber(self.db.tweakBottom)
+            local mt = mb + self.db.frameHeight
+            return math.max(top, mt), math.min(bottom, mb), mt, mb
+        else
+            local mb = tonumber(self.db.tweakBottom)
+            local mt = mb + self.db.frameHeight
+            return mt, mb, mt, mb
+        end
+    end
+end
+
 function Bar:getAreaCoords(area)
     if area == 'left' then
         local left, bottom, width, height = self.frame:GetRect()
@@ -1003,6 +1030,7 @@ function Bar:applySettings()
             self.frame:SetAlpha(1.0)
         end
     end
+    -- FIXME: only do this if really necessary
     Bazooka:updateAnchors()
 end
 
@@ -1600,25 +1628,36 @@ Bazooka.updaters = {
 
 -- BEGIN AceAddon stuff
 
+function Bazooka:setTopAnchorPoints()
+    self.TopAnchor:ClearAllPoints()
+    self.TopAnchor:SetPoint("TOP", UIParent, "TOP", 0, self.topTop)
+    self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, self.topBottom)
+    self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+    print("### setTopAnchor: ", self.topTop, ", ", self.topBottom)
+end
+
+function Bazooka:setBottomAnchorPoints()
+    self.BottomAnchor:ClearAllPoints()
+    self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, self.bottomTop)
+    self.BottomAnchor:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, self.bottomBottom)
+    self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+    print("### setBottomAnchor: ", self.bottomTop, ", ", self.bottomBottom)
+end
+
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults, true)
 
+    self.topTop, self.topBottom = 1, 0
     self.TopAnchor = CreateFrame("Frame", AppName .. "TopAnchor", UIParent)
-    self.TopAnchor:SetHeight(1)
-    self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, 0)
-    self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
-    self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+    self.TopAnchor:EnableMouse(false)
+    self:setTopAnchorPoints()
 
+    self.bottomTop, self.bottomBottom = 0, -1
     self.BottomAnchor = CreateFrame("Frame", AppName .. "BottomAnchor", UIParent)
-    self.BottomAnchor:SetHeight(1)
-    self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, 0)
-    self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
-    self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
-
-    if Jostle then
-        Jostle:RegisterTop(self.TopAnchor)
-        Jostle:RegisterBottom(self.BottomAnchor)
-    end
+    self.BottomAnchor:EnableMouse(false)
+    self:setBottomAnchorPoints()
 
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
@@ -1764,6 +1803,7 @@ function Bazooka:createBar()
     else
         bar = Bar:New(id, db)
         self.bars[bar.id] = bar
+        self:updateAnchors()
     end
     return bar
 end
@@ -1794,6 +1834,7 @@ function Bazooka:removeBar(bar)
     end
 
     self.bars[self.numBars + 1] = nil
+    self:updateAnchors()
 end
 
 function Bazooka:createPlugin(name, dataobj)
@@ -1834,12 +1875,15 @@ function Bazooka:applySettings()
     self:toggleLocked(self.db.profile.locked == true)
     if Jostle then
         if self.db.profile.adjustFrames then
+            Jostle:RegisterTop(self.TopAnchor)
+            Jostle:RegisterBottom(self.BottomAnchor)
             Jostle:EnableTopAdjusting()
             Jostle:EnableBottomAdjusting()
-            self:updateAnchors()
         else
-            Jostle:DisableTopAdjusting()
-            Jostle:DisableBottomAdjusting()
+            Jostle:Unregister(self.TopAnchor)
+            Jostle:Unregister(self.BottomAnchor)
+            -- Jostle:DisableTopAdjusting()
+            -- Jostle:DisableBottomAdjusting()
         end
     end
 end
@@ -1849,9 +1893,11 @@ function Bazooka:updateAnchors()
     local topTop, topBottom, bottomTop, bottomBottom
     for i = 1, self.numBars do 
         local bar = self.bars[i]
-        local top = bar.db.tweakTop
-        local bottom = bar.frame:GetBottom()
+        if not bar then
+            return
+        end
         if bar.db.attach == 'top' then
+            local top, bottom = bar:getTopBottom()
             if not topTop or topTop < top then
                 topTop = top
             end
@@ -1859,6 +1905,7 @@ function Bazooka:updateAnchors()
                 topBottom = bottom
             end
         elseif bar.db.attach == 'bottom' then
+            local top, bottom = bar:getTopBottom()
             if not bottomTop or bottomTop < top then
                 bottomTop = top
             end
@@ -1867,14 +1914,25 @@ function Bazooka:updateAnchors()
             end
         end
     end
-    self.TopAnchor:ClearAllPoints()
     if not topTop then
-        self.TopAnchor:SetHeight(1)
-        self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, 0)
+        topTop, topBottom = 1, 0
     end
     if not bottomTop then
-        self.BottomAnchor:SetHeight(1)
-        self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, 0)
+        bottomTop, bottomBottom = 0, -1
+    end
+    local needJostleRefresh = false
+    if self.topTop ~= topTop or self.topBottom ~= topBottom then
+        self.topTop, self.topBottom = topTop, topBottom
+        self:setTopAnchorPoints()
+        needJostleRefresh = true
+    end
+    if self.bottomTop ~= bottomTop or self.bottomBottom ~= bottomBottom then
+        self.bottomTop, self.bottomBottom = bottomTop, bottomBottom
+        self:setBottomAnchorPoints()
+        needJostleRefresh = true
+    end
+    if needJostleRefresh and Jostle and self.db.profile.adjustFrames then
+        Jostle:Refresh()
     end
 end
 
