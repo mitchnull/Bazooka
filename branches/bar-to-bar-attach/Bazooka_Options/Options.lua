@@ -460,13 +460,33 @@ local UpdateLayoutOptions = {
     fitToContentWidth = true,
 }
 
+local UpdateAnchorsOptions = {
+    attach = true,
+    tweakLeft = true,
+    tweakRight = true,
+    tweakTop = true,
+    tweakBottom = true,
+    frameHeight = true,
+}
+
 function Bar:setOption(info, value)
     local name = info[#info]
     if name:find("bgTexture_") == 1 then
         name = "bgTexture"
     end
+    if self.db[name] == value then
+        return
+    end
+    local origAttach = self.db.attach
     self.db[name] = value
-    if UpdateLayoutOptions[name] then
+    if UpdateAnchorsOptions[name] then
+        if origAttach ~= self.db.attach then
+            self.db.pos = nil
+        end
+        Bazooka:detachBar(self)
+        Bazooka:attachBar(self, self.db.attach, self.db.pos)
+        Bazooka:updateAnchors()
+    elseif UpdateLayoutOptions[name] then
         self:updateLayout()
     else
         self:applySettings()
@@ -886,11 +906,18 @@ function BarBulkHandler:applyBulkSettings(info)
         if selected then
             local bar = Bazooka.bars[id]
             if bar then
+                local origAttach = bar.db.attach
                 self:applyBulkSettingsTo(bar)
+                if origAttach ~= bar.db.attach then
+                    bar.db.pos = nil
+                end
+                Bazooka:detachBar(bar)
+                Bazooka:attachBar(bar, bar.db.attach, bar.db.pos)
                 bar:updateLayout()
             end
         end
     end
+    Bazooka:updateAnchors()
 end
 
 --------------------------------------
