@@ -484,20 +484,41 @@ Bar.OnDragStop = function(frame)
     Bazooka.draggedFrame = nil
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
+    local attach, pos = 'none', nil 
     if not Bazooka.locked then
         if self.db.attach == 'none' then
             self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
         else
             local cx, cy = frame:GetCenter()
             if cy < GetScreenHeight() / 2 then
-                self.db.attach = 'bottom'
+                attach = 'bottom'
+                cy = frame:GetBottom() or cy
+                local bars = Bazooka.attachedBars[attach]
+                for i = 1, #bars do
+                    local cb = bars[i]
+                    local cby = tonumber(cb.frame:GetBottom())
+                    if cy <= cby then
+                        pos = cb.db.pos
+                        break
+                    end
+                end
             else
-                self.db.attach = 'top'
+                attach = 'top'
+                cy = frame:GetTop() or cy
+                local bars = Bazooka.attachedBars[attach]
+                for i = 1, #bars do
+                    local cb = bars[i]
+                    local cby = tonumber(cb.frame:GetTop())
+                    if cy >= cby then
+                        pos = cb.db.pos
+                        break
+                    end
+                end
             end
         end
         self.db.frameWidth = self.frame:GetWidth()
         self.db.frameHeight = self.frame:GetHeight()
-        Bazooka:attachBar(self, self.db.attach) -- FIXME: pos
+        Bazooka:attachBar(self, attach, pos)
         Bazooka:updateAnchors()
     else
         Bazooka:attachBar(self, self.db.attach, self.db.pos)
@@ -1764,7 +1785,6 @@ function Bazooka:setTopAnchorPoints()
     self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, self.topBottom)
     self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
     self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
-    print("### setTopAnchor: ", self.topTop, ", ", self.topBottom)
 end
 
 function Bazooka:setBottomAnchorPoints()
@@ -1773,7 +1793,6 @@ function Bazooka:setBottomAnchorPoints()
     self.BottomAnchor:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, self.bottomBottom)
     self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
     self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
-    print("### setBottomAnchor: ", self.bottomTop, ", ", self.bottomBottom)
 end
 
 function Bazooka:getBarName(id)
@@ -1897,17 +1916,14 @@ function Bazooka:detachBarImpl(bar, attach, attachFunc)
     for i = 1, #bars do
         local cb = bars[i]
         if cb == bar then
-            print("### detaching: " .. cb.id)
             tremove(bars, i)
             cb = bars[i]
             if cb then
-                print("### reanchoring: " .. cb.id .. " with " .. attachFunc .. "(" .. tostring(prevBar and prevBar.id) .. ")")
                 cb[attachFunc](cb, prevBar)
             end
             break
         end
         prevBar = cb
-        print("### prevBar = " .. prevBar.id)
     end
 end
 
