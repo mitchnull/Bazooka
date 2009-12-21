@@ -169,7 +169,7 @@ Bazooka.Defaults = Defaults
 
 Bazooka.draggedFrame = nil
 Bazooka.bars = {}
-Bazzoka.attachedBars = {
+Bazooka.attachedBars = {
     ['top'] = {},
     ['bottom'] = {},
 }
@@ -1129,18 +1129,18 @@ end
 
 function Bar:attachTop(prevBar)
     if prevBar then
-        self.frame:SetPoint("TOPLEFT", prevBar, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakTop)
-        self.frame:SetPoint("TOPRIGHT", prevBar, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakTop)
+        self.frame:SetPoint("TOPLEFT", prevBar.frame, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakTop)
+        self.frame:SetPoint("TOPRIGHT", prevBar.frame, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakTop)
     else
-        self.frame:SetPoint("TOPLEFT", prevBar, "TOPLEFT", self.db.tweakLeft, self.db.tweakTop)
-        self.frame:SetPoint("TOPRIGHT", prevBar, "TOPRIGHT", self.db.tweakRight, self.db.tweakTop)
+        self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", self.db.tweakLeft, self.db.tweakTop)
+        self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", self.db.tweakRight, self.db.tweakTop)
     end
 end
 
 function Bar:attachBottom(prevBar)
     if prevBar then
-        self.frame:SetPoint("BOTTOMLEFT", prevBar, "TOPLEFT", self.db.tweakLeft, self.db.tweakBottom)
-        self.frame:SetPoint("BOTTOMRIGHT", prevBar, "TOPRIGHT", self.db.tweakRight, self.db.tweakBottom)
+        self.frame:SetPoint("BOTTOMLEFT", prevBar.frame, "TOPLEFT", self.db.tweakLeft, self.db.tweakBottom)
+        self.frame:SetPoint("BOTTOMRIGHT", prevBar.frame, "TOPRIGHT", self.db.tweakRight, self.db.tweakBottom)
     else
         self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakBottom)
         self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakBottom)
@@ -1637,37 +1637,9 @@ Bazooka.updaters = {
 
 -- BEGIN AceAddon stuff
 
-function Bazooka:setTopAnchorPoints()
-    self.TopAnchor:ClearAllPoints()
-    self.TopAnchor:SetPoint("TOP", UIParent, "TOP", 0, self.topTop)
-    self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, self.topBottom)
-    self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
-    self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
-    print("### setTopAnchor: ", self.topTop, ", ", self.topBottom)
-end
-
-function Bazooka:setBottomAnchorPoints()
-    self.BottomAnchor:ClearAllPoints()
-    self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, self.bottomTop)
-    self.BottomAnchor:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, self.bottomBottom)
-    self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
-    self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
-    print("### setBottomAnchor: ", self.bottomTop, ", ", self.bottomBottom)
-end
-
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults, true)
-
-    self.topTop, self.topBottom = 1, 0
-    self.TopAnchor = CreateFrame("Frame", AppName .. "TopAnchor", UIParent)
-    self.TopAnchor:EnableMouse(false)
-    self:setTopAnchorPoints()
-
-    self.bottomTop, self.bottomBottom = 0, -1
-    self.BottomAnchor = CreateFrame("Frame", AppName .. "BottomAnchor", UIParent)
-    self.BottomAnchor:EnableMouse(false)
-    self:setBottomAnchorPoints()
-
+    self:initAnchors()
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
     end
@@ -1770,6 +1742,40 @@ end
 
 -- END handlers
 
+function Bazooka:initAnchors()
+    self.topTop, self.topBottom = 1, 0
+    if not self.TopAnchor then
+        self.TopAnchor = CreateFrame("Frame", AppName .. "TopAnchor", UIParent)
+        self.TopAnchor:EnableMouse(false)
+    end
+    self:setTopAnchorPoints()
+
+    self.bottomTop, self.bottomBottom = 0, -1
+    if not self.BottomAnchor then
+        self.BottomAnchor = CreateFrame("Frame", AppName .. "BottomAnchor", UIParent)
+        self.BottomAnchor:EnableMouse(false)
+    end
+    self:setBottomAnchorPoints()
+end
+
+function Bazooka:setTopAnchorPoints()
+    self.TopAnchor:ClearAllPoints()
+    self.TopAnchor:SetPoint("TOP", UIParent, "TOP", 0, self.topTop)
+    self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, self.topBottom)
+    self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+    print("### setTopAnchor: ", self.topTop, ", ", self.topBottom)
+end
+
+function Bazooka:setBottomAnchorPoints()
+    self.BottomAnchor:ClearAllPoints()
+    self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, self.bottomTop)
+    self.BottomAnchor:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, self.bottomBottom)
+    self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+    print("### setBottomAnchor: ", self.bottomTop, ", ", self.bottomBottom)
+end
+
 function Bazooka:getBarName(id)
     return L["Bar#%d"]:format(id)
 end
@@ -1809,8 +1815,11 @@ function Bazooka:createBar()
     local id =  self.numBars
     local db = self.db.profile.bars[id]
     local bar = self.bars[id]
-    if not db.pos then -- clear old tweaks, likely they were there for multi-bar setup
-        db.tweakTop, db.tweakBottom = 0, 0
+    if not db.pos and (
+            db.tweakTop ~= 0 or db.tweakBottom ~= 0 or
+            db.tweakLeft ~= 0 or db.tweakRight ~= 0) then
+        print(AppName .. ": Bar#" .. bar.id .. " tweak points has been reset!")
+        db.tweakTop, db.tweakBottom, db.tweakLeft, db.tweakRight = 0, 0, 0, 0
     end
     if bar then
         bar:enable(id, db)
@@ -1818,8 +1827,9 @@ function Bazooka:createBar()
     else
         bar = Bar:New(id, db)
         self.bars[bar.id] = bar
-        self:updateAnchors()
     end
+    self:attachBar(bar, bar.db.attach, bar.db.pos)
+    self:updateAnchors()
     return bar
 end
 
@@ -1876,27 +1886,28 @@ function Bazooka:attachBar(bar, attach, pos)
         pos = self:attachBarImpl(bar, attach, pos, "attachBottom")
     else
         pos = nil
-        bar.frame:SetPoint(self.db.point, UIParent, self.db.relPoint, self.db.x, self.db.y)
+        bar.frame:SetPoint(bar.db.point, UIParent, bar.db.relPoint, bar.db.x, bar.db.y)
     end
     bar.db.pos = pos
 end
 
 function Bazooka:detachBarImpl(bar, attach, attachFunc)
     local bars = self.attachedBars[attach]
-    if not bars then
-        return
-    end
     local prevBar
     for i = 1, #bars do
-        if bars[i] == bar then
+        local cb = bars[i]
+        if cb == bar then
+            print("### detaching: " .. cb.id)
             tremove(bars, i)
-            bar = bars[i]
-            if bar then
-                bar[attachFunc](bar, prevBar)
+            cb = bars[i]
+            if cb then
+                print("### reanchoring: " .. cb.id .. " with " .. attachFunc .. "(" .. tostring(prevBar and prevBar.id) .. ")")
+                cb[attachFunc](cb, prevBar)
             end
             break
         end
-        prevBar = bar
+        prevBar = cb
+        print("### prevBar = " .. prevBar.id)
     end
 end
 
@@ -1987,9 +1998,6 @@ function Bazooka:applySettings()
 end
 
 function Bazooka:getBarsTopBottom(bars)
-    if not bars then
-        return
-    end
     local barsTop, barsBottom, prevBar
     for i = 1, #bars do
         local bar = bars[i]
@@ -2208,3 +2216,5 @@ CONFIGMODE_CALLBACKS[AppName] = function(action)
     end
 end
 
+-- Create our TopAnchor and BottomAnchor so that integrators can use them as soon as we are loaded
+Bazooka:initAnchors()
