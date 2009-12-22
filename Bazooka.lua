@@ -464,12 +464,13 @@ Bar.OnDragStart = function(frame, button)
         Bazooka.tipOwner = nil
     end
     local self = frame.bzkBar
-    Bazooka:detachBar(self)
-    Bazooka:updateAnchors()
     updateUIScale()
     frame:SetAlpha(0.7)
     Bazooka.draggedFrame = frame
     if button == "LeftButton" then
+        Bazooka:detachBar(self)
+        Bazooka:updateAnchors()
+        self.isMoving = true
         frame:StartMoving()
     else
         frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
@@ -486,32 +487,42 @@ Bar.OnDragStop = function(frame)
     frame:SetAlpha(1.0)
     local attach, pos = 'none', nil 
     if not Bazooka.locked then
-        if self.db.attach == 'none' then
-            self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
-        else
-            local cx, cy = frame:GetCenter()
-            if cy < GetScreenHeight() / 2 then
-                attach = 'bottom'
-                cy = frame:GetBottom() or cy
-                local bars = Bazooka.attachedBars[attach]
-                for i = 1, #bars do
-                    local cb = bars[i]
-                    local cby = tonumber(cb.frame:GetBottom())
-                    if cy <= cby then
-                        pos = cb.db.pos
-                        break
-                    end
+        -- FIX THIS MESS
+        if self.isMoving then
+            if IsAltKeyDown() then
+                if self.db.attach == 'none' then
+                    self.db.attach = 'top'
+                else
+                    self.db.attach = 'none'
                 end
+            end
+            if self.db.attach == 'none' then
+                self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
             else
-                attach = 'top'
-                cy = frame:GetTop() or cy
-                local bars = Bazooka.attachedBars[attach]
-                for i = 1, #bars do
-                    local cb = bars[i]
-                    local cby = tonumber(cb.frame:GetTop())
-                    if cy >= cby then
-                        pos = cb.db.pos
-                        break
+                local cx, cy = frame:GetCenter()
+                if cy < GetScreenHeight() / 2 then
+                    attach = 'bottom'
+                    cy = frame:GetBottom() or cy
+                    local bars = Bazooka.attachedBars[attach]
+                    for i = 1, #bars do
+                        local cb = bars[i]
+                        local cby = tonumber(cb.frame:GetBottom())
+                        if cy <= cby then
+                            pos = cb.db.pos
+                            break
+                        end
+                    end
+                else
+                    attach = 'top'
+                    cy = frame:GetTop() or cy
+                    local bars = Bazooka.attachedBars[attach]
+                    for i = 1, #bars do
+                        local cb = bars[i]
+                        local cby = tonumber(cb.frame:GetTop())
+                        if cy >= cby then
+                            pos = cb.db.pos
+                            break
+                        end
                     end
                 end
             end
@@ -526,6 +537,17 @@ Bar.OnDragStop = function(frame)
     end
     Bazooka:updateBarOptions()
 end
+
+Bar.OnMouseDown = function(frame, button, ...)
+    local self = frame.bzkBar
+    if not Bazooka.locked and button == 'RightButton' and IsAltKeyDown() then
+        Bazooka:loadOptions()
+        if Bazooka.barOpts then
+            Bazooka:openConfigDialog(Bazooka.barOpts, AppName .. ".bars", "bar" .. self.id)
+        end
+    end
+end
+
 
 if EnableOpacityWorkaround then
     Bar.setAlphaByParts = function(frame, alpha)
@@ -625,6 +647,7 @@ function Bar:enable(id, db)
         self.frame:SetScript("OnLeave", Bar.OnLeave)
         self.frame:SetScript("OnDragStart", Bar.OnDragStart)
         self.frame:SetScript("OnDragStop", Bar.OnDragStop)
+        self.frame:SetScript("OnMouseDown", Bar.OnMouseDown)
         self.frame:SetMovable(true)
         self.frame:SetResizable(true)
         self.frame:SetMinResize(Defaults.minFrameWidth, Defaults.minFrameHeight)
@@ -1017,9 +1040,8 @@ function Bar:setId(id)
 end
 
 function Bar:applySettings()
-    self.frame:ClearAllPoints()
     if self.db.attach == 'none' then
-        if self.db.frameWidth == 0 then
+        if self.db.frameWidth == 0 then -- FIXME: wth is this? still needed?
             self.db.frameWidth = GetScreenWidth() - self.db.tweakLeft + self.db.tweakRight
         end
         self.frame:SetWidth(self.db.frameWidth)
@@ -1837,7 +1859,7 @@ function Bazooka:createBar()
     if not db.pos and (
             db.tweakTop ~= 0 or db.tweakBottom ~= 0 or
             db.tweakLeft ~= 0 or db.tweakRight ~= 0) then
-        print(AppName .. ": Bar#" .. bar.id .. " tweak points has been reset!")
+        print(AppName .. ": Bar#" .. id .. " tweak points has been reset!") -- FIXME: pos could still be nill if detached?
         db.tweakTop, db.tweakBottom, db.tweakLeft, db.tweakRight = 0, 0, 0, 0
     end
     if bar then
@@ -2158,11 +2180,11 @@ function Bazooka:loadOptions()
     end
 end
 
-function Bazooka:openConfigDialog(opts)
+function Bazooka:openConfigDialog(opts, ...)
     -- this function will be overwritten by the Options module when loaded
     if not self.optionsLoaded then
         self:loadOptions()
-        return self:openConfigDialog(opts)
+        return self:openConfigDialog(opts, ...)
     end
     InterfaceOptionsFrame_OpenToCategory(self.dummyOpts)
 end

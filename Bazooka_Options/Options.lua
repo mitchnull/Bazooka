@@ -58,9 +58,12 @@ local function setColor(dbcolor, r, g, b, a)
     dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a = r, g, b, a
 end
 
-function Bazooka:openConfigDialog(opts)
+function Bazooka:openConfigDialog(opts, optsAppName, ...)
     opts = opts or lastConfiguredOpts
     if opts then
+        if optsAppName then
+            ACD:SelectGroup(optsAppName, ...)
+        end
         InterfaceOptionsFrame_OpenToCategory(opts)
     else
         InterfaceOptionsFrame_OpenToCategory(self.profiles) -- to expand our tree
@@ -460,12 +463,15 @@ local UpdateLayoutOptions = {
     fitToContentWidth = true,
 }
 
-local UpdateAnchorsOptions = {
+local AttachOptions = {
     attach = true,
     tweakLeft = true,
     tweakRight = true,
     tweakTop = true,
     tweakBottom = true,
+}
+
+local UpdateAnchorsOptions = {
     frameHeight = true,
 }
 
@@ -479,7 +485,7 @@ function Bar:setOption(info, value)
     end
     local origAttach = self.db.attach
     self.db[name] = value
-    if UpdateAnchorsOptions[name] then
+    if AttachOptions[name] then
         if origAttach ~= self.db.attach then
             self.db.pos = nil
         end
@@ -490,6 +496,9 @@ function Bar:setOption(info, value)
         self:updateLayout()
     else
         self:applySettings()
+    end
+    if UpdateAnchorsOptions[name] then
+        Bazooka:updateAnchors()
     end
 end
 
