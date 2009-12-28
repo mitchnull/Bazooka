@@ -477,7 +477,9 @@ local UpdateAnchorsOptions = {
 
 function Bar:setOption(info, value)
     local name = info[#info]
-    if name:find("bgTexture_") == 1 then
+    if name:find("tweak") == 1 then
+        value = tonumber(value) or 0
+    elseif name:find("bgTexture_") == 1 then
         name = "bgTexture"
     end
     if self.db[name] == value then
@@ -504,7 +506,9 @@ end
 
 function Bar:getOption(info)
     local name = info[#info]
-    if name:find("bgTexture_") == 1 then
+    if name:find("tweak") == 1 then
+        return tostring(self.db[name] or 0)
+    elseif name:find("bgTexture_") == 1 then
         name = "bgTexture"
     end
     return self.db[name]
@@ -540,11 +544,11 @@ function Bazooka:updateBarOptions()
     for i = 1, self.numBars do
         local bar = self.bars[i]
         bar:addOptions()
-        barOptions.args["bar" .. bar.id] = bar.opts
+        barOptions.args[bar:getOptionsName()] = bar.opts
         BarNames[i] = bar.name
     end
-    ACR:NotifyChange(self.AppName .. ".bars")
-    ACR:NotifyChange(self.AppName .. ".bulk-config")
+    ACR:NotifyChange(self:getSubAppName("bars"))
+    ACR:NotifyChange(self:getSubAppName("bulk-config"))
 end
 
 -- END Bar stuff
@@ -704,8 +708,8 @@ function Bazooka:updatePluginOptions()
         plugin:addOptions()
         pluginOptions.args[name] = plugin.opts
     end
-    ACR:NotifyChange(self.AppName .. ".plugins")
-    ACR:NotifyChange(self.AppName .. ".bulk-config")
+    ACR:NotifyChange(self:getSubAppName("plugins"))
+    ACR:NotifyChange(self:getSubAppName("bulk-config"))
 end
 
 -- END Plugin stuff
@@ -815,6 +819,9 @@ function BulkHandler:applyBulkSettingsTo(target)
 end
 
 function BulkHandler:isApplyDisabled(info)
+    if Bazooka.db.global.autoApply then
+        return true
+    end
     for key, value in pairs(self.selection) do
         if value then
             for key, value in pairs(self.selectedOptions) do
@@ -931,6 +938,10 @@ end
 
 --------------------------------------
 
+local function isAutoApply()
+    return Bazooka.db.global.autoApply
+end
+
 local bulkConfigOptions = {
     type = 'group',
     handler = BulkHandler,
@@ -989,12 +1000,14 @@ local bulkConfigOptions = {
                     confirm = function() return L["Apply selected options to selected bars?"] end,
                     func = "applyBulkSettings",
                     disabled = "isApplyDisabled",
+                    hidden = isAutoApply,
                     order = 9998,
                 },
                 clearSettings = {
                     type = 'execute',
                     name = L["Clear"],
                     func = "clearSettings",
+                    hidden = isAutoApply,
                     order = 9999,
                 },
             },
@@ -1036,12 +1049,14 @@ local bulkConfigOptions = {
                     confirm = function() return L["Apply selected options to selected plugins?"] end,
                     func = "applyBulkSettings",
                     disabled = "isApplyDisabled",
+                    hidden = isAutoApply,
                     order = 9998,
                 },
                 clear = {
                     type = 'execute',
                     name = L["Clear"],
                     func = "clearSettings",
+                    hidden = isAutoApply,
                     order = 9999,
                 },
             },
@@ -1179,8 +1194,9 @@ do
                 name = L["Create new bar"],
                 width = 'full',
                 func = function()
-                    Bazooka:createBar()
+                    local bar = Bazooka:createBar()
                     Bazooka:updateBarOptions()
+                    Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), bar:getOptionsName())
                 end,
                 order = 100,
             },
@@ -1188,7 +1204,7 @@ do
     }
 
     local function registerSubOptions(name, opts)
-        local appName = self.AppName .. "." .. name
+        local appName = self:getSubAppName(name)
         ACR:RegisterOptionsTable(appName, opts)
         return ACD:AddToBlizOptions(appName, opts.name or name, self.AppName)
     end
