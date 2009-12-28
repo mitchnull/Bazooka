@@ -473,7 +473,10 @@ Bar.OnDragStart = function(frame, button)
         self.isMoving = true
         frame:StartMoving()
     else
-        frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
+        self.isMoving = nil
+        if not IsAltKeyDown() then
+            frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
+        end
     end
 end
 
@@ -485,18 +488,18 @@ Bar.OnDragStop = function(frame)
     Bazooka.draggedFrame = nil
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
-    local attach, pos = 'none', nil 
+    local attach, pos = self.db.attach, nil 
+    Bazooka:detachBar(self) -- double detach doesn't hurt (in case we move)
     if not Bazooka.locked then
-        -- FIX THIS MESS
         if self.isMoving then
             if IsAltKeyDown() then
-                if self.db.attach == 'none' then
-                    self.db.attach = 'top'
+                if attach == 'none' then
+                    attach = 'top'
                 else
-                    self.db.attach = 'none'
+                    attach = 'none'
                 end
             end
-            if self.db.attach == 'none' then
+            if attach == 'none' then
                 self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
             else
                 local cx, cy = frame:GetCenter()
@@ -526,15 +529,17 @@ Bar.OnDragStop = function(frame)
                     end
                 end
             end
+        else
+            pos = self.db.pos
         end
         self.db.frameWidth = self.frame:GetWidth()
         self.db.frameHeight = self.frame:GetHeight()
-        Bazooka:attachBar(self, attach, pos)
-        Bazooka:updateAnchors()
     else
-        Bazooka:attachBar(self, self.db.attach, self.db.pos)
-        Bazooka:updateAnchors()
+        attach, pos = self.db.attach, self.db.pos
     end
+    self.isMoving = nil
+    Bazooka:attachBar(self, attach, pos)
+    Bazooka:updateAnchors()
     Bazooka:updateBarOptions()
 end
 
@@ -543,7 +548,7 @@ Bar.OnMouseDown = function(frame, button, ...)
     if not Bazooka.locked and button == 'RightButton' and IsAltKeyDown() then
         Bazooka:loadOptions()
         if Bazooka.barOpts then
-            Bazooka:openConfigDialog(Bazooka.barOpts, AppName .. ".bars", "bar" .. self.id)
+            Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), self:getOptionsName())
         end
     end
 end
@@ -572,6 +577,10 @@ function Bar:New(id, db)
     bar:enable(id, db)
     bar:applySettings()
     return bar
+end
+
+function Bar:getOptionsName()
+    return "bar" .. self.id
 end
 
 function Bar:createFadeAnim()
@@ -1041,7 +1050,7 @@ end
 
 function Bar:applySettings()
     if self.db.attach == 'none' then
-        if self.db.frameWidth == 0 then -- FIXME: wth is this? still needed?
+        if self.db.frameWidth == 0 then
             self.db.frameWidth = GetScreenWidth() - self.db.tweakLeft + self.db.tweakRight
         end
         self.frame:SetWidth(self.db.frameWidth)
@@ -1788,14 +1797,14 @@ end
 function Bazooka:initAnchors()
     self.topTop, self.topBottom = 1, 0
     if not self.TopAnchor then
-        self.TopAnchor = CreateFrame("Frame", AppName .. "TopAnchor", UIParent)
+        self.TopAnchor = CreateFrame("Frame", "Bazooka_TopAnchor", UIParent)
         self.TopAnchor:EnableMouse(false)
     end
     self:setTopAnchorPoints()
 
     self.bottomTop, self.bottomBottom = 0, -1
     if not self.BottomAnchor then
-        self.BottomAnchor = CreateFrame("Frame", AppName .. "BottomAnchor", UIParent)
+        self.BottomAnchor = CreateFrame("Frame", "Bazooka_BottomAnchor", UIParent)
         self.BottomAnchor:EnableMouse(false)
     end
     self:setBottomAnchorPoints()
@@ -1856,10 +1865,7 @@ function Bazooka:createBar()
     local id =  self.numBars
     local db = self.db.profile.bars[id]
     local bar = self.bars[id]
-    if not db.pos and (
-            db.tweakTop ~= 0 or db.tweakBottom ~= 0 or
-            db.tweakLeft ~= 0 or db.tweakRight ~= 0) then
-        print(AppName .. ": Bar#" .. id .. " tweak points has been reset!") -- FIXME: pos could still be nill if detached?
+    if not db.pos then
         db.tweakTop, db.tweakBottom, db.tweakLeft, db.tweakRight = 0, 0, 0, 0
     end
     if bar then
@@ -1926,7 +1932,7 @@ function Bazooka:attachBar(bar, attach, pos)
     elseif attach == 'bottom' then
         pos = self:attachBarImpl(bar, attach, pos, "attachBottom")
     else
-        pos = nil
+        pos = 0
         bar.frame:SetPoint(bar.db.point, UIParent, bar.db.relPoint, bar.db.x, bar.db.y)
     end
     bar.db.pos = pos
@@ -2151,11 +2157,15 @@ end
 
 -- BEGIN LoD Options muckery
 
+function Bazooka:getSubAppName(name)
+    return self.AppName .. '.' .. name
+end
+
 function Bazooka:setupDummyOptions()
     if self.optionsLoaded then
         return
     end
-    self.dummyOpts = CreateFrame("Frame", AppName .. "DummyOptions", UIParent)
+    self.dummyOpts = CreateFrame("Frame")
     self.dummyOpts.name = AppName
     self.dummyOpts:SetScript("OnShow", function(frame)
         if not self.optionsLoaded then
@@ -2256,3 +2266,21 @@ end
 
 -- Create our TopAnchor and BottomAnchor so that integrators can use them as soon as we are loaded
 Bazooka:initAnchors()
+
+--[[ Anchor test
+local topFrame = CreateFrame("Frame")
+topFrame:SetPoint("TOPLEFT", Bazooka.TopAnchor, "BOTTOMLEFT")
+topFrame:SetPoint("TOPRIGHT", Bazooka.TopAnchor, "BOTTOMRIGHT")
+topFrame:SetHeight(20)
+local tft = topFrame:CreateTexture()
+tft:SetAllPoints()
+tft:SetTexture(.8, 0.2, 0.2, 0.5)
+
+local bottomFrame = CreateFrame("Frame")
+bottomFrame:SetPoint("BOTTOMLEFT", Bazooka.BottomAnchor, "TOPLEFT")
+bottomFrame:SetPoint("BOTTOMRIGHT", Bazooka.BottomAnchor, "TOPRIGHT")
+bottomFrame:SetHeight(20)
+local bft = bottomFrame:CreateTexture()
+bft:SetAllPoints()
+bft:SetTexture(.8, 0.4, 0.2, 0.5)
+--]]
