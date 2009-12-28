@@ -46,6 +46,7 @@ local InCombatLockdown = InCombatLockdown
 local tinsert = tinsert
 local tremove = tremove
 local tostring = tostring
+local tonumber = tonumber
 local print = print
 local pairs = pairs
 local type = type
@@ -168,6 +169,10 @@ Bazooka.Defaults = Defaults
 
 Bazooka.draggedFrame = nil
 Bazooka.bars = {}
+Bazooka.attachedBars = {
+    ['top'] = {},
+    ['bottom'] = {},
+}
 Bazooka.plugins = {}
 Bazooka.numBars = 0
 
@@ -416,6 +421,8 @@ local Bar = {
     inset = 0,
     backdrop = nil,
     hl = nil,
+    attach = nil,
+    pos = nil,
 }
 
 setDeepCopyIndex(Bar)
@@ -461,9 +468,15 @@ Bar.OnDragStart = function(frame, button)
     frame:SetAlpha(0.7)
     Bazooka.draggedFrame = frame
     if button == "LeftButton" then
+        Bazooka:detachBar(self)
+        Bazooka:updateAnchors()
+        self.isMoving = true
         frame:StartMoving()
     else
-        frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
+        self.isMoving = nil
+        if not IsAltKeyDown() then
+            frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
+        end
     end
 end
 
@@ -475,23 +488,71 @@ Bar.OnDragStop = function(frame)
     Bazooka.draggedFrame = nil
     frame:StopMovingOrSizing()
     frame:SetAlpha(1.0)
+    local attach, pos = self.db.attach, nil 
+    Bazooka:detachBar(self) -- double detach doesn't hurt (in case we move)
     if not Bazooka.locked then
-        if self.db.attach == 'none' then
-            self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
-        else
-            local cx, cy = frame:GetCenter()
-            if cy < GetScreenHeight() / 2 then
-                self.db.attach = 'bottom'
-            else
-                self.db.attach = 'top'
+        if self.isMoving then
+            if IsAltKeyDown() then
+                if attach == 'none' then
+                    attach = 'top'
+                else
+                    attach = 'none'
+                end
             end
+            if attach == 'none' then
+                self.db.point, _, self.db.relPoint, self.db.x, self.db.y = frame:GetPoint()
+            else
+                local cx, cy = frame:GetCenter()
+                if cy < GetScreenHeight() / 2 then
+                    attach = 'bottom'
+                    cy = frame:GetBottom() or cy
+                    local bars = Bazooka.attachedBars[attach]
+                    for i = 1, #bars do
+                        local cb = bars[i]
+                        local cby = tonumber(cb.frame:GetBottom())
+                        if cy <= cby then
+                            pos = cb.db.pos
+                            break
+                        end
+                    end
+                else
+                    attach = 'top'
+                    cy = frame:GetTop() or cy
+                    local bars = Bazooka.attachedBars[attach]
+                    for i = 1, #bars do
+                        local cb = bars[i]
+                        local cby = tonumber(cb.frame:GetTop())
+                        if cy >= cby then
+                            pos = cb.db.pos
+                            break
+                        end
+                    end
+                end
+            end
+        else
+            pos = self.db.pos
         end
         self.db.frameWidth = self.frame:GetWidth()
         self.db.frameHeight = self.frame:GetHeight()
+    else
+        attach, pos = self.db.attach, self.db.pos
     end
-    self:applySettings()
+    self.isMoving = nil
+    Bazooka:attachBar(self, attach, pos)
+    Bazooka:updateAnchors()
     Bazooka:updateBarOptions()
 end
+
+Bar.OnMouseDown = function(frame, button, ...)
+    local self = frame.bzkBar
+    if not Bazooka.locked and button == 'RightButton' and IsAltKeyDown() then
+        Bazooka:loadOptions()
+        if Bazooka.barOpts then
+            Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), self:getOptionsName())
+        end
+    end
+end
+
 
 if EnableOpacityWorkaround then
     Bar.setAlphaByParts = function(frame, alpha)
@@ -516,6 +577,10 @@ function Bar:New(id, db)
     bar:enable(id, db)
     bar:applySettings()
     return bar
+end
+
+function Bar:getOptionsName()
+    return "bar" .. self.id
 end
 
 function Bar:createFadeAnim()
@@ -591,6 +656,7 @@ function Bar:enable(id, db)
         self.frame:SetScript("OnLeave", Bar.OnLeave)
         self.frame:SetScript("OnDragStart", Bar.OnDragStart)
         self.frame:SetScript("OnDragStop", Bar.OnDragStop)
+        self.frame:SetScript("OnMouseDown", Bar.OnMouseDown)
         self.frame:SetMovable(true)
         self.frame:SetResizable(true)
         self.frame:SetMinResize(Defaults.minFrameWidth, Defaults.minFrameHeight)
@@ -607,9 +673,6 @@ end
 function Bar:disable()
     if self.frame then
         self.frame:Hide()
-        if Jostle then
-            Jostle:Unregister(self.frame)
-        end
     end
     for name, plugin in pairs(self.allPlugins) do
         plugin:disable()
@@ -617,6 +680,32 @@ function Bar:disable()
     wipe(self.allPlugins)
     for area, plugins in pairs(self.plugins) do
         wipe(plugins)
+    end
+end
+
+function Bar:getTopBottom()
+    if self.db.attach == 'top' then
+        if self.parent then
+            local top, bottom, pt, pb = self.parent:getTopBottom()
+            local mt = pb + tonumber(self.db.tweakTop)
+            local mb = mt - self.db.frameHeight
+            return math.max(top, mt), math.min(bottom, mb), mt, mb
+        else
+            local mt = tonumber(self.db.tweakTop)
+            local mb = mt - self.db.frameHeight
+            return mt, mb, mt, mb
+        end
+    elseif self.db.attach == 'bottom' then
+        if self.parent then
+            local top, bottom, pt, pb = self.parent:getTopBottom()
+            local mb = pt + tonumber(self.db.tweakBottom)
+            local mt = mb + self.db.frameHeight
+            return math.max(top, mt), math.min(bottom, mb), mt, mb
+        else
+            local mb = tonumber(self.db.tweakBottom)
+            local mt = mb + self.db.frameHeight
+            return mt, mb, mt, mb
+        end
     end
 end
 
@@ -960,43 +1049,13 @@ function Bar:setId(id)
 end
 
 function Bar:applySettings()
-    local needJostleRefresh
-    self.frame:ClearAllPoints()
-    if self.db.attach == "top" then
-        self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", self.db.tweakLeft, self.db.tweakTop)
-        self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", self.db.tweakRight, self.db.tweakTop)
-        self.db.frameWidth = self.frame:GetWidth()
-        self.db.point, self.db.relPoint, self.db.x, self.db.y = "TOP", "TOP", 0, self.db.tweakTop
-        if self.frame:GetHeight() ~= self.db.frameHeight then
-            needJostleRefresh = true
-            self.frame:SetHeight(self.db.frameHeight)
-        end
-        if Jostle then
-            Jostle:RegisterTop(self.frame)
-        end
-    elseif self.db.attach == "bottom" then
-        self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakBottom)
-        self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakBottom)
-        self.db.frameWidth = self.frame:GetWidth()
-        self.db.point, self.db.relPoint, self.db.x, self.db.y = "BOTTOM", "BOTTOM", 0, self.db.tweakBottom
-        if self.frame:GetHeight() ~= self.db.frameHeight then
-            needJostleRefresh = true
-            self.frame:SetHeight(self.db.frameHeight)
-        end
-        if Jostle then
-            Jostle:RegisterBottom(self.frame)
-        end
-    else -- detached
+    if self.db.attach == 'none' then
         if self.db.frameWidth == 0 then
             self.db.frameWidth = GetScreenWidth() - self.db.tweakLeft + self.db.tweakRight
         end
-        self.frame:SetPoint(self.db.point, UIParent, self.db.relPoint, self.db.x, self.db.y)
         self.frame:SetWidth(self.db.frameWidth)
-        self.frame:SetHeight(self.db.frameHeight)
-        if Jostle then
-            Jostle:Unregister(self.frame)
-        end
     end
+    self.frame:SetHeight(self.db.frameHeight)
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
     self:applyBGSettings()
@@ -1014,9 +1073,6 @@ function Bar:applySettings()
         else
             self.frame:SetAlpha(1.0)
         end
-    end
-    if Jostle and needJostleRefresh then
-        Jostle:Refresh()
     end
 end
 
@@ -1123,6 +1179,26 @@ function Bar:globalSettingsChanged()
     end
 end
 
+function Bar:attachTop(prevBar)
+    if prevBar then
+        self.frame:SetPoint("TOPLEFT", prevBar.frame, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakTop)
+        self.frame:SetPoint("TOPRIGHT", prevBar.frame, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakTop)
+    else
+        self.frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", self.db.tweakLeft, self.db.tweakTop)
+        self.frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", self.db.tweakRight, self.db.tweakTop)
+    end
+end
+
+function Bar:attachBottom(prevBar)
+    if prevBar then
+        self.frame:SetPoint("BOTTOMLEFT", prevBar.frame, "TOPLEFT", self.db.tweakLeft, self.db.tweakBottom)
+        self.frame:SetPoint("BOTTOMRIGHT", prevBar.frame, "TOPRIGHT", self.db.tweakRight, self.db.tweakBottom)
+    else
+        self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakBottom)
+        self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakBottom)
+    end
+end
+
 Bazooka.Bar = Bar
 
 -- END Bar stuff
@@ -1143,7 +1219,6 @@ local Plugin = {
     fontSize = BarDefaults.fontSize,
     labelColorHex = colorToHex(BarDefaults.labelColor),
     suffixColorHex = colorToHex(BarDefaults.suffixColor),
-
 }
 
 setDeepCopyIndex(Plugin)
@@ -1616,6 +1691,7 @@ Bazooka.updaters = {
 
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults, true)
+    self:initAnchors()
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
     end
@@ -1718,11 +1794,45 @@ end
 
 -- END handlers
 
+function Bazooka:initAnchors()
+    self.topTop, self.topBottom = 1, 0
+    if not self.TopAnchor then
+        self.TopAnchor = CreateFrame("Frame", "Bazooka_TopAnchor", UIParent)
+        self.TopAnchor:EnableMouse(false)
+    end
+    self:setTopAnchorPoints()
+
+    self.bottomTop, self.bottomBottom = 0, -1
+    if not self.BottomAnchor then
+        self.BottomAnchor = CreateFrame("Frame", "Bazooka_BottomAnchor", UIParent)
+        self.BottomAnchor:EnableMouse(false)
+    end
+    self:setBottomAnchorPoints()
+end
+
+function Bazooka:setTopAnchorPoints()
+    self.TopAnchor:ClearAllPoints()
+    self.TopAnchor:SetPoint("TOP", UIParent, "TOP", 0, self.topTop)
+    self.TopAnchor:SetPoint("BOTTOM", UIParent, "TOP", 0, self.topBottom)
+    self.TopAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.TopAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+end
+
+function Bazooka:setBottomAnchorPoints()
+    self.BottomAnchor:ClearAllPoints()
+    self.BottomAnchor:SetPoint("TOP", UIParent, "BOTTOM", 0, self.bottomTop)
+    self.BottomAnchor:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, self.bottomBottom)
+    self.BottomAnchor:SetPoint("LEFT", UIParent, "LEFT", 0, 0)
+    self.BottomAnchor:SetPoint("RIGHT", UIParent, "RIGHT", 0, 0)
+end
+
 function Bazooka:getBarName(id)
     return L["Bar#%d"]:format(id)
 end
 
 function Bazooka:init()
+    self.attachedBars.top = {}
+    self.attachedBars.bottom = {}
     for i = 1, #self.bars do
         self.bars[i]:disable()
     end
@@ -1744,6 +1854,7 @@ function Bazooka:init()
     self:updateMainOptions()
     self:updateBarOptions()
     self:updatePluginOptions()
+    self:updateAnchors()
 end
 
 function Bazooka:createBar()
@@ -1754,6 +1865,9 @@ function Bazooka:createBar()
     local id =  self.numBars
     local db = self.db.profile.bars[id]
     local bar = self.bars[id]
+    if not db.pos then
+        db.tweakTop, db.tweakBottom, db.tweakLeft, db.tweakRight = 0, 0, 0, 0
+    end
     if bar then
         bar:enable(id, db)
         bar:applySettings()
@@ -1761,13 +1875,96 @@ function Bazooka:createBar()
         bar = Bar:New(id, db)
         self.bars[bar.id] = bar
     end
+    self:attachBar(bar, bar.db.attach, bar.db.pos)
+    self:updateAnchors()
     return bar
+end
+
+local function insertBar(bars, pos, bar)
+    local pb, nb, nbi
+    for i = 1, #bars do
+        local b = bars[i]
+        if pos <= b.db.pos then
+            if not nb then
+                nb = b
+                nbi = i
+            end
+            if pos < b.db.pos then
+                break
+            end
+            pos = pos + 1
+            b.db.pos = pos
+        elseif not nb then
+            pb = b
+        end
+    end
+    if nbi then
+        tinsert(bars, nbi, bar)
+    else
+        tinsert(bars, bar)
+    end
+    return pb, nb
+end
+
+function Bazooka:attachBarImpl(bar, attach, pos, attachFunc)
+    local bars = self.attachedBars[attach]
+    if not pos then
+        if #bars > 0 then
+            pos = bars[#bars].db.pos + 1
+        else
+            pos = 1
+        end
+    end
+    local prevBar, nextBar = insertBar(bars, pos, bar)
+    bar[attachFunc](bar, prevBar)
+    if nextBar then
+        nextBar[attachFunc](nextBar, bar)
+    end
+    return pos
+end
+
+function Bazooka:attachBar(bar, attach, pos)
+    attach = attach or 'none'
+    bar.db.attach = attach
+    bar.frame:ClearAllPoints()
+    if attach == 'top' then
+        pos = self:attachBarImpl(bar, attach, pos, "attachTop")
+    elseif attach == 'bottom' then
+        pos = self:attachBarImpl(bar, attach, pos, "attachBottom")
+    else
+        pos = 0
+        bar.frame:SetPoint(bar.db.point, UIParent, bar.db.relPoint, bar.db.x, bar.db.y)
+    end
+    bar.db.pos = pos
+end
+
+function Bazooka:detachBarImpl(bar, attach, attachFunc)
+    local bars = self.attachedBars[attach]
+    local prevBar
+    for i = 1, #bars do
+        local cb = bars[i]
+        if cb == bar then
+            tremove(bars, i)
+            cb = bars[i]
+            if cb then
+                cb[attachFunc](cb, prevBar)
+            end
+            break
+        end
+        prevBar = cb
+    end
+end
+
+function Bazooka:detachBar(bar)
+    self:detachBarImpl(bar, 'top', "attachTop")
+    self:detachBarImpl(bar, 'bottom', "attachBottom")
 end
 
 function Bazooka:removeBar(bar)
     if self.numBars <= 1 then
         return
     end
+    self:detachBar(bar)
     for name, plugin in pairs(bar.allPlugins) do
         plugin.db.bar, plugin.db.area, plugin.db.pos = 1, 'left', nil
         Bazooka:disablePlugin(plugin)
@@ -1790,6 +1987,7 @@ function Bazooka:removeBar(bar)
     end
 
     self.bars[self.numBars + 1] = nil
+    self:updateAnchors()
 end
 
 function Bazooka:createPlugin(name, dataobj)
@@ -1830,12 +2028,58 @@ function Bazooka:applySettings()
     self:toggleLocked(self.db.profile.locked == true)
     if Jostle then
         if self.db.profile.adjustFrames then
+            Jostle:RegisterTop(self.TopAnchor)
+            Jostle:RegisterBottom(self.BottomAnchor)
             Jostle:EnableTopAdjusting()
             Jostle:EnableBottomAdjusting()
         else
-            Jostle:DisableTopAdjusting()
-            Jostle:DisableBottomAdjusting()
+            Jostle:Unregister(self.TopAnchor)
+            Jostle:Unregister(self.BottomAnchor)
+            -- Jostle:DisableTopAdjusting()
+            -- Jostle:DisableBottomAdjusting()
         end
+    end
+end
+
+function Bazooka:getBarsTopBottom(bars)
+    local barsTop, barsBottom, prevBar
+    for i = 1, #bars do
+        local bar = bars[i]
+        bar.parent = prevBar
+        local top, bottom = bar:getTopBottom()
+        if not barsTop or barsTop < top then
+            barsTop = top
+        end
+        if not barsBottom or barsBottom > bottom then
+            barsBottom = bottom
+        end
+        prevBar = bar
+    end
+    return barsTop, barsBottom
+end
+
+function Bazooka:updateAnchors()
+    local topTop, topBottom = self:getBarsTopBottom(self.attachedBars['top'])
+    local bottomTop, bottomBottom = self:getBarsTopBottom(self.attachedBars['bottom'])
+    if not topTop then
+        topTop, topBottom = 1, 0
+    end
+    if not bottomTop then
+        bottomTop, bottomBottom = 0, -1
+    end
+    local needJostleRefresh
+    if self.topTop ~= topTop or self.topBottom ~= topBottom then
+        self.topTop, self.topBottom = topTop, topBottom
+        self:setTopAnchorPoints()
+        needJostleRefresh = true
+    end
+    if self.bottomTop ~= bottomTop or self.bottomBottom ~= bottomBottom then
+        self.bottomTop, self.bottomBottom = bottomTop, bottomBottom
+        self:setBottomAnchorPoints()
+        needJostleRefresh = true
+    end
+    if needJostleRefresh and Jostle and self.db.profile.adjustFrames then
+        Jostle:Refresh()
     end
 end
 
@@ -1913,11 +2157,15 @@ end
 
 -- BEGIN LoD Options muckery
 
+function Bazooka:getSubAppName(name)
+    return self.AppName .. '.' .. name
+end
+
 function Bazooka:setupDummyOptions()
     if self.optionsLoaded then
         return
     end
-    self.dummyOpts = CreateFrame("Frame", AppName .. "DummyOptions", UIParent)
+    self.dummyOpts = CreateFrame("Frame")
     self.dummyOpts.name = AppName
     self.dummyOpts:SetScript("OnShow", function(frame)
         if not self.optionsLoaded then
@@ -1942,11 +2190,11 @@ function Bazooka:loadOptions()
     end
 end
 
-function Bazooka:openConfigDialog(opts)
+function Bazooka:openConfigDialog(opts, ...)
     -- this function will be overwritten by the Options module when loaded
     if not self.optionsLoaded then
         self:loadOptions()
-        return self:openConfigDialog(opts)
+        return self:openConfigDialog(opts, ...)
     end
     InterfaceOptionsFrame_OpenToCategory(self.dummyOpts)
 end
@@ -2016,3 +2264,23 @@ CONFIGMODE_CALLBACKS[AppName] = function(action)
     end
 end
 
+-- Create our TopAnchor and BottomAnchor so that integrators can use them as soon as we are loaded
+Bazooka:initAnchors()
+
+--[[ Anchor test
+local topFrame = CreateFrame("Frame")
+topFrame:SetPoint("TOPLEFT", Bazooka.TopAnchor, "BOTTOMLEFT")
+topFrame:SetPoint("TOPRIGHT", Bazooka.TopAnchor, "BOTTOMRIGHT")
+topFrame:SetHeight(20)
+local tft = topFrame:CreateTexture()
+tft:SetAllPoints()
+tft:SetTexture(.8, 0.2, 0.2, 0.5)
+
+local bottomFrame = CreateFrame("Frame")
+bottomFrame:SetPoint("BOTTOMLEFT", Bazooka.BottomAnchor, "TOPLEFT")
+bottomFrame:SetPoint("BOTTOMRIGHT", Bazooka.BottomAnchor, "TOPRIGHT")
+bottomFrame:SetHeight(20)
+local bft = bottomFrame:CreateTexture()
+bft:SetAllPoints()
+bft:SetTexture(.8, 0.4, 0.2, 0.5)
+--]]
