@@ -1469,6 +1469,7 @@ function Plugin:globalSettingsChanged()
             self.text:SetFont(dbFontPath, self.fontSize, bdb.fontOutline)
         end
         self.text:SetTextColor(bdb.textColor.r, bdb.textColor.g, bdb.textColor.b, bdb.textColor.a)
+        self:setText()
     end
     if self.icon then
         self.icon:SetWidth(self.iconSize)
@@ -1591,6 +1592,7 @@ function Plugin:applySettings()
         self:detach()
         Bazooka:attachPlugin(self)
     end
+    self:globalSettingsChanged()
     self:updateLabel()
     self:updateLayout(true)
 end
