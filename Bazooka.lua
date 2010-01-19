@@ -146,6 +146,8 @@ local PluginDefaults = {
     showLabel = true,
     showTitle = true,
     showText = true,
+--    showValue = true,
+    showSuffix = true,
     shrinkThreshold = 5,
 }
 
@@ -1631,20 +1633,28 @@ function Plugin:setText()
     if self.db.showLabel and self.label then
         if self.db.showText and dataobj.text then
             self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
-        elseif self.db.showText and dataobj.value and dataobj.suffix then
-            self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.value, dataobj.suffix)
+        elseif self.db.showValue and dataobj.value then
+            if self.db.showSuffix and dataobj.suffix then
+                self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, self.label, dataobj.value, self.suffixColorHex, dataobj.suffix)
+            else
+                self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.value)
+            end
         else
             self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
         end
         self:updateLayout()
-    elseif self.db.showText then
-        if dataobj.text then
-            self.text:SetFormattedText("%s", dataobj.text)
-        elseif dataobj.value and dataobj.suffix then
+    elseif self.db.showText and dataobj.text then
+        self.text:SetFormattedText("%s", dataobj.text)
+        self:updateLayout()
+    elseif self.db.showValue and dataobj.value then
+        if self.db.showSuffix and dataobj.suffix then
             self.text:SetFormattedText("%s |c%s%s|r", dataobj.value, self.suffixColorHex, dataobj.suffix)
         else
-            self.text:SetFormattedText("")
+            self.text:SetFormattedText("%s", dataobj.value)
         end
+        self:updateLayout()
+    elseif self.text then
+        self.text:SetFormattedText("")
         self:updateLayout()
     end
 end
@@ -1995,6 +2005,10 @@ end
 function Bazooka:createPlugin(name, dataobj)
     local pt = dataobj.type or ""
     local db = self.db.profile.plugins[pt][name]
+    if db.showValue == nil then
+         -- FIXME: db upgrade, remove later and set default
+        db.showValue = db.showText
+    end
     local plugin = self.plugins[name]
     if plugin then
         plugin.db = db
