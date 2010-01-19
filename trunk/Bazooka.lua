@@ -146,8 +146,8 @@ local PluginDefaults = {
     showLabel = true,
     showTitle = true,
     showText = true,
---    showValue = true,
-    showSuffix = true,
+    showValue = false,
+    showSuffix = false,
     shrinkThreshold = 5,
 }
 
@@ -1580,7 +1580,7 @@ function Plugin:applySettings()
     elseif self.icon then
         self.icon:Hide()
     end
-    if self.db.showText or self.db.showLabel then
+    if self.db.showText or self.db.showValue or self.db.showLabel then
         if not self.text then
             self:createText()
         end
@@ -2005,10 +2005,6 @@ end
 function Bazooka:createPlugin(name, dataobj)
     local pt = dataobj.type or ""
     local db = self.db.profile.plugins[pt][name]
-    if db.showValue == nil then
-         -- FIXME: db upgrade, remove later and set default
-        db.showValue = db.showText
-    end
     local plugin = self.plugins[name]
     if plugin then
         plugin.db = db
