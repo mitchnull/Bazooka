@@ -602,6 +602,18 @@ local pluginOptionArgs = {
         disabled = "isDisabled",
         order = 150,
     },
+    showValue = {
+        type = 'toggle',
+        name = L["Show value"],
+        disabled = "isDisabled",
+        order = 151,
+    },
+    showSuffix = {
+        type = 'toggle',
+        name = L["Show suffix"],
+        disabled = "isDisabled",
+        order = 152,
+    },
     hideTipOnClick = {
         type = 'toggle',
         name = L["Hide tooltip on click"],
