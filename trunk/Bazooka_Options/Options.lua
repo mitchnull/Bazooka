@@ -605,6 +605,9 @@ local pluginOptionArgs = {
     showValue = {
         type = 'toggle',
         name = L["Show value"],
+        desc = function(info)
+            return info.handler.dataobj.value
+        end,
         disabled = "isDisabled",
         order = 151,
     },
