@@ -1497,7 +1497,7 @@ end
 
 function Plugin:updateLayout(forced)
     local w = 0
-    if self.db.showText or self.db.showLabel then
+    if self.db.showText or self.db.showValue or self.db.showLabel then
         local tw = self.text:GetStringWidth()
         local iw = self.db.showIcon and self.icon:GetWidth() or 0
         if tw > 0 then
