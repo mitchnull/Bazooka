@@ -614,7 +614,9 @@ local pluginOptionArgs = {
     showSuffix = {
         type = 'toggle',
         name = L["Show suffix"],
-        disabled = "isDisabled",
+        disabled = function(info)
+            return not info.handler.db.enabled or not info.handler.db.showValue
+        end,
         order = 152,
     },
     hideTipOnClick = {
