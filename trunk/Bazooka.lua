@@ -1493,6 +1493,7 @@ end
 function Plugin:createText()
     self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
     self.text:SetFont(Defaults.fontPath, BarDefaults.fontSize, BarDefaults.fontOutline)
+    self.text:SetWordWrap(false)
 end
 
 function Plugin:updateLayout(forced)
@@ -1584,6 +1585,7 @@ function Plugin:applySettings()
         if not self.text then
             self:createText()
         end
+        self.text:SetWidth(tonumber(self.db.maxTextWidth) or 0)
         self:setText()
         self.text:Show()
     elseif self.text then
