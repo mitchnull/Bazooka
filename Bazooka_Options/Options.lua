@@ -619,6 +619,12 @@ local pluginOptionArgs = {
         end,
         order = 152,
     },
+    maxTextWidth = {
+        type = 'input',
+        name = L["Max text width"],
+        disabled = "isDisabled",
+        order = 160,
+    },
     hideTipOnClick = {
         type = 'toggle',
         name = L["Hide tooltip on click"],
@@ -688,9 +694,13 @@ function Plugin:updateColoredTitle()
 end
 
 function Plugin:setOption(info, value)
-    self.db[info[#info]] = value
+    local name = info[#info]
+    if name == 'maxTextWidth' then
+        value = tonumber(value)
+    end
+    self.db[name] = value
     self:applySettings()
-    if info[#info] == 'enabled' then
+    if name == 'enabled' then
         self:updateColoredTitle()
     end
 end
