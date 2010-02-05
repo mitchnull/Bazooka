@@ -622,6 +622,11 @@ local pluginOptionArgs = {
     maxTextWidth = {
         type = 'input',
         name = L["Max text width"],
+        desc = function(info)
+            if info.handler.text then
+                return info.handler.text:GetStringWidth()
+            end
+        end,
         disabled = "isDisabled",
         order = 160,
     },
