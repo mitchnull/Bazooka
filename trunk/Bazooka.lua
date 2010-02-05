@@ -1494,6 +1494,7 @@ function Plugin:createText()
     self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
     self.text:SetFont(Defaults.fontPath, BarDefaults.fontSize, BarDefaults.fontOutline)
     self.text:SetWordWrap(false)
+    self.text:SetJustifyH('LEFT');
 end
 
 function Plugin:updateLayout(forced)
