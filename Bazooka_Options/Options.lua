@@ -26,6 +26,7 @@ local wipe = wipe
 local tonumber = tonumber
 local strsub = strsub
 local type = type
+local ceil = math.ceil
 
 local FontOutlines = {
     [""] = L["None"],
@@ -624,7 +625,7 @@ local pluginOptionArgs = {
         name = L["Max text width"],
         desc = function(info)
             if info.handler.text then
-                return info.handler.text:GetStringWidth()
+                return ceil(info.handler.text:GetStringWidth())
             end
         end,
         disabled = "isDisabled",
