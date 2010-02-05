@@ -27,6 +27,7 @@ local tonumber = tonumber
 local strsub = strsub
 local type = type
 local ceil = math.ceil
+local tostring = tostring
 
 local FontOutlines = {
     [""] = L["None"],
@@ -607,7 +608,9 @@ local pluginOptionArgs = {
         type = 'toggle',
         name = L["Show value"],
         desc = function(info)
-            return info.handler.dataobj.value
+            if info.handler.dataobj.value then
+                return tostring(info.handler.dataobj.value)
+            end
         end,
         disabled = "isDisabled",
         order = 151,
@@ -625,7 +628,7 @@ local pluginOptionArgs = {
         name = L["Max text width"],
         desc = function(info)
             if info.handler.text then
-                return ceil(info.handler.text:GetStringWidth())
+                return tostring(ceil(info.handler.text:GetStringWidth()))
             end
         end,
         disabled = "isDisabled",
