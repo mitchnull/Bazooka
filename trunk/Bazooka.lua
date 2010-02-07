@@ -1503,6 +1503,9 @@ function Plugin:updateLayout(forced)
         local tw = self.text:GetStringWidth()
         local iw = self.db.showIcon and self.icon:GetWidth() or 0
         if tw > 0 then
+            if self.db.maxTextWidth and self.db.maxTextWidth < tw then
+                tw = self.db.maxTextWidth
+            end
             local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
             self.text:SetPoint("LEFT", self.frame, "LEFT", offset, 0)
             w = offset + tw
@@ -1586,7 +1589,7 @@ function Plugin:applySettings()
         if not self.text then
             self:createText()
         end
-        self.text:SetWidth(tonumber(self.db.maxTextWidth) or 0)
+        self.text:SetWidth(self.db.maxTextWidth or 0)
         self:setText()
         self.text:Show()
     elseif self.text then

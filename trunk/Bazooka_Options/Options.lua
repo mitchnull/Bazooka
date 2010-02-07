@@ -706,6 +706,9 @@ function Plugin:setOption(info, value)
     local name = info[#info]
     if name == 'maxTextWidth' then
         value = tonumber(value)
+        if value and value <= 0 then
+            value = nil
+        end
     end
     self.db[name] = value
     self:applySettings()
