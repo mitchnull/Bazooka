@@ -70,7 +70,7 @@ local Defaults =  {
     fontPath = GameFontNormal:GetFont(),
     minFrameWidth = 10,
     minFrameHeight = 10,
-    maxFrameWidth = 1600,
+    maxFrameWidth = 2000,
     maxFrameHeight = 50,
 
     fadeOutDelay = 0.5,
