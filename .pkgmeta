@@ -9,16 +9,16 @@ externals:
         tag: latest
     libs/Ace3/AceAddon-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceAddon-3.0
-        tag: latest
+#        tag: latest
     libs/Ace3/AceEvent-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceEvent-3.0
-        tag: latest
+#        tag: latest
     libs/Ace3/AceDB-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDB-3.0
-        tag: latest
+#        tag: latest
     libs/Ace3/AceLocale-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceLocale-3.0
-        tag: latest
+#        tag: latest
     libs/LibSharedMedia-3.0:
         url: svn://svn.wowace.com/wow/libsharedmedia-3-0/mainline/trunk/LibSharedMedia-3.0
         tag: latest
@@ -30,19 +30,19 @@ externals:
 
     Bazooka_Options/libs/Ace3/AceGUI-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceGUI-3.0
-        tag: latest
+#        tag: latest
     Bazooka_Options/libs/Ace3/AceConfig-3.0/AceConfigRegistry-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfig-3.0/AceConfigRegistry-3.0
-        tag: latest
+#        tag: latest
     Bazooka_Options/libs/Ace3/AceConfig-3.0/AceConfigDialog-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceConfig-3.0/AceConfigDialog-3.0
-        tag: latest
+#        tag: latest
     Bazooka_Options/libs/Ace3/AceDBOptions-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDBOptions-3.0
-        tag: latest
+#        tag: latest
     Bazooka_Options/libs/AceGUI-3.0-SharedMediaWidgets:
         url: svn://svn.wowace.com/wow/ace-gui-3-0-shared-media-widgets/mainline/trunk/AceGUI-3.0-SharedMediaWidgets
-        tag: latest
+#        tag: latest
 
 move-folders:
     Bazooka/Bazooka_Options: Bazooka_Options
