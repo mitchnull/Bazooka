@@ -33,6 +33,16 @@ local function colorToHex(color)
     return ("%02x%02x%02x%02x"):format((color.a and color.a * 255 or 255), color.r*255, color.g*255, color.b*255)   
 end
 
+local function getTexture(textureName, region, ...)
+    if not region then
+        return
+    end
+    if region.GetTexture and region:GetTexture() == textureName then
+        return region
+    end
+    return getTexture(textureName, ...)
+end
+
 -- cached stuff
 
 local IsAltKeyDown = IsAltKeyDown
@@ -1145,6 +1155,12 @@ function Bar:applyBGSettings()
     self.frame:SetBackdrop(bg)
     self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a)
     self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a)
+    if self.db.bgGradient and self.db.bgGradient ~= "" then
+        local bgt = getTexture(bg.bgFile, self.frame:GetRegions())
+        if bgt then
+            bgt:SetGradientAlpha(self.db.bgGradient, self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a, self.db.bgGradientColor.r, self.db.bgGradientColor.g, self.db.bgGradientColor.b, self.db.bgGradientColor.a)
+        end
+    end
 end
 
 function Bar:applyFontSettings()
