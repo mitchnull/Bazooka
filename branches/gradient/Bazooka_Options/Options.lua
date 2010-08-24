@@ -30,6 +30,12 @@ local type = type
 local ceil = math.ceil
 local tostring = tostring
 
+local Gradients = {
+    [""] = L["None"],
+    ["HORIZONTAL"] = L["Horizontal"],
+    ["VERTICAL"] = L["Vertical"],
+}
+
 local FontOutlines = {
     [""] = L["None"],
     ["OUTLINE"] = L["Normal"],
@@ -367,6 +373,20 @@ local barOptionArgs = {
                 type = "color",
                 order = 19,
                 name = L["Border color"],
+                hasAlpha = true,
+                get = "getColorOption",
+                set = "setColorOption",
+            },
+            bgGradient = {
+                type = "select",
+                order = 30,
+                name = L["Gradient"],
+                values = Gradients,
+            },
+            bgGradientColor = {
+                type = "color",
+                order = 31,
+                name = L["Gradient color"],
                 hasAlpha = true,
                 get = "getColorOption",
                 set = "setColorOption",
