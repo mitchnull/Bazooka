@@ -1404,7 +1404,13 @@ function Plugin:hideTip(force)
     if not Bazooka.tipOwner then
         return
     end
-    if self.tipType == 'simple' or self.tipType == 'OnTooltipShow' then
+    if self.tipType == 'simple' then
+        local tt = setupTooltip()
+        tt:Hide()
+    elseif self.tipType == 'OnTooltipShow' then
+        if self.dataobj.OnLeave then
+            self.dataobj.OnLeave(self.frame)
+        end
         local tt = setupTooltip()
         tt:Hide()
     elseif self.tipType == 'OnEnter' then
