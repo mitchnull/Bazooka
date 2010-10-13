@@ -476,7 +476,7 @@ Bar.OnDragStart = function(frame, button)
         frame:StartMoving()
     else
         self.isMoving = nil
-        if not IsAltKeyDown() then
+        if IsAltKeyDown() then
             frame:StartSizing(self:getSizingPoint(getScaledCursorPosition()))
         end
     end
@@ -547,7 +547,7 @@ end
 
 Bar.OnMouseDown = function(frame, button, ...)
     local self = frame.bzkBar
-    if not Bazooka.locked and button == 'RightButton' and IsAltKeyDown() then
+    if not Bazooka.locked and button == 'RightButton' and not IsAltKeyDown() then
         Bazooka:loadOptions()
         if Bazooka.barOpts then
             Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), self:getOptionsName())
