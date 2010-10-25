@@ -151,6 +151,7 @@ local PluginDefaults = {
     shrinkThreshold = 5,
     overrideTooltipScale = false,
     tooltipScale = 1.0,
+    iconBorderClip = 0.07,
 }
 
 local Icon = [[Interface\AddOns\]] .. AppName .. [[\bzk_locked.tga]]
@@ -244,6 +245,7 @@ local defaults = {
                     shrinkThreshold = 0,
                     overrideTooltipScale = false,
                     tooltipScale = 1.0,
+                    iconBorderClip = 0.07,
                 },
                 [AppName] = {
                     pos = 1,
@@ -268,6 +270,7 @@ local defaults = {
                     shrinkThreshold = PluginDefaults.shrinkThreshold,
                     overrideTooltipScale = false,
                     tooltipScale = 1.0,
+                    iconBorderClip = 0.07,
                 },
             },
         },
@@ -1638,6 +1641,10 @@ function Plugin:setIcon()
     local dataobj = self.dataobj
     local icon = self.icon
     icon:SetTexture(dataobj.icon)
+    if self.db.iconBorderClip > 0 and not dataobj.iconCoords then
+        local tl, br = self.db.iconBorderClip, (1 - self.db.iconBorderClip)
+        icon:SetTexCoord(tl, br, tl, br)
+    end
 end
 
 function Plugin:setIconColor()
