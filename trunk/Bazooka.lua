@@ -149,6 +149,8 @@ local PluginDefaults = {
     showValue = false,
     showSuffix = false,
     shrinkThreshold = 5,
+    overrideTooltipScale = false,
+    tooltipScale = 1.0,
 }
 
 local Icon = [[Interface\AddOns\]] .. AppName .. [[\bzk_locked.tga]]
@@ -1365,23 +1367,32 @@ function Plugin:showTip()
         return
     end
     local dataobj = self.dataobj
+    local tt
     if dataobj.tooltip then
         self.tipType = 'tooltip'
-        setupTooltip(self.frame, dataobj.tooltip)
-        dataobj.tooltip:Show()
+        tt = setupTooltip(self.frame, dataobj.tooltip)
     elseif dataobj.OnEnter then
         self.tipType = 'OnEnter'
         dataobj.OnEnter(self.frame)
     elseif dataobj.OnTooltipShow then
         self.tipType = 'OnTooltipShow'
-        local tt = setupTooltip(self.frame)
+        tt = setupTooltip(self.frame)
         dataobj.OnTooltipShow(tt)
-        tt:Show()
     elseif Bazooka.db.profile.simpleTip then
         self.tipType = 'simple'
-        local tt = setupTooltip(self.frame)
+        tt = setupTooltip(self.frame)
         tt:SetText(self.title)
+    end
+    if tt then
+        if self.db.overrideTooltipScale then
+            self.origTipScale = tt:GetScale()
+            tt:SetScale(self.db.tooltipScale)
+        else
+            self.origTipScale = nil
+        end
         tt:Show()
+    else
+        self.origTipScale = nil
     end
 end
 
@@ -1405,22 +1416,26 @@ function Plugin:hideTip(force)
     if not Bazooka.tipOwner then
         return
     end
+    local tt
     if self.tipType == 'simple' then
-        local tt = setupTooltip()
-        tt:Hide()
+        tt = setupTooltip()
     elseif self.tipType == 'OnTooltipShow' then
         if self.dataobj.OnLeave then
             self.dataobj.OnLeave(self.frame)
         end
-        local tt = setupTooltip()
-        tt:Hide()
+        tt = setupTooltip()
     elseif self.tipType == 'OnEnter' then
         if self.dataobj.OnLeave then
             self.dataobj.OnLeave(self.frame)
         end
     elseif self.tipType == 'tooltip' then
-        if self.dataobj.tooltip then
-            self.dataobj.tooltip:Hide()
+        tt = self.dataobj.tooltip
+    end
+    if tt then
+        tt:Hide()
+        if self.origTipScale then
+            tt:SetScale(self.origTipScale)
+            self.origTipScale = nil
         end
     end
     if self.db.forceHideTip then
