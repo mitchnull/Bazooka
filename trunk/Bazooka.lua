@@ -1354,6 +1354,20 @@ function Plugin:New(name, dataobj, db)
     return plugin
 end
 
+function Plugin:setTipScale(tt)
+    if self.db.overrideTooltipScale then
+        self.origTipScale = tt:GetScale()
+        tt:SetScale(self.db.tooltipScale)
+    end
+end
+
+function Plugin:resetTipScale(tt)
+    if self.origTipScale then
+        tt:SetScale(self.origTipScale)
+        self.origTipScale = nil
+    end
+end
+
 function Plugin:showTip()
     if Bazooka.checkForceHide then
         Bazooka.checkForceHide:forceHideFrames(UIParent:GetChildren())
@@ -1374,32 +1388,28 @@ function Plugin:showTip()
         return
     end
     local dataobj = self.dataobj
-    local tt
     if dataobj.tooltip then
         self.tipType = 'tooltip'
-        tt = setupTooltip(self.frame, dataobj.tooltip)
+        local tt = setupTooltip(self.frame, dataobj.tooltip)
+        self:setTipScale(tt)
+        tt:Show()
     elseif dataobj.OnEnter then
         self.tipType = 'OnEnter'
+        GameTooltip:Hide()
+        self:setTipScale(GameTooltip)
         dataobj.OnEnter(self.frame)
     elseif dataobj.OnTooltipShow then
         self.tipType = 'OnTooltipShow'
-        tt = setupTooltip(self.frame)
+        local tt = setupTooltip(self.frame)
+        self:setTipScale(tt)
         dataobj.OnTooltipShow(tt)
+        tt:Show()
     elseif Bazooka.db.profile.simpleTip then
         self.tipType = 'simple'
-        tt = setupTooltip(self.frame)
+        local tt = setupTooltip(self.frame)
+        self:setTipScale(tt)
         tt:SetText(self.title)
-    end
-    if tt then
-        if self.db.overrideTooltipScale then
-            self.origTipScale = tt:GetScale()
-            tt:SetScale(self.db.tooltipScale)
-        else
-            self.origTipScale = nil
-        end
         tt:Show()
-    else
-        self.origTipScale = nil
     end
 end
 
@@ -1423,27 +1433,26 @@ function Plugin:hideTip(force)
     if not Bazooka.tipOwner then
         return
     end
-    local tt
     if self.tipType == 'simple' then
-        tt = setupTooltip()
+        local tt = setupTooltip()
+        tt:Hide()
+        self:resetTipScale(tt)
     elseif self.tipType == 'OnTooltipShow' then
         if self.dataobj.OnLeave then
             self.dataobj.OnLeave(self.frame)
         end
-        tt = setupTooltip()
+        local tt = setupTooltip()
+        tt:Hide()
+        self:resetTipScale(tt)
     elseif self.tipType == 'OnEnter' then
         if self.dataobj.OnLeave then
             self.dataobj.OnLeave(self.frame)
         end
+        self:resetTipScale(GameTooltip)
     elseif self.tipType == 'tooltip' then
-        tt = self.dataobj.tooltip
-    end
-    if tt then
+        local tt = self.dataobj.tooltip
         tt:Hide()
-        if self.origTipScale then
-            tt:SetScale(self.origTipScale)
-            self.origTipScale = nil
-        end
+        self:resetTipScale(tt)
     end
     if self.db.forceHideTip then
         if force then
