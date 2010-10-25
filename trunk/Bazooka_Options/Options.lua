@@ -634,6 +634,15 @@ local pluginOptionArgs = {
         end,
         order = 152,
     },
+    iconBorderClip = {
+        type = 'range',
+        name = L["Icon Border Clip"],
+        min = 0.0,
+        max = 0.1,
+        step = 0.005,
+        isPercent = true,
+        order = 155,
+    },
     maxTextWidth = {
         type = 'input',
         name = L["Max text width"],
