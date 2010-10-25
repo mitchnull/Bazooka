@@ -694,10 +694,9 @@ local pluginOptionArgs = {
         disabled = function(info)
             return not info.handler.db.enabled or not info.handler.db.overrideTooltipScale
         end,
-        min = 0,
-        softMax = 2.0,
-        max = 10.0,
-        step = 0.1,
+        min = 0.5,
+        max = 2.0,
+        step = 0.05,
         order = 251,
     },
     shrinkThreshold = {
