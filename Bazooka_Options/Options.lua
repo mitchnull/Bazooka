@@ -1213,6 +1213,11 @@ do
                 name = L["Enable highlight"],
                 order = 40,
             },
+            disableDBIcon = {
+                type = 'toggle',
+                name = L["Disable minimap icons"],
+                order = 45,
+            },
             fadeOutDelay = {
                 type = 'range',
                 width = 'full',

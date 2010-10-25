@@ -204,6 +204,7 @@ local defaults = {
         adjustFrames = true,
         simpleTip = true,
         enableHL = true,
+        disableDBIcon = true,
         numBars = 1,
         fadeOutDelay = Defaults.fadeOutDelay,
         fadeOutDuration = Defaults.fadeOutDuration,
@@ -2014,6 +2015,28 @@ function Bazooka:removeBar(bar)
     self:updateAnchors()
 end
 
+function Bazooka:disableDBIcon()
+    if self.isDBIconDisabled then
+        return
+    end
+    local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
+    if DBIcon and DBIcon.DisableLibrary then
+        DBIcon:DisableLibrary()
+        self.isDBIconDisabled = true
+    end
+end
+
+function Bazooka:enableDBIcon()
+    if not self.isDBIconDisabled then
+        return
+    end
+    local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
+    if DBIcon and DBIcon.EnableLibrary then
+        DBIcon:EnableLibrary()
+        self.isDBIconDisabled = nil
+    end
+end
+
 function Bazooka:createPlugin(name, dataobj)
     local pt = dataobj.type or ""
     local db = self.db.profile.plugins[pt][name]
@@ -2025,6 +2048,9 @@ function Bazooka:createPlugin(name, dataobj)
     else
         plugin = Plugin:New(name, dataobj, db)
         self.plugins[name] = plugin
+    end
+    if self.db.profile.disableDBIcon then
+        self:disableDBIcon()
     end
     self:updatePluginOptions()
     return plugin
@@ -2050,6 +2076,11 @@ function Bazooka:applySettings()
         return
     end
     self:toggleLocked(self.db.profile.locked == true)
+    if self.db.profile.disableDBIcon then
+        self:disableDBIcon()
+    else
+        self:enableDBIcon()
+    end
     if Jostle then
         if self.db.profile.adjustFrames then
             Jostle:RegisterTop(self.TopAnchor)
