@@ -682,6 +682,24 @@ local pluginOptionArgs = {
         disabled = "isDisabled",
         order = 240,
     },
+    overrideTooltipScale = {
+        type = 'toggle',
+        name = L["Override Tooltip Scale"],
+        disabled = "isDisabled",
+        order = 250,
+    },
+    tooltipScale = {
+        type = 'range',
+        name = L["Tooltip Scale"],
+        disabled = function(info)
+            return not info.handler.db.enabled or not info.handler.db.overrideTooltipScale
+        end,
+        min = 0,
+        softMax = 2.0,
+        max = 10.0,
+        step = 0.1,
+        order = 251,
+    },
     shrinkThreshold = {
         type = 'range',
         name = L["Shrink threshold"],
