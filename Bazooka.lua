@@ -242,6 +242,8 @@ local defaults = {
                     showTitle = true,
                     showText = false,
                     shrinkThreshold = 0,
+                    overrideTooltipScale = false,
+                    tooltipScale = 1.0,
                 },
                 [AppName] = {
                     pos = 1,
@@ -264,6 +266,8 @@ local defaults = {
                     showTitle = false,
                     showText = true,
                     shrinkThreshold = PluginDefaults.shrinkThreshold,
+                    overrideTooltipScale = false,
+                    tooltipScale = 1.0,
                 },
             },
         },
