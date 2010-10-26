@@ -16,19 +16,24 @@ local MaxIconSize = 40
 
 local BulkEnabledPrefix = "bulk_"
 local BulkSeparatorPrefix = "bulks_"
+local BulkNamePrefix = "bulkn_"
 local BEPLEN = strlen(BulkEnabledPrefix)
+local BNPLEN = strlen(BulkNamePrefix)
 local lastConfiguredOpts -- stupid hack to remember last open config frame
 local Huge = math.huge
 
 local _
 
 local pairs = pairs
+local ipairs = ipairs
 local wipe = wipe
 local tonumber = tonumber
 local strsub = strsub
 local type = type
 local ceil = math.ceil
 local tostring = tostring
+local tinsert = table.insert
+local tsort = table.sort
 
 local FontOutlines = {
     [""] = L["None"],
@@ -51,19 +56,13 @@ local BarNames = {
     [1] = Bazooka:getBarName(1),
 }
 
-local PluginNames = {}
-
-local function getPluginName(info) 
-    local name = info[#info]
-    return PluginNames[name]
+local function bulkName(origName)
+    return BulkNamePrefix .. tostring(origName)
 end
 
-local function getPluginNameBulk(info) 
-    local name = info[#info]
-    return PluginNames[strsub(name, 2)]
+local function origName(bulkName)
+    return strsub(bulkName, BNPLEN + 1)
 end
-
-local bulkConfigOptions
 
 local function getColor(dbcolor)
     return dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a
@@ -449,6 +448,8 @@ local barOptions = {
     },
 }
 
+local barSelectionArgs = {}
+
 function Bar:isTweakDisabled(info)
     if self.db.attach == 'none' then
         return true
@@ -562,25 +563,18 @@ function Bar:addOptions()
 end
 
 function Bazooka:updateBarOptions()
-    while #BarNames > self.numBars do
-        bulkConfigOptions.args.bars.args['_' .. #BarNames] = nil
-        BarNames[#BarNames] = nil
-    end
     wipe(barOptions.args)
+    wipe(barSelectionArgs)
     for i = 1, self.numBars do
         local bar = self.bars[i]
         bar:addOptions()
         barOptions.args[bar:getOptionsName()] = bar.opts
         BarNames[i] = bar.name
-        if not bulkConfigOptions.args.bars.args['_' .. i] then
-            bulkConfigOptions.args.bars.args['_' .. i] = {
-                type = 'toggle',
-                name = BarNames[i],
-                order = 2,
-                set = "setSelection",
-                get = "getSelection",
-            }
-        end
+        barSelectionArgs[bulkName(i)] = {
+            type = 'toggle',
+            name = BarNames[i],
+            order = i,
+        }
     end
     ACR:NotifyChange(self:getSubAppName("bars"))
     ACR:NotifyChange(self:getSubAppName("bulk-config"))
@@ -756,10 +750,17 @@ local pluginOptionArgs = {
     },
 }
 
-function Plugin:updateColoredTitle()
+local pluginSelectionArgs = {}
+
+function Plugin:getColoredTitle()
     local ct = self.db.enabled and self.title or "|cffed1100" .. self.title .."|r"
+    return ct
+end
+
+function Plugin:updateColoredTitle()
+    local ct = self:getColoredTitle()
     self.opts.name = ct
-    PluginNames[self.name] = ct
+    pluginSelectionArgs[bulkName(self.name)].name = ct
 end
 
 function Plugin:setOption(info, value)
@@ -801,20 +802,30 @@ function Plugin:addOptions()
     self:updateColoredTitle()
 end
 
+local sortedPlugins = {}
+local function sortPluginsByTitle(p1, p2)
+    return p1.title < p2.title
+end
+
 function Bazooka:updatePluginOptions()
     wipe(pluginOptions.args)
+    wipe(pluginSelectionArgs)
+    wipe(sortedPlugins)
     for name, plugin in pairs(self.plugins) do
+        tinsert(sortedPlugins, plugin)
+    end
+    tsort(sortedPlugins, sortPluginsByTitle)
+
+    for i = 1, #sortedPlugins do
+        local plugin = sortedPlugins[i]
         plugin:addOptions()
-        pluginOptions.args[name] = plugin.opts
-        if not bulkConfigOptions.args.plugins.args['_' .. name] then
-            bulkConfigOptions.args.plugins.args['_' .. name] = {
-                type = 'toggle',
-                name = getPluginNameBulk,
-                order = 2,
-                set = "setSelection",
-                get = "getSelection",
-            }
-        end
+        plugin.opts.order = i
+        pluginOptions.args[plugin.name] = plugin.opts
+        pluginSelectionArgs[bulkName(plugin.name)] = {
+            type = 'toggle',
+            name = plugin:getColoredTitle(),
+            order = i,
+        }
     end
     ACR:NotifyChange(self:getSubAppName("plugins"))
     ACR:NotifyChange(self:getSubAppName("bulk-config"))
@@ -871,12 +882,12 @@ function BulkHandler:getMultiOption(info, sel)
 end
 
 function BulkHandler:setSelection(info, value)
-    local sel = strsub(info[#info], 2)
+    local sel = origName(info[#info])
     self.selection[sel] = value
 end
 
 function BulkHandler:getSelection(info, sel)
-    local sel = strsub(info[#info], 2)
+    local sel = origName(info[#info])
     return self.selection[sel]
 end
 
@@ -953,19 +964,18 @@ function BulkHandler:clearSelection(info)
     wipe(self.selection)
 end
 
-function BulkHandler:selectAll(info)
-    for k, v in pairs(self.selectionBase) do
-        self.selection[tostring(k)] = true
-    end
-end
-
 --------------------------------------
 
 local PluginBulkHandler = setmetatable({
     selection = {},
     selectedOptions = {},
-    selectionBase = PluginNames,
 }, BulkHandler)
+
+function PluginBulkHandler:selectAll(info)
+    for name, plugin in pairs(Bazooka.plugins) do
+        self.selection[name] = true
+    end
+end
 
 function PluginBulkHandler:getOptions()
     return Bazooka.db.global.plugins
@@ -1002,8 +1012,13 @@ end
 local BarBulkHandler = setmetatable({
     selection = {},
     selectedOptions = {},
-    selectionBase = BarNames,
 }, BulkHandler)
+
+function BarBulkHandler:selectAll(info)
+    for _, bar in pairs(Bazooka.bars) do
+        self.selection[tostring(bar.id)] = true
+    end
+end
 
 function BarBulkHandler:getOptions()
     return Bazooka.db.global.bars
@@ -1052,7 +1067,7 @@ local function isAutoApply()
     return Bazooka.db.global.autoApply
 end
 
-bulkConfigOptions = {
+local bulkConfigOptions = {
     type = 'group',
     handler = BulkHandler,
     childGroups = 'tab',
@@ -1079,10 +1094,19 @@ bulkConfigOptions = {
             name = L["Bars"],
             order = 10,
             args = {
-                selection = {
+                selectionBegin = {
                     type = 'header',
                     name = L["Selection"],
                     order = 1,
+                },
+                selection = {
+                    type = 'group',
+                    name = "",
+                    inline = true,
+                    order = 2,
+                    get = "getSelection",
+                    set = "setSelection",
+                    args = barSelectionArgs,
                 },
                 selectionEnd = {
                     type = 'header',
@@ -1130,27 +1154,41 @@ bulkConfigOptions = {
             name = L["Plugins"],
             order = 20,
             args = {
-                selection = {
+                selectionBegin = {
                     type = 'header',
                     name = L["Selection"],
                     order = 1,
+                },
+                selection = {
+                    type = 'group',
+                    name = "",
+                    inline = true,
+                    order = 2,
+                    get = "getSelection",
+                    set = "setSelection",
+                    args = pluginSelectionArgs,
+                },
+                selectionEnd = {
+                    type = 'header',
+                    name = "",
+                    order = 3,
                 },
                 selectAll = {
                     type = 'execute',
                     name = L["Select All"],
                     func = "selectAll",
-                    order = 3,
+                    order = 4,
                 },
                 clearSelection = {
                     type = 'execute',
                     name = L["Clear"],
                     func = "clearSelection",
-                    order = 4,
+                    order = 5,
                 },
                 settings = {
                     type = 'header',
                     name = L["Settings"],
-                    order = 5,
+                    order = 6,
                 },
                 apply = {
                     type = 'execute',
