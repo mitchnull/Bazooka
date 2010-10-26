@@ -753,8 +753,11 @@ local pluginOptionArgs = {
 local pluginSelectionArgs = {}
 
 function Plugin:getColoredTitle()
-    local ct = self.db.enabled and self.title or "|cffed1100" .. self.title .."|r"
-    return ct
+    return ("|T%s:0|t %s%s"):format(
+        (self.dataobj.icon and not self.dataobj.iconCoords) and self.dataobj.icon or "",
+        self.db.enabled and "" or "|cffed1100",
+        self.title
+    )
 end
 
 function Plugin:updateColoredTitle()
