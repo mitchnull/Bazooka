@@ -760,7 +760,10 @@ end
 function Plugin:updateColoredTitle()
     local ct = self:getColoredTitle()
     self.opts.name = ct
-    pluginSelectionArgs[bulkName(self.name)].name = ct
+    local selection = pluginSelectionArgs[bulkName(self.name)]
+    if selection then
+        selection.name = ct
+    end
 end
 
 function Plugin:setOption(info, value)
@@ -1108,11 +1111,6 @@ local bulkConfigOptions = {
                     set = "setSelection",
                     args = barSelectionArgs,
                 },
-                selectionEnd = {
-                    type = 'header',
-                    name = "",
-                    order = 3,
-                },
                 selectAll = {
                     type = 'execute',
                     name = L["Select All"],
@@ -1167,11 +1165,6 @@ local bulkConfigOptions = {
                     get = "getSelection",
                     set = "setSelection",
                     args = pluginSelectionArgs,
-                },
-                selectionEnd = {
-                    type = 'header',
-                    name = "",
-                    order = 3,
                 },
                 selectAll = {
                     type = 'execute',
