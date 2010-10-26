@@ -557,7 +557,7 @@ end
 
 Bar.OnMouseDown = function(frame, button, ...)
     local self = frame.bzkBar
-    if not Bazooka.locked and button == 'RightButton' and not IsAltKeyDown() then
+    if button == 'RightButton' and not IsAltKeyDown() then
         Bazooka:loadOptions()
         if Bazooka.barOpts then
             Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), self:getOptionsName())
