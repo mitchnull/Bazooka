@@ -812,6 +812,13 @@ local sortedPlugins = {}
 local function sortPluginsByTitle(p1, p2)
     return p1.title < p2.title
 end
+local function sortPluginsByTitleDisabledLast(p1, p2)
+    if p1.db.enabled then
+        return not p2.db.enabled or p1.title < p2.title
+    else 
+        return not p2.db.enabled and p1.title < p2.title
+    end
+end
 
 function Bazooka:updatePluginOptions()
     wipe(pluginOptions.args)
@@ -820,7 +827,11 @@ function Bazooka:updatePluginOptions()
     for name, plugin in pairs(self.plugins) do
         tinsert(sortedPlugins, plugin)
     end
-    tsort(sortedPlugins, sortPluginsByTitle)
+    if Bazooka.db.global.sortDisabledLast then
+        tsort(sortedPlugins, sortPluginsByTitleDisabledLast)
+    else
+        tsort(sortedPlugins, sortPluginsByTitle)
+    end
 
     for i = 1, #sortedPlugins do
         local plugin = sortedPlugins[i]
