@@ -781,6 +781,9 @@ function Plugin:setOption(info, value)
     self:applySettings()
     if name == 'enabled' then
         self:updateColoredTitle()
+        if Bazooka.db.global.sortDisabledLast then
+            Bazooka:updatePluginOrder()
+        end
     end
 end
 
@@ -809,14 +812,34 @@ function Plugin:addOptions()
 end
 
 local sortedPlugins = {}
-local function sortPluginsByTitle(p1, p2)
+
+local function comparePluginsByTitle(p1, p2)
     return p1.title < p2.title
 end
-local function sortPluginsByTitleDisabledLast(p1, p2)
+
+local function comparePluginsByTitleDisabledLast(p1, p2)
     if p1.db.enabled then
         return not p2.db.enabled or p1.title < p2.title
     else 
         return not p2.db.enabled and p1.title < p2.title
+    end
+end
+
+function Bazooka:sortPlugins()
+    if self.db.global.sortDisabledLast then
+        tsort(sortedPlugins, comparePluginsByTitleDisabledLast)
+    else
+        tsort(sortedPlugins, comparePluginsByTitle)
+    end
+    return sortedPlugins;
+end
+
+function Bazooka:updatePluginOrder()
+    self:sortPlugins()
+    for i = 1, #sortedPlugins do
+        local plugin = sortedPlugins[i]
+        plugin.opts.order = i
+        pluginSelectionArgs[bulkName(plugin.name)].order = i
     end
 end
 
@@ -827,10 +850,10 @@ function Bazooka:updatePluginOptions()
     for name, plugin in pairs(self.plugins) do
         tinsert(sortedPlugins, plugin)
     end
-    if Bazooka.db.global.sortDisabledLast then
-        tsort(sortedPlugins, sortPluginsByTitleDisabledLast)
+    if self.db.global.sortDisabledLast then
+        tsort(sortedPlugins, comparePluginsByTitleDisabledLast)
     else
-        tsort(sortedPlugins, sortPluginsByTitle)
+        tsort(sortedPlugins, comparePluginsByTitle)
     end
 
     for i = 1, #sortedPlugins do
@@ -1321,6 +1344,16 @@ do
                 name = L["Disable minimap icons"],
                 order = 45,
             },
+            sortDisabledLast = {
+                type = 'toggle',
+                name = L["Show disabled plugins last"],
+                order = 47,
+                set = function(info, value)
+                    Bazooka.db.global.sortDisabledLast = value
+                    Bazooka:updatePluginOrder()
+                end,
+                get = function(info) return Bazooka.db.global.sortDisabledLast end,
+            },
             fadeOutDelay = {
                 type = 'range',
                 width = 'full',
@@ -1392,9 +1425,9 @@ do
     self.barOpts = registerSubOptions('bars', barOptions)
     self.pluginOpts = registerSubOptions('plugins', pluginOptions)
     self.bulkConfigOpts = registerSubOptions('bulk-config', bulkConfigOptions)
-    self:updateBarOptions()
-    self:updatePluginOptions()
     self.setupDBOptions = function(self)
+        self:updateBarOptions()
+        self:updatePluginOptions()
         local profiles =  AceDBOptions:GetOptionsTable(self.db)
         if LibDualSpec then
             LibDualSpec:EnhanceOptions(profiles, self.db)
