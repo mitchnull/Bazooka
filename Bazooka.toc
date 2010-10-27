@@ -1,7 +1,7 @@
 ## Interface: 40000
 ## Title: Bazooka
 ## Author: mitch0
-## Version: 1.9.1
+## Version: 1.9.2
 ## Notes: Data Broker Display similar to FuBar
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: true
