@@ -754,7 +754,7 @@ local pluginSelectionArgs = {}
 
 function Plugin:getColoredTitle()
     return ("|T%s:0|t %s%s"):format(
-        (self.dataobj.icon and not self.dataobj.iconCoords) and self.dataobj.icon or "",
+        self.dataobj.staticIcon or (self.dataobj.icon and not self.dataobj.iconCoords) and self.dataobj.icon or "",
         self.db.enabled and "" or "|cffed1100",
         self.title
     )
