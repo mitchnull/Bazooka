@@ -1680,7 +1680,15 @@ function Plugin:setText()
     local dataobj = self.dataobj
     if self.db.showLabel and self.label then
         if self.db.showText and dataobj.text then
-            self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
+            if self.db.showValue and dataobj.value then
+                if self.db.showSuffix and dataobj.suffix then
+                    self.text:SetFormattedText("|c%s%s:|r %s %s |c%s%s|r", self.labelColorHex, self.label, dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                else
+                    self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.text, dataobj.value)
+                end
+            else
+                self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
+            end
         elseif self.db.showValue and dataobj.value then
             if self.db.showSuffix and dataobj.suffix then
                 self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, self.label, dataobj.value, self.suffixColorHex, dataobj.suffix)
@@ -1692,7 +1700,15 @@ function Plugin:setText()
         end
         self:updateLayout()
     elseif self.db.showText and dataobj.text then
-        self.text:SetFormattedText("%s", dataobj.text)
+        if self.db.showValue and dataobj.value then
+            if self.db.showSuffix and dataobj.suffix then
+                self.text:SetFormattedText("%s %s |c%s%s|r", dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
+            else
+                self.text:SetFormattedText("%s %s", dataobj.text, dataobj.value)
+            end
+        else
+            self.text:SetFormattedText("%s", dataobj.text)
+        end
         self:updateLayout()
     elseif self.db.showValue and dataobj.value then
         if self.db.showSuffix and dataobj.suffix then
