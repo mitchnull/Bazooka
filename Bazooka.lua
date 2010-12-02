@@ -132,7 +132,7 @@ local BarDefaults = {
     bgBorderColor = makeColor(0.8, 0.6, 0.0, 1.0),
 }
 local PluginDefaults = {
-    enabled = true,
+    enabled = false,
     bar = 1,
     area = 'left',
     pos = nil,
