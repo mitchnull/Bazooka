@@ -2089,7 +2089,7 @@ function Bazooka:enableDBIcon()
 end
 
 function Bazooka:createPlugin(name, dataobj)
-    local pt = dataobj.type or ""
+    local pt = dataobj.type or (dataobj.text and "data source" or "launcher")
     local db = self.db.profile.plugins[pt][name]
     local plugin = self.plugins[name]
     if plugin then
