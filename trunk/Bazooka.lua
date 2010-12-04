@@ -1603,6 +1603,29 @@ function Plugin:disable()
         self.frame:Hide()
         self.bar = nil
     end
+    LDB.UnregisterAllCallbacks(self)
+end
+
+function Plugin:updateLDBCallback(attr, method, reg)
+    local callback = ("LibDataBroker_AttributeChanged_%s_%s"):format(self.name, attr)
+    if reg then
+        LDB.RegisterCallback(self, callback, method)
+    else
+        LDB.UnregisterCallback(self, callback)
+    end
+end
+
+function Plugin:updateLDBCallbacks()
+    self:updateLDBCallback("icon", "setIcon", self.db.showIcon)
+    self:updateLDBCallback("iconCoords", "setIconCoords", self.db.showIcon)
+    self:updateLDBCallback("iconR", "setIconColor", self.db.showIcon)
+    self:updateLDBCallback("iconG", "setIconColor", self.db.showIcon)
+    self:updateLDBCallback("iconB", "setIconColor", self.db.showIcon)
+
+    self:updateLDBCallback("label", "updateLabel", self.db.showLabel)
+    self:updateLDBCallback("text", "setText", self.db.showText)
+    self:updateLDBCallback("value", "setText", self.db.showValue)
+    self:updateLDBCallback("suffix", "setText", self.db.showSuffix)
 end
 
 function Plugin:applySettings()
@@ -1628,7 +1651,11 @@ function Plugin:applySettings()
             self:createText()
         end
         self.text:SetWidth(self.db.maxTextWidth or 0)
-        self:setText()
+        if self.db.showLabel then
+            self:updateLabel()
+        else
+            self:setText()
+        end
         self.text:Show()
     elseif self.text then
         self.text:SetFormattedText("")
@@ -1641,6 +1668,7 @@ function Plugin:applySettings()
     self:globalSettingsChanged()
     self:updateLabel()
     self:updateLayout(true)
+    self:updateLDBCallbacks()
 end
 
 function Plugin:setIcon()
@@ -1748,19 +1776,6 @@ end
 
 Bazooka.Plugin = Plugin
 
-Bazooka.updaters = {
-    label = Plugin.updateLabel,
-    text = Plugin.setText,
-    value = Plugin.setText,
-    suffix = Plugin.setText,
-
-    icon = Plugin.setIcon,
-    iconR = Plugin.setIconColor,
-    iconG = Plugin.setIconColor,
-    iconB = Plugin.setIconColor,
-    iconCoords = Plugin.setIconCoords,
-}
-
 -- END Plugin stuff
 
 -- BEGIN AceAddon stuff
@@ -1771,6 +1786,7 @@ function Bazooka:OnInitialize()
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
     end
+    self:setupLDB()
     self.db.RegisterCallback(self, "OnProfileChanged", "profileChanged")
     self.db.RegisterCallback(self, "OnProfileCopied", "profileChanged")
     self.db.RegisterCallback(self, "OnProfileReset", "profileChanged")
@@ -1779,7 +1795,6 @@ function Bazooka:OnInitialize()
     if self.setupDBOptions then -- trickery to make it work with a straight checkout
         self:setupDBOptions()
     end
-    self:setupLDB()
 end
 
 function Bazooka:OnEnable(first)
@@ -1788,9 +1803,6 @@ function Bazooka:OnEnable(first)
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
-    LDB.RegisterCallback(self, "LibDataBroker_AttributeChanged", "attributeChanged")
-    -- our updates get lost between :init() and RegisterCallback()
-    self:attributeChanged("LibDataBroker_AttributeChanged", AppName, 'icon', self.ldb.icon, self.ldb)
 end
 
 function Bazooka:OnDisable()
@@ -1847,18 +1859,6 @@ end
 function Bazooka:dataObjectCreated(event, name, dataobj)
     self:createPlugin(name, dataobj)
     self:updatePluginOptions()
-end
-
-function Bazooka:attributeChanged(event, name, attr, value, dataobj)
-    local plugin = self.plugins[name]
-    if plugin and plugin.db.enabled then
-        local updater = self.updaters[attr]
-        if updater then
-            updater(plugin)
-            return
-        end
---        print("### " .. tostring(name) .. "." .. tostring(attr) .. " = " ..  tostring(value))
-    end
 end
 
 function Bazooka:profileChanged()
@@ -2218,7 +2218,7 @@ end
 function Bazooka:setupLDB()
     local ldb = {
         type = "launcher",
-        icon = Icon,
+        icon = self.db.profile.locked and Icon or UnlockedIcon,
         OnClick = function(frame, button)
             if button == "LeftButton" then
                 self:toggleLocked()
