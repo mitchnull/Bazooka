@@ -22,6 +22,7 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
 -- Remove all related ifs when the opacity setting for embedded icons gets fixed
 local EnableOpacityWorkaround = true
+local EnableAlphaAnimWorkaround = true
 local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
@@ -596,14 +597,29 @@ function Bar:getOptionsName()
 end
 
 function Bar:createFadeAnim()
-    self.fadeAnim = AlphaAnim:New(self.frame)
---    self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
---   self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
+    if EnableAlphaAnimWorkaround then
+        self.fadeAnim = AlphaAnim:New(self.frame)
+        self.fadeAnimGrp = self.fadeAnim
+    else
+        self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
+        self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
+        self.fadeAnim:SetScript("OnStop", function(self)
+            local frame = self:GetParent()
+            local alpha = frame:GetAlpha() + (self:GetChange() * self:GetSmoothProgress())
+            if alpha > 1 then
+                alpha = 1
+            elseif alpha < 0 then
+                alpha = 0
+            end
+            -- local alpha = frame:GetAlpha()
+            frame:SetAlpha(alpha)
+        end)
+    end
 end
 
 function Bar:fadeIn()
     if self.fadeAnim then
-        self.fadeAnim:Stop()
+        self.fadeAnimGrp:Stop()
     end
     local alpha = self.frame:GetAlpha()
     local change = 1.0 - alpha
@@ -626,12 +642,12 @@ function Bar:fadeIn()
     self.fadeAnim:SetStartDelay(0)
     self.fadeAnim:SetDuration(Bazooka.db.profile.fadeInDuration * change / fullChange)
     self.fadeAnim:SetChange(change)
-    self.fadeAnim:Play()
+    self.fadeAnimGrp:Play()
 end
 
 function Bar:fadeOut(delay)
     if self.fadeAnim then
-        self.fadeAnim:Stop()
+        self.fadeAnimGrp:Stop()
     end
     local alpha = self.frame:GetAlpha()
     local change = alpha - self.db.fadeAlpha
@@ -646,7 +662,7 @@ function Bar:fadeOut(delay)
     self.fadeAnim:SetStartDelay(delay or Bazooka.db.profile.fadeOutDelay)
     self.fadeAnim:SetDuration(Bazooka.db.profile.fadeOutDuration * change / fullChange)
     self.fadeAnim:SetChange(-change)
-    self.fadeAnim:Play()
+    self.fadeAnimGrp:Play()
 end
 
 function Bar:enable(id, db)
