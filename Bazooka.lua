@@ -22,7 +22,6 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
 -- Remove all related ifs when the opacity setting for embedded icons gets fixed
 local EnableOpacityWorkaround = true
-local EnableAlphaAnimWorkaround = true
 local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
@@ -36,25 +35,26 @@ end
 
 -- cached stuff
 
-local IsAltKeyDown = IsAltKeyDown
-local GetCursorPosition = GetCursorPosition
-local GetAddOnInfo = GetAddOnInfo
-local GetScreenWidth = GetScreenWidth
-local GetScreenHeight = GetScreenHeight
-local UIParent = UIParent
-local CreateFrame = CreateFrame
-local InCombatLockdown = InCombatLockdown
-local tinsert = tinsert
-local tremove = tremove
-local tostring = tostring
-local tonumber = tonumber
-local print = print
-local pairs = pairs
-local type = type
-local unpack = unpack
-local wipe = wipe
-local math = math
-local GameTooltip = GameTooltip
+local _G = _G
+local IsAltKeyDown = _G.IsAltKeyDown
+local GetCursorPosition = _G.GetCursorPosition
+local GetAddOnInfo = _G.GetAddOnInfo
+local GetScreenWidth = _G.GetScreenWidth
+local GetScreenHeight = _G.GetScreenHeight
+local UIParent = _G.UIParent
+local CreateFrame = _G.CreateFrame
+local InCombatLockdown = _G.InCombatLockdown
+local tinsert = _G.tinsert
+local tremove = _G.tremove
+local tostring = _G.tostring
+local tonumber = _G.tonumber
+local print = _G.print
+local pairs = _G.pairs
+local type = _G.type
+local unpack = _G.unpack
+local wipe = _G.wipe
+local math = _G.math
+local GameTooltip = _G.GameTooltip
 
 -- hard-coded config stuff
 
@@ -352,61 +352,6 @@ end
 
 ---------------------------------
 
--- BEGIN AlphaAnim
--- This is a (hopefully) temporary hack to replace the blizz Alpha animation
--- as it's broken presently.  It relies on OnUpdate being free to use!
-
-local GetTime = GetTime
-local AlphaAnim = {}
-setDeepCopyIndex(AlphaAnim)
-
-AlphaAnim.OnUpdate = function(frame, elapsed)
-    local self = frame.bzkAlphaAnim
-    local now = GetTime()
-    if now < self.startStamp then
-        return
-    end
-    local playTime = now - self.startStamp
-    if playTime >= self.duration then
-        frame:SetAlpha(self.startAlpha + self.change)
-        frame:SetScript("OnUpdate", nil)
-        return
-    end
-    frame:SetAlpha(self.startAlpha + self.change * playTime / self.duration)
-end
-
-function AlphaAnim:New(frame)
-    local self = setmetatable({}, AlphaAnim)
-    self.frame = frame
-    frame.bzkAlphaAnim = self
-    return self
-end
-
-function AlphaAnim:Play()
-    self.startStamp = GetTime() + self.startDelay
-    self.startAlpha = self.frame:GetAlpha()
-    self.frame:SetScript("OnUpdate", AlphaAnim.OnUpdate)
-end
-
-function AlphaAnim:Stop()
-    self.frame:SetScript("OnUpdate", nil)
-end
-
-function AlphaAnim:SetDuration(duration)
-    self.duration = duration
-end
-
-function AlphaAnim:SetStartDelay(delay)
-    self.startDelay = delay
-end
-
-function AlphaAnim:SetChange(change)
-    self.change = change
-end
-
--- END AlphaAnim
----------------------------------
-
 -- BEGIN Bar stuff
 
 local function sumPluginsWidth(plugins)
@@ -597,32 +542,24 @@ function Bar:getOptionsName()
 end
 
 function Bar:createFadeAnim()
-    if EnableAlphaAnimWorkaround then
-        self.fadeAnim = AlphaAnim:New(self.frame)
-        self.fadeAnimGrp = self.fadeAnim
-    else
-        self.fadeAnimGrp = self.frame:CreateAnimationGroup("BazookaBarFA_" .. self.id)
-        self.fadeAnim = self.fadeAnimGrp:CreateAnimation("Alpha")
-        self.fadeAnim:SetScript("OnStop", function(self)
-            local frame = self:GetParent()
-            local alpha = frame:GetAlpha() + (self:GetChange() * self:GetSmoothProgress())
-            if alpha > 1 then
-                alpha = 1
-            elseif alpha < 0 then
-                alpha = 0
-            end
-            print("### anim:OnStop(), current alpha: " .. frame:GetAlpha() .. ", progress: " .. self:GetSmoothProgress() .. ", new alpha: " .. alpha)
-            -- local alpha = frame:GetAlpha()
-            frame:SetAlpha(alpha)
-        end)
+    self.fadeAnimGrp = self.frame:CreateAnimationGroup()
+    self.fadeAnim = self.fadeAnimGrp:CreateAnimation()
+    self.fadeAnim:SetScript("OnUpdate", function(anim)
+        if not anim:IsDelaying() then
+            anim:GetRegionParent():SetAlpha(anim.startAlpha + (anim.change * anim:GetSmoothProgress()))
+        end
+    end)
+    self.fadeAnim:SetScript("OnPlay", function(anim)
+        anim.startAlpha = anim:GetRegionParent():GetAlpha()
+    end)
+    self.fadeAnim.SetChange = function(anim, change)
+        anim.change = change
     end
 end
 
 function Bar:fadeIn()
     if self.fadeAnim then
-        if not EnableAlphaAnimWorkaround then print("### calling anim:Stop(), current alpha: " .. self.frame:GetAlpha()) end
         self.fadeAnimGrp:Stop()
-        if not EnableAlphaAnimWorkaround then print("### alpha after stop: " .. self.frame:GetAlpha()) end
     end
     local alpha = self.frame:GetAlpha()
     local change = 1.0 - alpha
@@ -650,9 +587,7 @@ end
 
 function Bar:fadeOut(delay)
     if self.fadeAnim then
-        if not EnableAlphaAnimWorkaround then print("### calling anim:Stop(), current alpha: " .. self.frame:GetAlpha()) end
         self.fadeAnimGrp:Stop()
-        if not EnableAlphaAnimWorkaround then print("### alpha after stop: " .. self.frame:GetAlpha()) end
     end
     local alpha = self.frame:GetAlpha()
     local change = alpha - self.db.fadeAlpha
