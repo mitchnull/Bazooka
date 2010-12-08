@@ -611,6 +611,7 @@ function Bar:createFadeAnim()
             elseif alpha < 0 then
                 alpha = 0
             end
+            print("### anim:OnStop(), current alpha: " .. frame:GetAlpha() .. ", progress: " .. self:GetSmoothProgress() .. ", new alpha: " .. alpha)
             -- local alpha = frame:GetAlpha()
             frame:SetAlpha(alpha)
         end)
@@ -619,7 +620,9 @@ end
 
 function Bar:fadeIn()
     if self.fadeAnim then
+        if not EnableAlphaAnimWorkaround then print("### calling anim:Stop(), current alpha: " .. self.frame:GetAlpha()) end
         self.fadeAnimGrp:Stop()
+        if not EnableAlphaAnimWorkaround then print("### alpha after stop: " .. self.frame:GetAlpha()) end
     end
     local alpha = self.frame:GetAlpha()
     local change = 1.0 - alpha
@@ -647,7 +650,9 @@ end
 
 function Bar:fadeOut(delay)
     if self.fadeAnim then
+        if not EnableAlphaAnimWorkaround then print("### calling anim:Stop(), current alpha: " .. self.frame:GetAlpha()) end
         self.fadeAnimGrp:Stop()
+        if not EnableAlphaAnimWorkaround then print("### alpha after stop: " .. self.frame:GetAlpha()) end
     end
     local alpha = self.frame:GetAlpha()
     local change = alpha - self.db.fadeAlpha
