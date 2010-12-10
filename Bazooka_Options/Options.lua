@@ -1354,6 +1354,15 @@ do
                 end,
                 get = function(info) return Bazooka.db.global.sortDisabledLast end,
             },
+            enableOpacityWorkaround = {
+                type = 'toggle',
+                name = L["Enable opacity workaround"],
+                order = 48,
+                set = function(info, value)
+                    Bazooka.db.global.enableOpacityWorkaround = value
+                end,
+                get = function(info) return Bazooka.db.global.enableOpacityWorkaround end,
+            },
             fadeOutDelay = {
                 type = 'range',
                 width = 'full',

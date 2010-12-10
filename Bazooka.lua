@@ -512,23 +512,23 @@ Bar.OnMouseDown = function(frame, button, ...)
 end
 
 
-if EnableOpacityWorkaround then
-    Bar.setAlphaByParts = function(frame, alpha)
-        frame.bzkAlpha = alpha
-        local self = frame.bzkBar
-        if self.db.bgEnabled then
-            self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha)
-            self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a * alpha)
-        end
-        for name, plugin in pairs(self.allPlugins) do
-            plugin.frame:SetAlpha(plugin.frame:GetAlpha())
-        end
+-- BEGIN EnableOpacityWorkaround 
+Bar.setAlphaByParts = function(frame, alpha)
+    frame.bzkAlpha = alpha
+    local self = frame.bzkBar
+    if self.db.bgEnabled then
+        self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha)
+        self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a * alpha)
     end
-
-    Bar.getAlphaByParts = function(frame)
-        return frame.bzkAlpha
+    for name, plugin in pairs(self.allPlugins) do
+        plugin.frame:SetAlpha(plugin.frame:GetAlpha())
     end
 end
+
+Bar.getAlphaByParts = function(frame)
+    return frame.bzkAlpha
+end
+-- END EnableOpacityWorkaround 
 
 function Bar:New(id, db)
     local bar = setmetatable({}, Bar)
@@ -1274,25 +1274,25 @@ Plugin.OnDragStop = function(frame)
     end
 end
 
-if EnableOpacityWorkaround then
-    Plugin.setAlphaByParts = function(frame, alpha)
-        frame.bzkAlpha = alpha
-        local self = frame.bzkPlugin
-        if self.bar then
-            alpha = alpha * self.bar.frame:GetAlpha()
-        end
-        if self.icon then
-            self.icon:SetAlpha(alpha)
-        end
-        if self.text then
-            self.text:SetAlpha(alpha)
-        end
+-- BEGIN EnableOpacityWorkaround
+Plugin.setAlphaByParts = function(frame, alpha)
+    frame.bzkAlpha = alpha
+    local self = frame.bzkPlugin
+    if self.bar then
+        alpha = alpha * self.bar.frame:GetAlpha()
     end
-
-    Plugin.getAlphaByParts = function(frame)
-        return frame.bzkAlpha
+    if self.icon then
+        self.icon:SetAlpha(alpha)
+    end
+    if self.text then
+        self.text:SetAlpha(alpha)
     end
 end
+
+Plugin.getAlphaByParts = function(frame)
+    return frame.bzkAlpha
+end
+-- END EnableOpacityWorkaround
 
 function Plugin:New(name, dataobj, db)
     local plugin = setmetatable({}, Plugin)
@@ -1738,6 +1738,7 @@ Bazooka.Plugin = Plugin
 
 function Bazooka:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("BazookaDB", defaults, true)
+    EnableOpacityWorkaround = self.db.global.enableOpacityWorkaround
     self:initAnchors()
     if LibDualSpec then
         LibDualSpec:EnhanceDatabase(self.db, AppName)
