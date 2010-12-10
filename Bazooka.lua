@@ -1746,6 +1746,7 @@ function Bazooka:OnInitialize()
     self.db.RegisterCallback(self, "OnProfileChanged", "profileChanged")
     self.db.RegisterCallback(self, "OnProfileCopied", "profileChanged")
     self.db.RegisterCallback(self, "OnProfileReset", "profileChanged")
+    self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDisable")
     self:profileChanged()
     self:setupDummyOptions()
     if self.setupDBOptions then -- trickery to make it work with a straight checkout
