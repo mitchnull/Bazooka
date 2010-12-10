@@ -1768,6 +1768,9 @@ function Bazooka:OnDisable()
     for i = 1, #self.bars do
         self.bars[i].frame:Hide()
     end
+    for name, plugin in pairs(self.plugins) do
+        plugin:disable()
+    end
 end
 
 -- END AceAddon stuff
