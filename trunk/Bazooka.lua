@@ -576,11 +576,16 @@ function Bar:fadeIn()
         end
     end
     local fullChange = 1.0 - self.db.fadeAlpha
+    local duration = Bazooka.db.profile.fadeInDuration * change / fullChange
+    if duration < 0.01 then
+        self.frame:SetAlpha(1.0)
+        return
+    end
     if not self.fadeAnim then
         self:createFadeAnim()
     end
     self.fadeAnim:SetStartDelay(0)
-    self.fadeAnim:SetDuration(Bazooka.db.profile.fadeInDuration * change / fullChange + 0.001)
+    self.fadeAnim:SetDuration(duration)
     self.fadeAnim:SetChange(change)
     self.fadeAnimGrp:Play()
 end
@@ -596,11 +601,20 @@ function Bar:fadeOut(delay)
         return
     end
     local fullChange = 1.0 - self.db.fadeAlpha
+    delay = delay or Bazooka.db.profile.fadeOutDelay
+    local duration = Bazooka.db.profile.fadeOutDuration * change / fullChange
+    if duration < 0.01 then
+        if delay < 0.01 then
+            self.frame:SetAlpha(self.db.fadeAlpha)
+            return
+        end
+        duration = 0.01 -- if duration is too small (maybe only if 0, but meh) the animation doesn't work properly
+    end
     if not self.fadeAnim then
         self:createFadeAnim()
     end
-    self.fadeAnim:SetStartDelay(delay or Bazooka.db.profile.fadeOutDelay)
-    self.fadeAnim:SetDuration(Bazooka.db.profile.fadeOutDuration * change / fullChange + 0.001)
+    self.fadeAnim:SetStartDelay(delay)
+    self.fadeAnim:SetDuration(duration)
     self.fadeAnim:SetChange(-change)
     self.fadeAnimGrp:Play()
 end
