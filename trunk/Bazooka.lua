@@ -1235,6 +1235,16 @@ Plugin.OnMouseDown = function(frame, ...)
     end
 end
 
+Plugin.OnMouseWheel = function(frame, ...)
+    local self = frame.bzkPlugin
+    if self.db.hideTipOnClick then
+        self:hideTip(true)
+    end
+    if self.dataobj.OnMouseWheel then
+        self.dataobj.OnMouseWheel(frame, ...)
+    end
+end
+
 Plugin.OnClick = function(frame, ...)
     local self = frame.bzkPlugin
     if self.dataobj.OnClick then
@@ -1385,6 +1395,11 @@ function Plugin:showTip()
         tt:SetText(self.title)
         tt:Show()
     end
+end
+
+function Plugin:toggleMouse(flag)
+    self.frame:EnableMouse(flag)
+    self.frame:EnableMouseWheel(flag)
 end
 
 -- hides frames that are not Bazooka's but are anchored to our frame
@@ -1566,7 +1581,9 @@ function Plugin:enable()
         self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
         self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
         self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
+        self.frame:SetScript("OnMouseWheel", Plugin.OnMouseWheel)
         self.frame:EnableMouse(true)
+        self.frame:EnableMouseWheel(true)
     end
     self.frame:Show()
 end
@@ -1643,6 +1660,11 @@ function Plugin:applySettings()
     self:updateLabel()
     self:updateLayout(true)
     self:updateLDBCallbacks()
+    if InCombatLockdown() then
+        self:toggleMouse(not self.db.disableMouseInCombat)
+    else
+        self:toggleMouse(not self.db.disableMouseOutOfCombat)
+    end
 end
 
 function Plugin:setIcon()
@@ -1854,7 +1876,7 @@ function Bazooka:PLAYER_REGEN_DISABLED()
     end
     for name, plugin in pairs(self.plugins) do
         if plugin.db.enabled then
-            plugin.frame:EnableMouse(not plugin.db.disableMouseInCombat)
+            plugin:toggleMouse(not plugin.db.disableMouseInCombat)
         end
     end
 end
@@ -1874,7 +1896,7 @@ function Bazooka:PLAYER_REGEN_ENABLED()
     end
     for name, plugin in pairs(self.plugins) do
         if plugin.db.enabled then
-            plugin.frame:EnableMouse(not plugin.db.disableMouseOutOfCombat)
+            plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
         end
     end
 end
