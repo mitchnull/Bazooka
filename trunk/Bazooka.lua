@@ -350,6 +350,10 @@ local function setupTooltip(owner, ttFrame, dx, dy)
     return ttFrame
 end
 
+local function stripColors(text)
+    return tostring(text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+end
+
 ---------------------------------
 
 -- BEGIN Bar stuff
@@ -1680,39 +1684,83 @@ function Plugin:setText()
         if self.db.showText and dataobj.text then
             if self.db.showValue and dataobj.value then
                 if self.db.showSuffix and dataobj.suffix then
-                    self.text:SetFormattedText("|c%s%s:|r %s %s |c%s%s|r", self.labelColorHex, self.label, dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                    if self.db.stripColors then
+                        self.text:SetFormattedText("|c%s%s:|r %s %s |c%s%s|r", self.labelColorHex, stripColors(self.label), stripColors(dataobj.text), stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
+                    else
+                        self.text:SetFormattedText("|c%s%s:|r %s %s |c%s%s|r", self.labelColorHex, self.label, dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                    end
                 else
-                    self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.text, dataobj.value)
+                    if self.db.stripColors then
+                        self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, stripColors(self.label), stripColors(dataobj.text), stripColors(dataobj.value))
+                    else
+                        self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.text, dataobj.value)
+                    end
                 end
             else
-                self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
+                if self.db.stripColors then
+                    self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, stripColors(self.label), stripColors(dataobj.text))
+                else
+                    self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
+                end
             end
         elseif self.db.showValue and dataobj.value then
             if self.db.showSuffix and dataobj.suffix then
-                self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, self.label, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                if self.db.stripColors then
+                    self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, stripColors(self.label), stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
+                else
+                    self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, self.label, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                end
             else
-                self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.value)
+                if self.db.stripColors then
+                    self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, stripColors(self.label), stripColors(dataobj.value))
+                else
+                    self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.value)
+                end
             end
         else
-            self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
+            if self.db.stripColors then
+                self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, stripColors(self.label))
+            else
+                self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
+            end
         end
         self:updateLayout()
     elseif self.db.showText and dataobj.text then
         if self.db.showValue and dataobj.value then
             if self.db.showSuffix and dataobj.suffix then
-                self.text:SetFormattedText("%s %s |c%s%s|r", dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                if self.db.stripColors then
+                    self.text:SetFormattedText("%s %s |c%s%s|r", stripColors(dataobj.text), stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
+                else
+                    self.text:SetFormattedText("%s %s |c%s%s|r", dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
+                end
             else
-                self.text:SetFormattedText("%s %s", dataobj.text, dataobj.value)
+                if self.db.stripColors then
+                    self.text:SetFormattedText("%s %s", stripColors(dataobj.text), stripColors(dataobj.value))
+                else
+                    self.text:SetFormattedText("%s %s", dataobj.text, dataobj.value)
+                end
             end
         else
-            self.text:SetFormattedText("%s", dataobj.text)
+            if self.db.stripColors then
+                self.text:SetFormattedText("%s", stripColors(dataobj.text))
+            else
+                self.text:SetFormattedText("%s", dataobj.text)
+            end
         end
         self:updateLayout()
     elseif self.db.showValue and dataobj.value then
         if self.db.showSuffix and dataobj.suffix then
-            self.text:SetFormattedText("%s |c%s%s|r", dataobj.value, self.suffixColorHex, dataobj.suffix)
+            if self.db.stripColors then
+                self.text:SetFormattedText("%s |c%s%s|r", stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
+            else
+                self.text:SetFormattedText("%s |c%s%s|r", dataobj.value, self.suffixColorHex, dataobj.suffix)
+            end
         else
-            self.text:SetFormattedText("%s", dataobj.value)
+            if self.db.stripColors then
+                self.text:SetFormattedText("%s", stripColors(dataobj.value))
+            else
+                self.text:SetFormattedText("%s", dataobj.value)
+            end
         end
         self:updateLayout()
     elseif self.text then

@@ -635,7 +635,7 @@ local pluginOptionArgs = {
         type = 'toggle',
         name = L["Show value"],
         desc = function(info)
-            if info.handler.dataobj.value then
+            if info.handler.dataobj and info.handler.dataobj.value then
                 return tostring(info.handler.dataobj.value)
             end
         end,
@@ -649,6 +649,12 @@ local pluginOptionArgs = {
             return not info.handler.db.enabled or not info.handler.db.showValue
         end,
         order = 152,
+    },
+    stripColors = {
+        type = 'toggle',
+        name = L["Strip colors"],
+        disabled = "isDisabled",
+        order = 153,
     },
     iconBorderClip = {
         type = 'range',
