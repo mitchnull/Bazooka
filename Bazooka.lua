@@ -1252,6 +1252,15 @@ Plugin.OnClick = function(frame, ...)
     end
 end
 
+Plugin.OnDoubleClick = function(frame, ...)
+    local self = frame.bzkPlugin
+    if self.dataobj.OnDoubleClick then
+        self.dataobj.OnDoubleClick(frame, ...)
+    elseif self.dataobj.OnClick then
+        self.dataobj.OnClick(frame, ...)
+    end
+end
+
 Plugin.OnUpdate = function(frame)
     local x, y = getScaledCursorPosition()
     if x ~= Bazooka.lastX or y ~= Bazooka.lastY then
@@ -1578,10 +1587,14 @@ function Plugin:enable()
         self.frame:SetScript("OnEnter", Plugin.OnEnter)
         self.frame:SetScript("OnLeave", Plugin.OnLeave)
         self.frame:SetScript("OnClick", Plugin.OnClick)
+        self.frame:SetScript("OnDoubleClick", Plugin.OnDoubleClick)
         self.frame:SetScript("OnMouseDown", Plugin.OnMouseDown)
         self.frame:SetScript("OnDragStart", Plugin.OnDragStart)
         self.frame:SetScript("OnDragStop", Plugin.OnDragStop)
         self.frame:SetScript("OnMouseWheel", Plugin.OnMouseWheel)
+        if self.dataobj.OnReceiveDrag then
+            self.frame:SetScript("OnReceiveDrag", self.dataobj.OnReceiveDrag)
+        end
         self.frame:EnableMouse(true)
         self.frame:EnableMouseWheel(true)
     end
