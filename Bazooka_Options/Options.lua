@@ -8,6 +8,7 @@ local AceDBOptions = LibStub("AceDBOptions-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(Bazooka.OptionsAppName)
 local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
+local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
 
 local MinFontSize = 5
 local MaxFontSize = 30
@@ -1339,6 +1340,7 @@ do
                 type = 'toggle',
                 name = L["Adjust frames"],
                 order = 30,
+                disabled = not Jostle,
             },
             enableHL = {
                 type = 'toggle',
