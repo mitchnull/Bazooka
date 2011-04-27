@@ -1847,9 +1847,6 @@ function Bazooka:OnInitialize()
     self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDisable")
     self:profileChanged()
     self:setupDummyOptions()
-    if self.setupDBOptions then -- trickery to make it work with a straight checkout
-        self:setupDBOptions()
-    end
 end
 
 function Bazooka:OnEnable(first)
