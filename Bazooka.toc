@@ -20,8 +20,3 @@ embeds.xml
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 localizations\localizations.xml
 Bazooka.lua
-#@do-not-package@
-Bazooka_Options\embeds.xml
-Bazooka_Options\localizations\localizations.xml
-Bazooka_Options\Options.lua
-#@end-do-not-package@

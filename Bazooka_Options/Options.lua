@@ -46,6 +46,7 @@ local FrameStratas = {
     ["HIGH"] = L["High"],
     ["MEDIUM"] = L["Medium"],
     ["LOW"] = L["Low"],
+    ["BACKGROUND"] = L["Background"],
 }
 
 local TextureTypes = {
@@ -365,7 +366,7 @@ local barOptionArgs = {
                 type = "range",
                 order = 17,
                 name = L["Border thickness"],
-                min = 1, max = 16, step = 1,
+                min = 1, max = 64, step = 1,
             },
             bgColor = {
                 type = "color",
@@ -1442,23 +1443,16 @@ do
     self.barOpts = registerSubOptions('bars', barOptions)
     self.pluginOpts = registerSubOptions('plugins', pluginOptions)
     self.bulkConfigOpts = registerSubOptions('bulk-config', bulkConfigOptions)
-    self.setupDBOptions = function(self)
-        self:updateBarOptions()
-        self:updatePluginOptions()
-        local profiles =  AceDBOptions:GetOptionsTable(self.db)
-        if LibDualSpec then
-            LibDualSpec:EnhanceOptions(profiles, self.db)
-        end
-        profiles.disabled = function()
-            lastConfiguredOpts = self.profiles
-            return false
-        end
-        self.profiles = registerSubOptions('profiles', profiles)
+    self:updateBarOptions()
+    self:updatePluginOptions()
+    local profiles =  AceDBOptions:GetOptionsTable(self.db)
+    if LibDualSpec then
+        LibDualSpec:EnhanceOptions(profiles, self.db)
     end
-
-    if self.db then -- trickery to make it work with a straight checkout
-        self:setupDBOptions()
-        self.setupDBOptions = nil
+    profiles.disabled = function()
+        lastConfiguredOpts = self.profiles
+        return false
     end
+    self.profiles = registerSubOptions('profiles', profiles)
 end
 
