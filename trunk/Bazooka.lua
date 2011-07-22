@@ -168,7 +168,7 @@ local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
 local MaxTweakPts = 5
 
 Bazooka = LibStub("AceAddon-3.0"):NewAddon(Bazooka, AppName, "AceEvent-3.0")
-_G['Bazooka'] = Bazooka
+_G.Bazooka = Bazooka
 Bazooka:SetDefaultModuleState(false)
 
 Bazooka.version = VERSION
