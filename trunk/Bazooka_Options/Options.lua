@@ -1,3 +1,4 @@
+local OptionsAppName = ...
 local Bazooka = Bazooka
 local Bar = Bazooka.Bar
 local Plugin = Bazooka.Plugin
@@ -6,7 +7,7 @@ local Defaults = Bazooka.Defaults
 local ACR = LibStub("AceConfigRegistry-3.0")
 local AceDBOptions = LibStub("AceDBOptions-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
-local L = LibStub("AceLocale-3.0"):GetLocale(Bazooka.OptionsAppName)
+local L = LibStub("AceLocale-3.0"):GetLocale(OptionsAppName)
 local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
 local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
 
