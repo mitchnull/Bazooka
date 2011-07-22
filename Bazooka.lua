@@ -8,7 +8,7 @@ Description: Bazooka is a FuBar like broker display
 License: Public Domain
 ]]
 
-local AppName = "Bazooka"
+local AppName, Bazooka = ...
 local OptionsAppName = AppName .. "_Options"
 local VERSION = AppName .. "-@project-version@"
 --@debug@
@@ -167,13 +167,12 @@ local MinDropPlaceHLDX = 3
 local BzkDialogDisablePlugin = 'BAZOOKA_DISABLE_PLUGIN'
 local MaxTweakPts = 5
 
-Bazooka = LibStub("AceAddon-3.0"):NewAddon(AppName, "AceEvent-3.0")
-local Bazooka = Bazooka
+Bazooka = LibStub("AceAddon-3.0"):NewAddon(Bazooka, AppName, "AceEvent-3.0")
+_G['Bazooka'] = Bazooka
 Bazooka:SetDefaultModuleState(false)
 
 Bazooka.version = VERSION
 Bazooka.AppName = AppName
-Bazooka.OptionsAppName = OptionsAppName
 Bazooka.Defaults = Defaults
 
 Bazooka.draggedFrame = nil
