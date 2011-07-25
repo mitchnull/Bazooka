@@ -1551,7 +1551,11 @@ function Plugin:updateLayout(forced)
             end
             local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
             self.text:ClearAllPoints()
-            self.text:SetPoint(align, self.frame, align, offset, 0)
+            if align == "LEFT" then
+                self.text:SetPoint(align, self.frame, align, offset, 0)
+            else
+                self.text:SetPoint(align, self.frame, align, -offset, 0)
+            end
             self.text:SetJustifyH(align)
             w = offset + tw
         elseif iw > 0 then
