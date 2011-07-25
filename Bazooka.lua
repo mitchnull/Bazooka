@@ -156,6 +156,7 @@ local PluginDefaults = {
     overrideTooltipScale = false,
     tooltipScale = 1.0,
     iconBorderClip = 0.07,
+    alignment = "LEFT",
 }
 
 local Icon = [[Interface\AddOns\]] .. AppName .. [[\bzk_locked.tga]]
@@ -1525,17 +1526,22 @@ function Plugin:createIcon()
     local iconSize = BarDefaults.iconSize
     self.icon:SetWidth(iconSize)
     self.icon:SetHeight(iconSize)
-    self.icon:SetPoint("LEFT", self.frame, "LEFT", 0, 0)
 end
 
 function Plugin:createText()
     self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
     self.text:SetFont(Defaults.fontPath, BarDefaults.fontSize, BarDefaults.fontOutline)
     self.text:SetWordWrap(false)
-    self.text:SetJustifyH('LEFT');
 end
 
 function Plugin:updateLayout(forced)
+    local align = self.db.alignment or "LEFT"
+    self.text:ClearAllPoints()
+    if self.icon then
+        self.icon:ClearAllPoints()
+        self.icon:SetPoint(align, self.frame, align, 0, 0)
+    end
+
     local w = 0
     if self.db.showText or self.db.showValue or self.db.showLabel then
         local tw = self.text:GetStringWidth()
@@ -1545,7 +1551,8 @@ function Plugin:updateLayout(forced)
                 tw = self.db.maxTextWidth
             end
             local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
-            self.text:SetPoint("LEFT", self.frame, "LEFT", offset, 0)
+            self.text:SetPoint(align, self.frame, align, offset, 0)
+            self.text:SetJustifyH(align)
             w = offset + tw
         elseif iw > 0 then
             w = iw

@@ -55,6 +55,11 @@ local TextureTypes = {
     ["statusbar"] = L["Statusbar"],
 }
 
+local Alignments = {
+    ["LEFT"] = L["Left"],
+    ["RIGHT"] = L["Right"],
+}
+
 local BarNames = {
     [1] = Bazooka:getBarName(1),
 }
@@ -609,6 +614,12 @@ local pluginOptionArgs = {
             lastConfiguredOpts = Bazooka.pluginOpts
             return false
         end,
+    },
+    alignment = {
+        type = 'select',
+        name = L["Alignment"],
+        values = Alignments,
+        order = 110,
     },
     showIcon = {
         type = 'toggle',
