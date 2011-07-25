@@ -3,6 +3,7 @@ local AL = LibStub("AceLocale-3.0")
 local L = AL:NewLocale(AppName, "enUS", true)
 
 L["Adjust frames"] = "Adjust frames"
+L["Alignment"] = "Alignment"
 L["Apply"] = "Apply"
 L["Apply selected options to selected bars?"] = "Apply selected options to selected bars?"
 L["Apply selected options to selected plugins?"] = "Apply selected options to selected plugins?"
