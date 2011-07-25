@@ -1536,7 +1536,6 @@ end
 
 function Plugin:updateLayout(forced)
     local align = self.db.alignment or "LEFT"
-    self.text:ClearAllPoints()
     if self.icon then
         self.icon:ClearAllPoints()
         self.icon:SetPoint(align, self.frame, align, 0, 0)
@@ -1551,6 +1550,7 @@ function Plugin:updateLayout(forced)
                 tw = self.db.maxTextWidth
             end
             local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
+            self.text:ClearAllPoints()
             self.text:SetPoint(align, self.frame, align, offset, 0)
             self.text:SetJustifyH(align)
             w = offset + tw
