@@ -69,7 +69,7 @@ local Defaults =  {
 --  edgeTexture = "Blizzard Tooltip",
 --  edgeFile = [[Interface\Tooltips\UI-Tooltip-Border]],
     edgeTexture = "None",
-    edgeFile = false,
+    edgeFile = [[]],
     fontName = "Friz Quadrata TT",
     fontPath = GameFontNormal:GetFont(),
     minFrameWidth = 10,
@@ -1108,14 +1108,10 @@ function Bar:applyBGSettings()
             bg.bgFile = Defaults.bgFile
             LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
-        if self.db.bgBorderTexture == 'None' then -- hack for beta green thing
-            bg.edgeFile = false
-        else
-            bg.edgeFile = LSM:Fetch("border", self.db.bgBorderTexture, true)
-            if not bg.edgeFile then
-                bg.edgeFile = Defaults.edgeFile
-                LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
-            end
+        bg.edgeFile = LSM:Fetch("border", self.db.bgBorderTexture, true)
+        if not bg.edgeFile then
+            bg.edgeFile = Defaults.edgeFile
+            LSM.RegisterCallback(self, "LibSharedMedia_Registered", "mediaUpdate")
         end
     else
         bg.bgFile = Defaults.bgFile
