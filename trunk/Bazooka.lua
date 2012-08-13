@@ -1379,21 +1379,20 @@ function Plugin:showTip(modifierKey, modifierState)
         Bazooka.tipOwner:hideTip(true)
     end
     Bazooka.tipOwner = self
-    -- hard manualTooltip toggle
-    --[[
-    if self.db.manualTooltip then
-        if not IsModifierKeyDown() then
+    if Bazooka.db.profile.manualTooltipToggle then
+        if self.db.manualTooltip then
+            if not IsModifierKeyDown() then
+                return
+            end
+        elseif self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
             return
         end
-    elseif self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
-        return
-    end
-    ]]
-    -- soft manualTooltip toggle 
-    if not (self.db.manualTooltip and IsModifierKeyDown()) 
-            and not (modifierKey and origTipType) 
-            and (self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown())) then
-        return
+    else
+        if not (self.db.manualTooltip and IsModifierKeyDown()) 
+                and not (modifierKey and origTipType) 
+                and (self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown())) then
+            return
+        end
     end
     if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
         self.tipType = 'simple'
