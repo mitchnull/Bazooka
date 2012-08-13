@@ -1356,6 +1356,12 @@ do
                 name = L["Enable simple tooltips"],
                 order = 20,
             },
+            manualTooltipToggle = {
+                type = 'toggle',
+                name = L["Manual tooltip toggle mode"],
+                desc = L["Set if you want to hide the plugin tooltip when releasing the modifier key in manual tooltip mode"],
+                order = 25,
+            },
             adjustFrames = {
                 type = 'toggle',
                 name = L["Adjust frames"],
