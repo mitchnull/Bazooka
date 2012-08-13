@@ -40,6 +40,7 @@ end
 
 local _G = _G
 local IsAltKeyDown = _G.IsAltKeyDown
+local IsModifierKeyDown = _G.IsModifierKeyDown
 local GetCursorPosition = _G.GetCursorPosition
 local GetAddOnInfo = _G.GetAddOnInfo
 local GetScreenWidth = _G.GetScreenWidth
@@ -1368,18 +1369,32 @@ function Plugin:resetTipScale(tt)
     end
 end
 
-function Plugin:showTip()
+function Plugin:showTip(modifierKey, modifierState)
     if Bazooka.checkForceHide then
         Bazooka.checkForceHide:forceHideFrames(UIParent:GetChildren())
         Bazooka.checkForceHide = nil
     end
-    if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
-        return
-    end
+    local origTipType = self.tipType
     if Bazooka.tipOwner then
         Bazooka.tipOwner:hideTip(true)
     end
     Bazooka.tipOwner = self
+    -- hard manualTooltip toggle
+    --[[
+    if self.db.manualTooltip then
+        if not IsModifierKeyDown() then
+            return
+        end
+    elseif self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
+        return
+    end
+    ]]
+    -- soft manualTooltip toggle 
+    if not (self.db.manualTooltip and IsModifierKeyDown()) 
+            and not (modifierKey and origTipType) 
+            and (self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown())) then
+        return
+    end
     if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
         self.tipType = 'simple'
         local tt = setupTooltip(self.frame)
@@ -1438,6 +1453,10 @@ function Plugin:hideTip(force)
     if not Bazooka.tipOwner then
         return
     end
+    Bazooka.tipOwner = nil
+    if not self.tipType then
+        return
+    end
     if self.tipType == 'simple' then
         local tt = setupTooltip()
         tt:Hide()
@@ -1459,6 +1478,7 @@ function Plugin:hideTip(force)
         tt:Hide()
         self:resetTipScale(tt)
     end
+    self.tipType = nil
     if self.db.forceHideTip then
         if force then
             self:forceHideFrames(UIParent:GetChildren())
@@ -1466,8 +1486,6 @@ function Plugin:hideTip(force)
             Bazooka.checkForceHide = self
         end
     end
-    Bazooka.tipOwner = nil
-    self.tipType = nil
 end
 
 function Plugin:getDropPlace(x, y)
@@ -1871,6 +1889,7 @@ function Bazooka:OnEnable(first)
     self:init()
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
+    self:RegisterEvent("MODIFIER_STATE_CHANGED")
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
 end
 
@@ -1925,6 +1944,13 @@ function Bazooka:PLAYER_REGEN_ENABLED()
         if plugin.db.enabled then
             plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
         end
+    end
+end
+
+function Bazooka:MODIFIER_STATE_CHANGED(event, key, state)
+    local tipOwner = Bazooka.tipOwner
+    if tipOwner and (tipOwner.db.manualTooltip or Bazooka.db.profile.simpleTip) then
+        tipOwner:showTip(key, state)
     end
 end
 
