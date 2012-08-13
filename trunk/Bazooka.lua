@@ -1394,7 +1394,7 @@ function Plugin:showTip(modifierKey, modifierState)
             return
         end
     end
-    if Bazooka.db.profile.simpleTip and IsAltKeyDown() then
+    if Bazooka.db.profile.simpleTip and IsAltKeyDown() and not modifierKey then
         self.tipType = 'simple'
         local tt = setupTooltip(self.frame)
         tt:SetText(self.title)
