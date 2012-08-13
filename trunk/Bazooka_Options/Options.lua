@@ -696,6 +696,13 @@ local pluginOptionArgs = {
         disabled = "isDisabled",
         order = 190,
     },
+    manualTooltip = {
+        type = 'toggle',
+        name = L["Manual tooltip"],
+        desc = L["Show tooltip by pressing a modifier key"],
+        disabled = "isDisabled",
+        order = 195,
+    },
     disableTooltip = {
         type = 'toggle',
         name = L["Disable tooltip"],
