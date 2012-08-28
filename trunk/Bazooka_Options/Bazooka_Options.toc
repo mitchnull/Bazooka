@@ -1,4 +1,4 @@
-## Interface: 40300
+## Interface: 50001
 ## Title: Bazooka Options
 ## Author: mitch0
 ## Version: @project-version@
