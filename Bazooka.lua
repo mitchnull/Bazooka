@@ -59,6 +59,7 @@ local unpack = _G.unpack
 local wipe = _G.wipe
 local math = _G.math
 local GameTooltip = _G.GameTooltip
+local IsInPetBattle = _G.C_PetBattles.IsInBattle
 
 -- hard-coded config stuff
 
@@ -88,6 +89,7 @@ local BarDefaults = {
     fadeOutOfCombat = false,
     disableMouseInCombat = true,
     disableMouseOutOfCombat = false,
+    disableDuringPetBattle = true,
     fadeAlpha = 0.4,
 
     point = "TOP",
@@ -598,22 +600,23 @@ function Bar:fadeIn()
     self.fadeAnimGrp:Play()
 end
 
-function Bar:fadeOut(delay)
+function Bar:fadeOut(delay, fadeAlpha)
     if self.fadeAnim then
         self.fadeAnimGrp:Stop()
     end
+    fadeAlpha = fadeAlpha or self.db.fadeAlpha
     local alpha = self.frame:GetAlpha()
-    local change = alpha - self.db.fadeAlpha
+    local change = alpha - fadeAlpha
     if change < 0.05 then
-        self.frame:SetAlpha(self.db.fadeAlpha)
+        self.frame:SetAlpha(fadeAlpha)
         return
     end
-    local fullChange = 1.0 - self.db.fadeAlpha
+    local fullChange = 1.0 - fadeAlpha
     delay = delay or Bazooka.db.profile.fadeOutDelay
     local duration = Bazooka.db.profile.fadeOutDuration * change / fullChange
     if duration < 0.01 then
         if delay < 0.01 then
-            self.frame:SetAlpha(self.db.fadeAlpha)
+            self.frame:SetAlpha(fadeAlpha)
             return
         end
         duration = 0.01 -- if duration is too small (maybe only if 0, but meh) the animation doesn't work properly
@@ -1056,6 +1059,8 @@ function Bar:applySettings()
         else
             self.frame:SetAlpha(1.0)
         end
+    elseif IsInPetBattle() then
+        self:disableForPetBattle()
     else
         self:toggleMouse(not self.db.disableMouseOutOfCombat)
         if self.db.fadeOutOfCombat and not self.isMouseInside then
@@ -1190,6 +1195,18 @@ function Bar:attachBottom(prevBar)
     else
         self.frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", self.db.tweakLeft, self.db.tweakBottom)
         self.frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", self.db.tweakRight, self.db.tweakBottom)
+    end
+end
+
+function Bar:disableForPetBattle(useFadeAnim)
+    self:toggleMouse(false)
+    for name, plugin in pairs(self.allPlugins) do
+        plugin:toggleMouse(false)
+    end
+    if useFadeAnim then
+        self:fadeOut(0, 0)
+    else
+        self.frame:SetAlpha(0)
     end
 end
 
@@ -1886,8 +1903,10 @@ end
 function Bazooka:OnEnable(first)
     self.enabled = true
     self:init()
-    self:RegisterEvent("PLAYER_REGEN_DISABLED")
-    self:RegisterEvent("PLAYER_REGEN_ENABLED")
+    self:RegisterEvent("PLAYER_REGEN_DISABLED", "onEnteringCombat")
+    self:RegisterEvent("PLAYER_REGEN_ENABLED", "onLeavingCombat")
+    self:RegisterEvent("PET_BATTLE_OPENING_START", "onPetBattleStart")
+    self:RegisterEvent("PET_BATTLE_CLOSE", "onPetBattleEnd")
     self:RegisterEvent("MODIFIER_STATE_CHANGED")
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
 end
@@ -1908,7 +1927,7 @@ end
 
 -- BEGIN handlers
 
-function Bazooka:PLAYER_REGEN_DISABLED()
+function Bazooka:onEnteringCombat()
     self:lock()
     for i = 1, #self.bars do
         local bar = self.bars[i]
@@ -1926,7 +1945,7 @@ function Bazooka:PLAYER_REGEN_DISABLED()
     end
 end
 
-function Bazooka:PLAYER_REGEN_ENABLED()
+function Bazooka:onLeavingCombat()
     if not self.db.profile.locked then
         self:unlock()
     end
@@ -1944,6 +1963,23 @@ function Bazooka:PLAYER_REGEN_ENABLED()
             plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
         end
     end
+end
+
+function Bazooka:onPetBattleStart()
+    self:lock()
+    for i = 1, #self.bars do
+        local bar = self.bars[i]
+        if bar.db.disableDuringPetBattle then
+            bar:disableForPetBattle(true)
+        end
+    end
+end
+
+function Bazooka:onPetBattleEnd()
+    if InCombatLockdown() then
+        return
+    end
+    self:onLeavingCombat()
 end
 
 function Bazooka:MODIFIER_STATE_CHANGED(event, key, state)

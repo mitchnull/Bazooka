@@ -146,6 +146,11 @@ local barOptionArgs = {
         name = L["Disable mouse out of combat"],
         order = 40,
     },
+    disableDuringPetBattle = {
+        type = 'toggle',
+        name = L["Disable during pet battle"],
+        order = 45,
+    },
     fadeAlpha = {
         type = 'range',
         name = L["Fade opacity"],
