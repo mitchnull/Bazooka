@@ -146,3 +146,13 @@ if L then
 --@localization(locale="zhTW", format="lua_additive_table", handle-subnamespaces="none", namespace="opt", handle-unlocalized="ignore")@
 end
 
+L = AL:NewLocale(AppName, "ptBR")
+if L then
+--@localization(locale="ptBR", format="lua_additive_table", handle-subnamespaces="none", namespace="opt", handle-unlocalized="ignore")@
+end
+
+L = AL:NewLocale(AppName, "itIT")
+if L then
+--@localization(locale="itIT", format="lua_additive_table", handle-subnamespaces="none", namespace="opt", handle-unlocalized="ignore")@
+end
+
