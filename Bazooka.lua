@@ -1622,9 +1622,6 @@ function Plugin:updateLayout(forced)
             self.bar:updateWidth()
         end
     end
-    if EnableOpacityWorkaround then
-        self.frame:SetAlpha(self.frame:GetAlpha())
-    end
 end
 
 function Plugin:enable()
