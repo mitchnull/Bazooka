@@ -1069,8 +1069,10 @@ function Bar:applySettings()
         self:toggleMouse(not self.db.disableMouseInCombat)
         if self.db.fadeInCombat and not self.isMouseInside then
             self.frame:SetAlpha(self.db.fadeAlpha)
+            self:fadeOut(0)
         else
             self.frame:SetAlpha(1.0)
+            self:fadeIn()
         end
     elseif IsInPetBattle() then
         self:disableForPetBattle()
@@ -1078,8 +1080,10 @@ function Bar:applySettings()
         self:toggleMouse(not self.db.disableMouseOutOfCombat)
         if self.db.fadeOutOfCombat and not self.isMouseInside then
             self.frame:SetAlpha(self.db.fadeAlpha)
+            self:fadeOut(0)
         else
             self.frame:SetAlpha(1.0)
+            self:fadeIn()
         end
     end
 end
@@ -1220,6 +1224,7 @@ function Bar:disableForPetBattle(useFadeAnim)
         self:fadeOut(0, 0)
     else
         self.frame:SetAlpha(0)
+        self:fadeOut(0, 0)
     end
 end
 
