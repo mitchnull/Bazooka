@@ -571,6 +571,15 @@ function Bar:fadeIn()
     if self.fadeAnim then
         self.fadeAnimGrp:Stop()
     end
+    if self.isHidden then
+        -- force text update on plugins, the updates were disabled
+        self.isHidden = nil
+        for name, plugin in pairs(self.allPlugins) do
+            if plugin.text then
+                plugin:setText()
+            end
+        end
+    end
     local alpha = self.frame:GetAlpha()
     local change = 1.0 - alpha
     if change < 0.05 then
@@ -605,6 +614,10 @@ function Bar:fadeOut(delay, fadeAlpha)
         self.fadeAnimGrp:Stop()
     end
     fadeAlpha = fadeAlpha or self.db.fadeAlpha
+    if fadeAlpha < 0.05 then
+        fadeAlpha = 0
+        self.isHidden = true -- this will disable text updates (see Plugin:setText() and Bar:fadeIn()), partial fix for ticket-37
+    end
     local alpha = self.frame:GetAlpha()
     local change = alpha - fadeAlpha
     if change < 0.05 then
@@ -1765,6 +1778,9 @@ function Plugin:setIconCoords()
 end
 
 function Plugin:setText()
+    if self.bar and self.bar.isHidden then
+        return
+    end
     local dataobj = self.dataobj
     if self.db.showLabel and self.label then
         if self.db.showText and dataobj.text then
