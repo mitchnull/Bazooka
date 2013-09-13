@@ -1,4 +1,4 @@
-## Interface: 50300
+## Interface: 50400
 ## Title: Bazooka
 ## Author: mitch0
 ## Version: @project-version@
