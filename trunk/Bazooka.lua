@@ -2544,3 +2544,4 @@ local bft = bottomFrame:CreateTexture()
 bft:SetAllPoints()
 bft:SetTexture(.8, 0.4, 0.2, 0.5)
 --]]
+
