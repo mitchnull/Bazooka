@@ -379,9 +379,15 @@ local barOptionArgs = {
                 name = L["Border thickness"],
                 min = 1, max = 64, step = 1,
             },
+            bgInset = {
+                type = "range",
+                order = 18,
+                name = L["Border inset"],
+                min = 0, max = 32, step = 1,
+            },
             bgColor = {
                 type = "color",
-                order = 18,
+                order = 19,
                 name = L["Background color"],
                 hasAlpha = true,
                 get = "getColorOption",
@@ -389,7 +395,7 @@ local barOptionArgs = {
             },
             bgBorderColor = {
                 type = "color",
-                order = 19,
+                order = 20,
                 name = L["Border color"],
                 hasAlpha = true,
                 get = "getColorOption",
@@ -525,6 +531,11 @@ function Bar:setOption(info, value)
         return
     end
     local origAttach = self.db.attach
+    if name == 'bgEdgeSize' then
+        if self.db.bgInset and self.db.bgInset == Bazooka:getInsetForEdgeSize(self.db.bgEdgeSize) then
+            self.db.bgInset = Bazooka:getInsetForEdgeSize(value)
+        end
+    end
     self.db[name] = value
     if AttachOptions[name] then
         if origAttach ~= self.db.attach then

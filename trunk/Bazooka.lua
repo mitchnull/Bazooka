@@ -1147,7 +1147,10 @@ function Bar:applyBGSettings()
     bg.tile = self.db.bgTile
     bg.tileSize = self.db.bgTileSize
     bg.edgeSize = (bg.edgeFile and bg.edgeFile ~= [[Interface\None]]) and self.db.bgEdgeSize or 0
-    local inset = math.floor(bg.edgeSize / 4)
+    if not self.db.bgInset then
+        self.db.bgInset = Bazooka:getInsetForEdgeSize(self.db.bgEdgeSize)
+    end
+    local inset = math.min(bg.edgeSize, self.db.bgInset)
     if inset ~= self.inset then
         self.inset = inset
         self:updateLayout()
@@ -2415,6 +2418,10 @@ function Bazooka:highlight(bar, area, pos)
     if bar then
         bar:highlight(area, pos)
     end
+end
+
+function Bazooka:getInsetForEdgeSize(edgeSize)
+    return math.floor(edgeSize / 4)
 end
 
 -- BEGIN LoD Options muckery
