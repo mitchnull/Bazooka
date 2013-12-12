@@ -103,6 +103,7 @@ L["Thick"] = "Thick"
 L["Tile background"] = "Tile background"
 L["Top"] = "Top"
 L["Tweak anchor positions"] = "Tweak anchor positions"
+L["Use label as title"] = "Use label as title"
 L["Width"] = "Width"
 
 -----------------------------------------------------------------------------

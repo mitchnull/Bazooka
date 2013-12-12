@@ -155,6 +155,7 @@ local PluginDefaults = {
     showText = true,
     showValue = false,
     showSuffix = false,
+    useLabelAsTitle = false,
     shrinkThreshold = 5,
     overrideTooltipScale = false,
     tooltipScale = 1.0,
@@ -1353,7 +1354,7 @@ Plugin.OnDragStop = function(frame)
         Bazooka:updatePluginOptions()
     else
         self:reattach()
-        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self.title)
+        Bazooka:openStaticDialog(BzkDialogDisablePlugin, self, self:getTitle())
     end
 end
 
@@ -1391,6 +1392,16 @@ function Plugin:New(name, dataobj, db)
     plugin.db = db
     plugin:applySettings()
     return plugin
+end
+
+function Plugin:getTitle()
+    if self.db.useLabelAsTitle and self.dataobj.label then
+        local title = stripColors(self.dataobj.label)
+        if title ~= "" then
+            return title
+        end
+    end
+    return self.title
 end
 
 function Plugin:setTipScale(tt)
@@ -1435,7 +1446,7 @@ function Plugin:showTip(modifierKey, modifierState)
     if Bazooka.db.profile.simpleTip and IsAltKeyDown() and not modifierKey then
         self.tipType = 'simple'
         local tt = setupTooltip(self.frame)
-        tt:SetText(self.title)
+        tt:SetText(self:getTitle())
         tt:Show()
         return
     end
@@ -1460,7 +1471,7 @@ function Plugin:showTip(modifierKey, modifierState)
         self.tipType = 'simple'
         local tt = setupTooltip(self.frame)
         self:setTipScale(tt)
-        tt:SetText(self.title)
+        tt:SetText(self:getTitle())
         tt:Show()
     end
 end

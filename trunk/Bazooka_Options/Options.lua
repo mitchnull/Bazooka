@@ -623,13 +623,18 @@ local pluginOptions = {
 local pluginOptionArgs = {
     enabled = {
         type = 'toggle',
-        width = 'full',
+--        width = 'full',
         name = L["Enabled"],
         order = 10,
         disabled = function()
             lastConfiguredOpts = Bazooka.pluginOpts
             return false
         end,
+    },
+    useLabelAsTitle = {
+        type = 'toggle',
+        name = L["Use label as title"],
+        order = 15,
     },
     alignment = {
         type = 'select',
@@ -799,7 +804,7 @@ function Plugin:getColoredTitle()
     return ("|T%s:0|t %s%s"):format(
         self.dataobj.staticIcon or (self.dataobj.icon and not self.dataobj.iconCoords) and self.dataobj.icon or "",
         self.db.enabled and "" or "|cffed1100",
-        self.title
+        self:getTitle()
     )
 end
 
@@ -822,11 +827,9 @@ function Plugin:setOption(info, value)
     end
     self.db[name] = value
     self:applySettings()
-    if name == 'enabled' then
+    if name == 'enabled' or name == 'useLabelAsTitle' then
         self:updateColoredTitle()
-        if Bazooka.db.global.sortDisabledLast then
-            Bazooka:updatePluginOrder()
-        end
+        Bazooka:updatePluginOrder()
     end
 end
 
@@ -857,14 +860,14 @@ end
 local sortedPlugins = {}
 
 local function comparePluginsByTitle(p1, p2)
-    return p1.title < p2.title
+    return p1:getTitle() < p2:getTitle()
 end
 
 local function comparePluginsByTitleDisabledLast(p1, p2)
     if p1.db.enabled then
-        return not p2.db.enabled or p1.title < p2.title
+        return not p2.db.enabled or p1:getTitle() < p2:getTitle()
     else 
-        return not p2.db.enabled and p1.title < p2.title
+        return not p2.db.enabled and p1:getTitle() < p2:getTitle()
     end
 end
 
