@@ -655,7 +655,7 @@ function Bar:enable(id, db)
             self.frame.GetAlpha = Bar.getAlphaByParts
         end
         self.frame:EnableMouse(true)
-        self.frame:SetClampedToScreen(true)
+        self.frame:SetClampedToScreen(false)
         self.frame:SetClampRectInsets(MaxTweakPts, -MaxTweakPts, -MaxTweakPts, MaxTweakPts)
         self.frame:RegisterForDrag("LeftButton", "RightButton")
         self.frame:SetScript("OnEnter", Bar.OnEnter)
@@ -2163,6 +2163,8 @@ function Bazooka:attachBar(bar, attach, pos)
         pos = self:attachBarImpl(bar, attach, pos, "attachBottom")
     else
         pos = 0
+        bar.frame:SetWidth(bar.db.frameWidth)
+        bar.frame:SetHeight(bar.db.frameHeight)
         bar.frame:SetPoint(bar.db.point, UIParent, bar.db.relPoint, bar.db.x, bar.db.y)
     end
     bar.db.pos = pos
