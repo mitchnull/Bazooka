@@ -834,7 +834,12 @@ function Plugin:setOption(info, value)
 end
 
 function Plugin:getOption(info)
-    return self.db[info[#info]]
+    local name = info[#info]
+    local value = self.db[name]
+    if name == 'maxTextWidth' and value then
+        value = tostring(value)
+    end
+    return value
 end
 
 function Plugin:isDisabled()
