@@ -568,11 +568,10 @@ function Bar:createFadeAnim()
     end
 end
 
-function Bar:fadeIn()
-    if self.fadeAnim then
-        self.fadeAnimGrp:Stop()
-    end
-    if self.isHidden then
+function Bar:setFullyHidden(flag)
+    if flag then
+        self.isHidden = true
+    elseif self.isHidden then
         -- force text update on plugins, the updates were disabled
         self.isHidden = nil
         for name, plugin in pairs(self.allPlugins) do
@@ -581,6 +580,13 @@ function Bar:fadeIn()
             end
         end
     end
+end
+
+function Bar:fadeIn()
+    if self.fadeAnim then
+        self.fadeAnimGrp:Stop()
+    end
+    self:setFullyHidden(false)
     local alpha = self.frame:GetAlpha()
     local change = 1.0 - alpha
     if change < 0.05 then
@@ -617,7 +623,9 @@ function Bar:fadeOut(delay, fadeAlpha)
     fadeAlpha = fadeAlpha or self.db.fadeAlpha
     if fadeAlpha < 0.05 then
         fadeAlpha = 0
-        self.isHidden = true -- this will disable text updates (see Plugin:setText() and Bar:fadeIn()), partial fix for ticket-37
+        self:setFullyHidden(true) -- this will disable text updates (see Plugin:setText() and Bar:fadeIn()), partial fix for ticket-37
+    else
+        self:setFullyHidden(false)
     end
     local alpha = self.frame:GetAlpha()
     local change = alpha - fadeAlpha
