@@ -112,6 +112,7 @@ local BarDefaults = {
     font = Defaults.fontName,
     fontSize = 12,
     fontOutline = "",
+    fontShadow = true,
 
     iconSize = 16,
 
@@ -1586,6 +1587,11 @@ function Plugin:globalSettingsChanged()
         fontOutline = fontOutline or ""
         if dbFontPath ~= fontPath or bdb.fontSize ~= fontSize or bdb.fontOutline ~= fontOutline then
             self.text:SetFont(dbFontPath, self.fontSize, bdb.fontOutline)
+        end
+        if bdb.fontShadow then
+            self.text:SetShadowOffset(1, -1)
+        else
+            self.text:SetShadowOffset(0, 0)
         end
         self.text:SetTextColor(bdb.textColor.r, bdb.textColor.g, bdb.textColor.b, bdb.textColor.a)
         self:setText()

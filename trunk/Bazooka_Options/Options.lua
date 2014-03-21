@@ -278,6 +278,20 @@ local barOptionArgs = {
         step = 1,
         order = 120,
     },
+    pluginOpacity = {
+        type = 'range',
+        name = L["Opacity"],
+        order = 123,
+        min = 0,
+        max = 1.0,
+        isPercent = true,
+        step = 0.01,
+    },
+    fontShadow = {
+        type = 'toggle',
+        name = L['Font shadow'],
+        order = 126,
+    },
 
     labelColor = {
         type = 'color',
@@ -299,15 +313,6 @@ local barOptionArgs = {
         order = 150,
         get = "getColorOption",
         set = "setColorOption",
-    },
-    pluginOpacity = {
-        type = 'range',
-        name = L["Opacity"],
-        order = 155,
-        min = 0,
-        max = 1.0,
-        isPercent = true,
-        step = 0.01,
     },
 
     bgHeader = {
