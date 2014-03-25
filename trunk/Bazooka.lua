@@ -567,6 +567,13 @@ Bar.fixGradientOnSizeChanged = function(frame, w, h)
 end
 -- END EnableGradientWorkaround 
 
+Bar.initialOnUpdateFixFontMetricHack = function(frame)
+    -- fix miscalculated font metrics
+    local self = frame.bzkBar
+    self:globalSettingsChanged()
+    frame:SetScript("OnUpdate", nil)
+end
+
 function Bar:New(id, db)
     local bar = setmetatable({}, Bar)
     bar:enable(id, db)
@@ -685,6 +692,7 @@ function Bar:enable(id, db)
     if not self.frame then
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
         self.frame.bzkBar = self
+        self.frame:SetScript("OnUpdate", Bar.initialOnUpdateFixFontMetricHack)
         if EnableOpacityWorkaround then
             self.frame.bzkAlpha = self.frame:GetAlpha()
             self.frame.SetAlpha = Bar.setAlphaByParts
