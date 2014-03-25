@@ -24,7 +24,10 @@ local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 -- internal vars
 
 -- Remove all related ifs when the opacity setting for embedded icons gets fixed
-local EnableOpacityWorkaround = true
+local EnableOpacityWorkaround = false -- loaded from global options
+-- Remove all related ifs when the setting for gradient background gets fixed
+local EnableGradientWorkaround = true
+
 local _ -- throwaway
 local uiScale = 1.0 -- just to be safe...
 
@@ -34,6 +37,16 @@ end
 
 local function colorToHex(color)
     return ("%02x%02x%02x%02x"):format((color.a and color.a * 255 or 255), color.r*255, color.g*255, color.b*255)   
+end
+
+local function getTexture(textureName, region, ...)
+    if not region then
+        return
+    end
+    if region.GetTexture and region:GetTexture() == textureName then
+        return region
+    end
+    return getTexture(textureName, ...)
 end
 
 -- cached stuff
@@ -137,6 +150,7 @@ local BarDefaults = {
     bgTileSize = 32,
     bgEdgeSize = 16,
     bgColor = makeColor(0, 0, 0, 1.0),
+    bgGradientColor = makeColor(0, 0, 0, 0),
     bgBorderColor = makeColor(0.8, 0.6, 0.0, 1.0),
 }
 local PluginDefaults = {
@@ -529,7 +543,11 @@ Bar.setAlphaByParts = function(frame, alpha)
     frame.bzkAlpha = alpha
     local self = frame.bzkBar
     if self.db.bgEnabled then
-        self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha)
+        if self.bgt then
+            self:setGradientBg()
+        else
+            self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha)
+        end
         self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a * alpha)
     end
     for name, plugin in pairs(self.allPlugins) do
@@ -541,6 +559,13 @@ Bar.getAlphaByParts = function(frame)
     return frame.bzkAlpha
 end
 -- END EnableOpacityWorkaround 
+
+-- BEGIN EnableGradientWorkaround 
+Bar.fixGradientOnSizeChanged = function(frame, w, h)
+    local self = frame.bzkBar
+    self:setGradientBg()
+end
+-- END EnableGradientWorkaround 
 
 function Bar:New(id, db)
     local bar = setmetatable({}, Bar)
@@ -661,6 +686,7 @@ function Bar:enable(id, db)
         self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
         self.frame.bzkBar = self
         if EnableOpacityWorkaround then
+            self.frame.bzkAlpha = self.frame:GetAlpha()
             self.frame.SetAlpha = Bar.setAlphaByParts
             self.frame.GetAlpha = Bar.getAlphaByParts
         end
@@ -1128,6 +1154,17 @@ function Bar:toggleMouse(flag)
     end
 end
 
+function Bar:setGradientBg()
+    if self.bgt then
+        if EnableOpacityWorkaround then
+            local alpha = self.frame.bzkAlpha
+            self.bgt:SetGradientAlpha(self.db.bgGradient, self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha, self.db.bgGradientColor.r, self.db.bgGradientColor.g, self.db.bgGradientColor.b, self.db.bgGradientColor.a * alpha)
+        else
+            self.bgt:SetGradientAlpha(self.db.bgGradient, self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a, self.db.bgGradientColor.r, self.db.bgGradientColor.g, self.db.bgGradientColor.b, self.db.bgGradientColor.a)
+        end
+    end
+end
+
 function Bar:applyBGSettings()
     if not self.db.bgEnabled then
         self.frame:SetBackdrop(nil)
@@ -1172,6 +1209,18 @@ function Bar:applyBGSettings()
     self.frame:SetBackdrop(bg)
     self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a)
     self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a)
+    if self.db.bgGradient and self.db.bgGradient ~= "" and self.db.bgGradientColor then
+        self.bgt = getTexture(bg.bgFile, self.frame:GetRegions())
+        self:setGradientBg()
+        if EnableGradientWorkaround then
+            self.frame:SetScript("OnSizeChanged", Bar.fixGradientOnSizeChanged)
+        end
+    else
+        self.bgt = nil
+        if EnableGradientWorkaround then
+            self.frame:SetScript("OnSizeChanged", nil)
+        end
+    end
 end
 
 function Bar:applyFontSettings()
@@ -1675,6 +1724,7 @@ function Plugin:enable()
         self.frame = CreateFrame("Button", "BazookaPlugin_" .. self.name, UIParent)
         self.frame.bzkPlugin = self
         if EnableOpacityWorkaround then
+            self.frame.bzkAlpha = self.frame:GetAlpha()
             self.frame.SetAlpha = Plugin.setAlphaByParts
             self.frame.GetAlpha = Plugin.getAlphaByParts
         end

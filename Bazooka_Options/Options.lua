@@ -37,6 +37,18 @@ local tostring = tostring
 local tinsert = table.insert
 local tsort = table.sort
 
+local Gradients = {
+    [""] = L["None"],
+    ["HORIZONTAL"] = L["Horizontal"],
+    ["VERTICAL"] = L["Vertical"],
+}
+
+local Gradients = {
+    [""] = L["None"],
+    ["HORIZONTAL"] = L["Horizontal"],
+    ["VERTICAL"] = L["Vertical"],
+}
+
 local FontOutlines = {
     [""] = L["None"],
     ["OUTLINE"] = L["Normal"],
@@ -402,6 +414,20 @@ local barOptionArgs = {
                 type = "color",
                 order = 20,
                 name = L["Border color"],
+                hasAlpha = true,
+                get = "getColorOption",
+                set = "setColorOption",
+            },
+            bgGradient = {
+                type = "select",
+                order = 30,
+                name = L["Gradient"],
+                values = Gradients,
+            },
+            bgGradientColor = {
+                type = "color",
+                order = 31,
+                name = L["Gradient color"],
                 hasAlpha = true,
                 get = "getColorOption",
                 set = "setColorOption",
