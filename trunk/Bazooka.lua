@@ -1553,11 +1553,13 @@ function Plugin:forceHideFrames(frame, ...)
     if not frame then
         return
     end
-    if not frame.bzkPlugin then
-        -- we assume that if the frame is anchored to us, it's _only_ anchored to us
-        local _, relativeTo = frame:GetPoint()
-        if relativeTo == self.frame then
-            frame:Hide()
+    if not frame:IsForbidden() then
+        if not frame.bzkPlugin then
+            -- we assume that if the frame is anchored to us, it's _only_ anchored to us
+            local _, relativeTo = frame:GetPoint()
+            if relativeTo == self.frame then
+                frame:Hide()
+            end
         end
     end
     return self:forceHideFrames(...)
