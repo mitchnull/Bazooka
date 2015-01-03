@@ -224,6 +224,7 @@ local defaults = {
     global = {
         plugins = PluginDefaults,
         bars = BarDefaults,
+        autoApply = true,
     },
     profile = {
         locked = false,
