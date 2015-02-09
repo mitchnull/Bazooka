@@ -1490,14 +1490,14 @@ function Plugin:showTip(modifierKey, modifierState)
         Bazooka.checkForceHide:forceHideFrames(UIParent:GetChildren())
         Bazooka.checkForceHide = nil
     end
-    if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
-        return
-    end
     local origTipType = self.tipType
     if Bazooka.tipOwner then
         Bazooka.tipOwner:hideTip(true)
+        Bazooka.tipOwner = nil
     end
-    Bazooka.tipOwner = self
+    if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
+        return
+    end
     if self.db.manualTooltip then
         if Bazooka.db.profile.manualTooltipToggle then
             if not IsModifierKeyDown() then
@@ -1509,6 +1509,7 @@ function Plugin:showTip(modifierKey, modifierState)
             end
         end
     end
+    Bazooka.tipOwner = self
     if Bazooka.db.profile.simpleTip and IsAltKeyDown() and not modifierKey then
         self.tipType = 'simple'
         local tt = setupTooltip(self.frame)
