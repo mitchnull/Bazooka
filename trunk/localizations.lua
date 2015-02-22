@@ -3,7 +3,8 @@ local AL = LibStub("AceLocale-3.0")
 local L = AL:NewLocale(AppName, "enUS", true)
 
 L["|cffeda55fDrag|r to move the frame"] = "|cffeda55fDrag|r to move the frame"
-L["|cffeda55fLeft Click|r to lock/unlock frames"] = "|cffeda55fLeft Click|r to lock/unlock frames"
+L["|cffeda55fLeft Click|r to toggle marked bars"] = "|cffeda55fLeft Click|r to toggle marked bars"
+L["|cffeda55fShift Click|r to lock/unlock frames"] = "|cffeda55fShift Click|r to lock/unlock frames"
 L["|cffeda55fRight Click|r to open the configuration window"] = "|cffeda55fRight Click|r to open the configuration window"
 L["Disable %s plugin?"] = "Disable %s plugin?"
 L["Bar"] = "Bar"

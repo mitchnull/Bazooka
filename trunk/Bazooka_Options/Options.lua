@@ -134,13 +134,24 @@ local barOptionArgs = {
         values = FrameStratas,
         order = 5,
     },
-    fadeInCombat =  {
+    hidden = {
         type = 'toggle',
-        name = L["Fade in combat"],
+        name = L["Hidden"],
+        order = 6,
         disabled = function()
             lastConfiguredOpts = Bazooka.barOpts
             return false
         end,
+    },
+    marked = {
+        type = 'toggle',
+        name = L["Marked"],
+        desc = L["Marked bars can be toggled simultaneously by clicking the Bazooka icon or by the '/bazooka togglebars' slash command"],
+        order = 7,
+    },
+    fadeInCombat =  {
+        type = 'toggle',
+        name = L["Fade in combat"],
         order = 10,
     },
     fadeOutOfCombat =  {
