@@ -53,6 +53,7 @@ end
 
 local _G = _G
 local IsAltKeyDown = _G.IsAltKeyDown
+local IsShiftKeyDown = _G.IsShiftKeyDown
 local IsModifierKeyDown = _G.IsModifierKeyDown
 local GetCursorPosition = _G.GetCursorPosition
 local GetAddOnInfo = _G.GetAddOnInfo
@@ -73,6 +74,10 @@ local wipe = _G.wipe
 local math = _G.math
 local GameTooltip = _G.GameTooltip
 local IsInPetBattle = _G.C_PetBattles.IsInBattle
+local strtrim = _G.strtrim
+local strsub = _G.strsub
+local strlen = _G.strlen
+local strsplit = _G.strsplit
 
 -- hard-coded config stuff
 
@@ -98,6 +103,8 @@ local Defaults =  {
 }
 
 local BarDefaults = {
+    hidden = false,
+    marked = false,
     fadeInCombat = false,
     fadeOutOfCombat = false,
     disableMouseInCombat = true,
@@ -589,6 +596,7 @@ end
 function Bar:createFadeAnim()
     self.fadeAnimGrp = self.frame:CreateAnimationGroup()
     self.fadeAnim = self.fadeAnimGrp:CreateAnimation()
+    self.fadeAnim.bzkBar = self
     self.fadeAnim:SetScript("OnUpdate", function(anim)
         if not anim:IsDelaying() then
             anim:GetRegionParent():SetAlpha(anim.startAlpha + (anim.change * anim:GetSmoothProgress()))
@@ -597,6 +605,9 @@ function Bar:createFadeAnim()
     self.fadeAnim:SetScript("OnPlay", function(anim)
         anim.startAlpha = anim:GetRegionParent():GetAlpha()
     end)
+    self.fadeAnim:SetScript("OnFinished", function(anim, requested)
+        -- FIXME: schedule fadeOut if necessary
+    end)
     self.fadeAnim.SetChange = function(anim, change)
         anim.change = change
     end
@@ -604,10 +615,10 @@ end
 
 function Bar:setFullyHidden(flag)
     if flag then
-        self.isHidden = true
-    elseif self.isHidden then
+        self.isFullyHidden = true
+    elseif self.isFullyHidden then
         -- force text update on plugins, the updates were disabled
-        self.isHidden = nil
+        self.isFullyHidden = nil
         for name, plugin in pairs(self.allPlugins) do
             if plugin.text then
                 plugin:setText()
@@ -616,9 +627,19 @@ function Bar:setFullyHidden(flag)
     end
 end
 
-function Bar:fadeIn()
+local function calcFadeAnimDuration(change, fullChange, fullDuration)
+    if fullChange < 0.05 and fullChange > -0.05 then
+        return 0
+    end
+    return fullDuration * change / fullChange
+end
+
+function Bar:fadeIn(initAlpha)
     if self.fadeAnim then
         self.fadeAnimGrp:Stop()
+    end
+    if initAlpha then
+        self.frame:SetAlpha(initAlpha)
     end
     self:setFullyHidden(false)
     local alpha = self.frame:GetAlpha()
@@ -627,16 +648,11 @@ function Bar:fadeIn()
         self.frame:SetAlpha(1.0)
         return
     end
-    if alpha < self.db.fadeAlpha then -- better be safe
-        alpha = self.db.fadeAlpha
-        change = 1.0 - alpha
-        self.frame:SetAlpha(alpha)
-        if change < 0.05 then
-            return
-        end
-    end
     local fullChange = 1.0 - self.db.fadeAlpha
-    local duration = Bazooka.db.profile.fadeInDuration * change / fullChange
+    if alpha < self.db.fadeAlpha then
+        fullChange = 1.0
+    end
+    local duration = calcFadeAnimDuration(change, fullChange, Bazooka.db.profile.fadeInDuration)
     if duration < 0.01 then
         self.frame:SetAlpha(1.0)
         return
@@ -650,9 +666,12 @@ function Bar:fadeIn()
     self.fadeAnimGrp:Play()
 end
 
-function Bar:fadeOut(delay, fadeAlpha)
+function Bar:fadeOut(delay, fadeAlpha, initAlpha)
     if self.fadeAnim then
         self.fadeAnimGrp:Stop()
+    end
+    if initAlpha then
+        self.frame:SetAlpha(initAlpha)
     end
     fadeAlpha = fadeAlpha or self.db.fadeAlpha
     if fadeAlpha < 0.05 then
@@ -662,14 +681,21 @@ function Bar:fadeOut(delay, fadeAlpha)
         self:setFullyHidden(false)
     end
     local alpha = self.frame:GetAlpha()
-    local change = alpha - fadeAlpha
-    if change < 0.05 then
+    local change = fadeAlpha - alpha
+    if change < 0.05 and change > -0.05 then
         self.frame:SetAlpha(fadeAlpha)
         return
     end
-    local fullChange = 1.0 - fadeAlpha
+    local fullChange, fullDuration
+    if alpha < fadeAlpha then
+        fullChange = fadeAlpha
+        fullDuration = Bazooka.db.profile.fadeInDuration
+    else
+        fullChange = fadeAlpha - 1.0
+        fullDuration = Bazooka.db.profile.fadeOutDuration
+    end
     delay = delay or Bazooka.db.profile.fadeOutDelay
-    local duration = Bazooka.db.profile.fadeOutDuration * change / fullChange
+    local duration = calcFadeAnimDuration(change, fullChange, fullDuration)
     if duration < 0.01 then
         if delay < 0.01 then
             self.frame:SetAlpha(fadeAlpha)
@@ -682,7 +708,7 @@ function Bar:fadeOut(delay, fadeAlpha)
     end
     self.fadeAnim:SetStartDelay(delay)
     self.fadeAnim:SetDuration(duration)
-    self.fadeAnim:SetChange(-change)
+    self.fadeAnim:SetChange(change)
     self.fadeAnimGrp:Play()
 end
 
@@ -1099,6 +1125,21 @@ function Bar:setId(id)
     end
 end
 
+function Bar:toggleHidden(hiddenFlag)
+    if hiddenFlag == nil then
+        hiddenFlag = not self.db.hidden
+    end
+    if self.db.hidden == hiddenFlag then
+        return
+    end
+    self.db.hidden = hiddenFlag
+    if hiddenFlag then
+        self:disableAndHide()
+    else
+        self:enableAndShow()
+    end
+end
+
 function Bar:applySettings()
     if self.db.attach == 'none' then
         if self.db.frameWidth == 0 then
@@ -1110,26 +1151,10 @@ function Bar:applySettings()
     self.frame:SetFrameStrata(self.db.strata)
     self:applyFontSettings()
     self:applyBGSettings()
-    if InCombatLockdown() then
-        self:toggleMouse(not self.db.disableMouseInCombat)
-        if self.db.fadeInCombat and not self.isMouseInside then
-            self.frame:SetAlpha(self.db.fadeAlpha)
-            self:fadeOut(0)
-        else
-            self.frame:SetAlpha(1.0)
-            self:fadeIn()
-        end
-    elseif IsInPetBattle() then
-        self:disableForPetBattle()
+    if self.db.hidden then
+        self:disableAndHide(true)
     else
-        self:toggleMouse(not self.db.disableMouseOutOfCombat)
-        if self.db.fadeOutOfCombat and not self.isMouseInside then
-            self.frame:SetAlpha(self.db.fadeAlpha)
-            self:fadeOut(0)
-        else
-            self.frame:SetAlpha(1.0)
-            self:fadeIn()
-        end
+        self:enableAndShow(true)
     end
 end
 
@@ -1286,17 +1311,38 @@ function Bar:attachBottom(prevBar)
     end
 end
 
-function Bar:disableForPetBattle(useFadeAnim)
+function Bar:enableAndShow(skipFadeAnim)
+    if IsInPetBattle() and self.db.disableDuringPetBattle then
+        self:disableAndHide(skipFadeAnim)
+    elseif InCombatLockdown() then
+        self:toggleMouse(not self.db.disableMouseInCombat)
+        if self.db.fadeInCombat and not self.isMouseInside then
+            self:fadeOut(0, nil, skipFadeAnim and self.db.fadeAlpha or nil)
+        else
+            self:fadeIn(skipFadeAnim and 1.0 or nil)
+        end
+        for name, plugin in pairs(self.allPlugins) do
+            plugin:toggleMouse(not plugin.db.disableMouseInCombat)
+        end
+    else
+        self:toggleMouse(not self.db.disableMouseOutOfCombat)
+        if self.db.fadeOutOfCombat and not self.isMouseInside then
+            self:fadeOut(0, nil, skipFadeAnim and self.db.fadeAlpha or nil)
+        else
+            self:fadeIn(skipFadeAnim and 1.0 or nil)
+        end
+        for name, plugin in pairs(self.allPlugins) do
+            plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
+        end
+    end
+end
+
+function Bar:disableAndHide(skipFadeAnim)
     self:toggleMouse(false)
     for name, plugin in pairs(self.allPlugins) do
         plugin:toggleMouse(false)
     end
-    if useFadeAnim then
-        self:fadeOut(0, 0)
-    else
-        self.frame:SetAlpha(0)
-        self:fadeOut(0, 0)
-    end
+    self:fadeOut(0, 0, skipFadeAnim and 0)
 end
 
 Bazooka.Bar = Bar
@@ -1872,7 +1918,7 @@ function Plugin:setIconCoords()
 end
 
 function Plugin:setText()
-    if self.bar and self.bar.isHidden then
+    if self.bar and self.bar.isFullyHidden then
         return
     end
     local dataobj = self.dataobj
@@ -2041,16 +2087,16 @@ function Bazooka:onEnteringCombat()
     self:lock()
     for i = 1, #self.bars do
         local bar = self.bars[i]
-        bar:toggleMouse(not bar.db.disableMouseInCombat)
-        if bar.db.fadeInCombat and not bar.isMouseInside then
-            bar:fadeOut(0)
-        else
-            bar:fadeIn()
-        end
-    end
-    for name, plugin in pairs(self.plugins) do
-        if plugin.db.enabled then
-            plugin:toggleMouse(not plugin.db.disableMouseInCombat)
+        if not bar.db.hidden then
+            bar:toggleMouse(not bar.db.disableMouseInCombat)
+            if bar.db.fadeInCombat and not bar.isMouseInside then
+                bar:fadeOut(0)
+            else
+                bar:fadeIn()
+            end
+            for name, plugin in pairs(bar.allPlugins) do
+                plugin:toggleMouse(not plugin.db.disableMouseInCombat)
+            end
         end
     end
 end
@@ -2061,16 +2107,16 @@ function Bazooka:onLeavingCombat()
     end
     for i = 1, #self.bars do
         local bar = self.bars[i]
-        bar:toggleMouse(not bar.db.disableMouseOutOfCombat)
-        if bar.db.fadeOutOfCombat and not bar.isMouseInside then
-            bar:fadeOut(0)
-        else
-            bar:fadeIn()
-        end
-    end
-    for name, plugin in pairs(self.plugins) do
-        if plugin.db.enabled then
-            plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
+        if not bar.db.hidden then
+            bar:toggleMouse(not bar.db.disableMouseOutOfCombat)
+            if bar.db.fadeOutOfCombat and not bar.isMouseInside then
+                bar:fadeOut(0)
+            else
+                bar:fadeIn()
+            end
+            for name, plugin in pairs(bar.allPlugins) do
+                plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
+            end
         end
     end
 end
@@ -2079,17 +2125,21 @@ function Bazooka:onPetBattleStart()
     self:lock()
     for i = 1, #self.bars do
         local bar = self.bars[i]
-        if bar.db.disableDuringPetBattle then
-            bar:disableForPetBattle(true)
+        if not bar.db.hidden then
+            if bar.db.disableDuringPetBattle then
+                bar:disableAndHide()
+            end
         end
     end
 end
 
 function Bazooka:onPetBattleEnd()
-    if InCombatLockdown() then
-        return
+    for i = 1, #self.bars do
+        local bar = self.bars[i]
+        if not bar.db.hidden then
+            bar:enableAndShow()
+        end
     end
-    self:onLeavingCombat()
 end
 
 function Bazooka:MODIFIER_STATE_CHANGED(event, key, state)
@@ -2465,15 +2515,18 @@ function Bazooka:setupLDB()
         type = "launcher",
         icon = self.db.profile.locked and Icon or UnlockedIcon,
         OnClick = function(frame, button)
-            if button == "LeftButton" then
+            if IsShiftKeyDown() then
                 self:toggleLocked()
+            elseif button == "LeftButton" then
+                self:toggleBars()
             elseif button == "RightButton" then
                 self:openConfigDialog()
             end
         end,
         OnTooltipShow = function(tt)
             tt:AddLine(self.AppName)
-            tt:AddLine(L["|cffeda55fLeft Click|r to lock/unlock frames"])
+            tt:AddLine(L["|cffeda55fLeft Click|r to toggle marked bars"])
+            tt:AddLine(L["|cffeda55fShift Click|r to lock/unlock frames"])
             tt:AddLine(L["|cffeda55fRight Click|r to open the configuration window"])
         end,
     }
@@ -2508,6 +2561,31 @@ end
 
 function Bazooka:getInsetForEdgeSize(edgeSize)
     return math.floor(edgeSize / 4)
+end
+
+function Bazooka:toggleBar(hiddenFlag, barId, ...)
+    if not barId then
+        return
+    end
+    barId = tonumber(barId) or -1
+    local bar = self.bars[barId]
+    if bar then
+        bar:toggleHidden(hiddenFlag)
+    end
+    self:toggleBar(hiddenFlag, ...)
+end
+
+function Bazooka:toggleBars(hiddenFlag, params)
+    if not params then
+        for i = 1, #self.bars do
+            local bar = self.bars[i]
+            if bar.db.marked then
+                bar:toggleHidden(hiddenFlag)
+            end
+        end
+    else
+        self:toggleBar(hiddenFlag, strsplit(' ', params))
+    end
 end
 
 -- BEGIN LoD Options muckery
@@ -2603,8 +2681,15 @@ end
 SLASH_BAZOOKA1 = "/bazooka"
 SlashCmdList["BAZOOKA"] = function(msg)
     msg = strtrim(msg or "")
-    if msg == "locked" then
+    local cmd, params = strsplit(' ', msg, 2)
+    if cmd == "locked" then
         Bazooka:toggleLocked()
+    elseif cmd == "hidebars" then
+        Bazooka:toggleBars(true, params)
+    elseif cmd == "showbars" then
+        Bazooka:toggleBars(false, params)
+    elseif cmd == "togglebars" then
+        Bazooka:toggleBars(nil, params)
     else
         Bazooka:openConfigDialog()
     end
