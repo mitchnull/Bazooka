@@ -2486,13 +2486,17 @@ end
 
 function Bazooka:lock()
     self.locked = true
-    self.ldb.icon = Icon
+    for i = 1, #self.ldbs do 
+        self.ldbs[i].icon = Icon
+    end
     self:closeStaticDialog(BzkDialogDisablePlugin)
 end
 
 function Bazooka:unlock()
     self.locked = false
-    self.ldb.icon = UnlockedIcon
+    for i = 1, #self.ldbs do
+        self.ldbs[i].icon = UnlockedIcon
+    end
 end
 
 function Bazooka:toggleLocked(flag)
@@ -2510,11 +2514,12 @@ function Bazooka:toggleLocked(flag)
     end
 end
 
-function Bazooka:setupLDB()
-    local ldb = {
-        type = "launcher",
-        icon = self.db.profile.locked and Icon or UnlockedIcon,
-        OnClick = function(frame, button)
+local function extraLauncherName(idx)
+    return Bazooka.AppName .. "_" .. idx
+end
+
+function Bazooka:setupLDB(forceEnableExtraLaunchers)
+    self.ldbOnClick = self.ldbOnClick or function(frame, button)
             if IsShiftKeyDown() then
                 self:toggleLocked()
             elseif button == "LeftButton" then
@@ -2522,16 +2527,60 @@ function Bazooka:setupLDB()
             elseif button == "RightButton" then
                 self:openConfigDialog()
             end
-        end,
-        OnTooltipShow = function(tt)
+        end
+    self.ldbOnTooltipShow = self.ldbOnTooltipShow or function(tt)
             tt:AddLine(self.AppName)
             tt:AddLine(L["|cffeda55fLeft Click|r to toggle marked bars"])
             tt:AddLine(L["|cffeda55fShift Click|r to lock/unlock frames"])
             tt:AddLine(L["|cffeda55fRight Click|r to open the configuration window"])
-        end,
-    }
-    LDB:NewDataObject(self.AppName, ldb)
-    self.ldb = ldb
+        end
+    local ldbIcon = self.db.profile.locked and Icon or UnlockedIcon
+    if not self.ldbs then
+        self.ldbs = {}
+        local ldb = {
+            type = "launcher",
+            icon = ldbIcon,
+            OnClick = self.ldbOnClick,
+            OnTooltipShow = self.ldbOnTooltipShow,
+        }
+        LDB:NewDataObject(self.AppName, ldb)
+        self.ldbs[1] = ldb
+    end
+    if self.db.profile.extraLaunchers then
+        for i = 2, self.db.profile.numBars do
+            if not self.ldbs[i] then
+                local ldb = {
+                    type = "launcher",
+                    icon = ldbIcon,
+                    OnClick = self.ldbOnClick,
+                    OnTooltipShow = self.ldbOnTooltipShow,
+                    bzkName = extraLauncherName(i),
+                }
+                local pdb = self.db.profile.plugins["launcher"][ldb.bzkName]
+                if not pdb.pos then
+                    pdb.bar = i
+                    pdb.pos = 1
+                end
+                LDB:NewDataObject(ldb.bzkName, ldb)
+                self.ldbs[i] = ldb
+            elseif forceEnableExtraLaunchers then
+                local plugin = self.plugins[self.ldbs[i].bzkName]
+                if plugin then
+                    plugin.db.enabled = true
+                    plugin:applySettings()
+                end
+            end
+        end
+    else
+        for i = 2, #self.ldbs do
+            local ldb = self.ldbs[i]
+            local plugin = self.plugins[ldb.bzkName]
+            if plugin then
+                self:disablePlugin(plugin)
+            end
+        end
+    end
+    self:updatePluginOptions()
 end
 
 function Bazooka:getDropPlace(x, y)

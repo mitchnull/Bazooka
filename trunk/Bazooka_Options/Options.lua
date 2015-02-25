@@ -1463,6 +1463,16 @@ do
                 end,
                 get = function(info) return Bazooka.db.global.enableOpacityWorkaround end,
             },
+            extraLaunchers = {
+                type = 'toggle',
+                name = L["Extra launchers"],
+                desc = L["Create a bazooka launcher for each bar"],
+                set = function(info, value)
+                    Bazooka:setOption(info, value)
+                    Bazooka:setupLDB(value)
+                end,
+                order = 49,
+            },
             fadeOutDelay = {
                 type = 'range',
                 width = 'full',
@@ -1500,6 +1510,7 @@ do
                 func = function()
                     local bar = Bazooka:createBar()
                     Bazooka:updateBarOptions()
+                    Bazooka:setupLDB()
                     Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), bar:getOptionsName())
                 end,
                 order = 100,
