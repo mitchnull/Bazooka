@@ -2054,6 +2054,15 @@ function Bazooka:OnInitialize()
     self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDisable")
     self:profileChanged()
     self:setupDummyOptions()
+    hooksecurefunc("OrderHall_CheckCommandBar",
+        function()
+            if self.db.global.hideOrderHallCommandBar then
+                if OrderHallCommandBar then
+                    OrderHallCommandBar:Hide()
+                end
+            end
+        end
+    )
 end
 
 function Bazooka:OnEnable(first)

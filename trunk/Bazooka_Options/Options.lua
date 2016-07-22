@@ -1434,6 +1434,17 @@ do
                 order = 30,
                 disabled = not Jostle,
             },
+            hideOrderHallCommandBar = {
+                type = 'toggle',
+                name = L["Hide Order Hall Command Bar"],
+                order = 33,
+                set = function(info, value)
+                    Bazooka.db.global.hideOrderHallCommandBar = value
+                end,
+                get = function(info)
+                    return Bazooka.db.global.hideOrderHallCommandBar
+                end,
+            },
             enableHL = {
                 type = 'toggle',
                 name = L["Enable highlight"],
