@@ -19,6 +19,10 @@ local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
 local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
 local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
+if Jostle then
+    Jostle:DisableTopAdjusting()
+    Jostle:DisableBottomAdjusting()
+end
 local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
 -- internal vars
