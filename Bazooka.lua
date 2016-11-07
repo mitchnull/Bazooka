@@ -2445,8 +2445,8 @@ function Bazooka:applySettings()
         else
             Jostle:Unregister(self.TopAnchor)
             Jostle:Unregister(self.BottomAnchor)
-            -- Jostle:DisableTopAdjusting()
-            -- Jostle:DisableBottomAdjusting()
+            Jostle:DisableTopAdjusting()
+            Jostle:DisableBottomAdjusting()
         end
     end
 end
