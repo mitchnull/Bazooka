@@ -116,6 +116,13 @@ end
 
 -- BEGIN Bar stuff
 
+local function createNewBar()
+    local bar = Bazooka:createBar()
+    Bazooka:updateBarOptions()
+    Bazooka:setupLDB()
+    Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), bar:getOptionsName())
+end
+
 local function isTweakValid(info, value)
     return tonumber(value) ~= nil
 end
@@ -628,6 +635,22 @@ function Bar:addOptions()
     self.opts.name = self.name
 end
 
+local CreateNewBarFakeOptions = {
+    type = 'group',
+    inline = false,
+    name = '+',
+    order = -1,
+    args = {
+        createBar = {
+            type = 'execute',
+            name = L["Create new bar"],
+            width = 'full',
+            func = createNewBar,
+            disabled = createNewBar,
+        },
+    },
+}
+
 function Bazooka:updateBarOptions()
     wipe(barOptions.args)
     wipe(barSelectionArgs)
@@ -642,6 +665,7 @@ function Bazooka:updateBarOptions()
             order = i,
         }
     end
+    barOptions.args['+'] = CreateNewBarFakeOptions
     ACR:NotifyChange(self:getSubAppName("bars"))
     ACR:NotifyChange(self:getSubAppName("bulk-config"))
 end
@@ -1518,12 +1542,7 @@ do
                 type = 'execute',
                 name = L["Create new bar"],
                 width = 'full',
-                func = function()
-                    local bar = Bazooka:createBar()
-                    Bazooka:updateBarOptions()
-                    Bazooka:setupLDB()
-                    Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), bar:getOptionsName())
-                end,
+                func = createNewBar,
                 order = 100,
             },
         },
