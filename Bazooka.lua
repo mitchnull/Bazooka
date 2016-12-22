@@ -2532,7 +2532,7 @@ end
 
 function Bazooka:setupLDB(forceEnableExtraLaunchers)
     self.ldbOnClick = self.ldbOnClick or function(frame, button)
-            if IsShiftKeyDown() then
+            if IsShiftKeyDown() or button == "MiddleButton" then
                 self:toggleLocked()
             elseif button == "LeftButton" then
                 self:toggleBars()
