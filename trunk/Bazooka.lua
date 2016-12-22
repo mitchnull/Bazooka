@@ -536,6 +536,9 @@ Bar.OnDragStop = function(frame)
 end
 
 Bar.OnMouseDown = function(frame, button, ...)
+    if Bazooka.locked then
+        return
+    end
     local self = frame.bzkBar
     if button == 'RightButton' and not IsAltKeyDown() then
         Bazooka:openConfigDialog()
