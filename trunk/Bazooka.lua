@@ -2434,6 +2434,12 @@ function Bazooka:applySettings()
         return
     end
     self:toggleLocked(self.db.profile.locked == true)
+    for i = 1, #self.bars do
+        local bar = self.bars[i]
+        if bar.db.marked and bar.db.hidden then
+            bar:disableAndHide(true)
+        end
+    end
     if self.db.profile.disableDBIcon then
         self:disableDBIcon()
     else
