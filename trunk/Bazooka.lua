@@ -811,6 +811,9 @@ end
 function Bar:getDropPlace(x, y)
     local dstArea, dstPos
     local minDist = math.huge
+    if self.db.marked and self.db.hidden then
+        return dstArea, dstPos, minDist
+    end
     for area, plugins in pairs(self.plugins) do
         if #plugins == 0 then
             local dist = distance2(x, y, self:getAreaCoords(area))
@@ -1711,6 +1714,13 @@ function Plugin:globalSettingsChanged()
     end
     self.frame:SetAlpha(bdb.pluginOpacity)
     self:updateLayout(true)
+    if bdb.marked and bdb.hidden then
+        self:toggleMouse(false)
+    elseif InCombatLockdown() then
+        self:toggleMouse(not self.db.disableMouseInCombat)
+    else
+        self:toggleMouse(not self.db.disableMouseOutOfCombat)
+    end
 end
 
 function Plugin:createIcon()
@@ -1880,11 +1890,6 @@ function Plugin:applySettings()
     self:updateLabel()
     self:updateLayout(true)
     self:updateLDBCallbacks()
-    if InCombatLockdown() then
-        self:toggleMouse(not self.db.disableMouseInCombat)
-    else
-        self:toggleMouse(not self.db.disableMouseOutOfCombat)
-    end
 end
 
 function Plugin:setIcon()
