@@ -1,0 +1,32 @@
+## Interface: 70300
+## Title: Bazooka
+## Author: mitch0
+## Version: @project-version@
+## Notes: Data Broker Display similar to FuBar
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: true
+## SavedVariables: BazookaDB
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 LibJostle-3.0
+#@do-not-package@
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 AceGUI-3.0-SharedMediaWidgets LibJostle-3.0
+#@end-do-not-package@
+## X-License: Public Domain
+## X-RelSite-WoWI: 14767
+## X-Credits: ckknight for the original FuBar design
+
+#@no-lib-strip@
+libs\LibStub-1.0\LibStub.lua
+libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+libs\Ace3\AceAddon-3.0\AceAddon-3.0.xml
+libs\Ace3\AceEvent-3.0\AceEvent-3.0.xml
+libs\Ace3\AceDB-3.0\AceDB-3.0.xml
+libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
+libs\LibSharedMedia-3.0\lib.xml
+libs\LibDualSpec-1.0\LibDualSpec-1.0.lua
+libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+libs\LibJostle-3.0\lib.xml
+#@end-no-lib-strip@
+libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+
+localizations.lua
+Bazooka.lua
