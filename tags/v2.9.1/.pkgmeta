@@ -1,0 +1,51 @@
+package-as: Bazooka
+
+externals:
+    libs/LibStub-1.0:
+        url: https://repos.wowace.com/wow/libstub/trunk
+        tag: latest
+    libs/CallbackHandler-1.0:
+        url: https://repos.wowace.com/wow/callbackhandler/trunk/CallbackHandler-1.0
+        tag: latest
+    libs/Ace3/AceAddon-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceAddon-3.0
+        tag: latest
+    libs/Ace3/AceEvent-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceEvent-3.0
+        tag: latest
+    libs/Ace3/AceDB-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceDB-3.0
+        tag: latest
+    libs/Ace3/AceLocale-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceLocale-3.0
+        tag: latest
+    libs/LibSharedMedia-3.0:
+        url: https://repos.wowace.com/wow/libsharedmedia-3-0/trunk/LibSharedMedia-3.0
+        tag: latest
+    libs/LibDualSpec-1.0: 
+        url: https://repos.wowace.com/wow/libdualspec-1-0
+    libs/LibJostle-3.0:
+        url: https://repos.wowace.com/wow/libjostle-3-0/trunk
+
+    Bazooka_Options/libs/Ace3/AceGUI-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceGUI-3.0
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceConfig-3.0/AceConfigRegistry-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceConfig-3.0/AceConfigRegistry-3.0
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceConfig-3.0/AceConfigDialog-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceConfig-3.0/AceConfigDialog-3.0
+        tag: latest
+    Bazooka_Options/libs/Ace3/AceDBOptions-3.0:
+        url: https://repos.wowace.com/wow/ace3/trunk/AceDBOptions-3.0
+        tag: latest
+    Bazooka_Options/libs/AceGUI-3.0-SharedMediaWidgets:
+        url: https://repos.wowace.com/wow/ace-gui-3-0-shared-media-widgets/trunk/AceGUI-3.0-SharedMediaWidgets
+#        tag: latest
+
+move-folders:
+    Bazooka/Bazooka_Options: Bazooka_Options
+
+tools-used:
+    - libdatabroker-1-1
+
