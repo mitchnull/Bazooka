@@ -52,6 +52,7 @@ end
 -- cached stuff
 
 local _G = _G
+local IsClassic = (_G.WOW_PROJECT_ID == _G.WOW_PROJECT_CLASSIC)
 local IsAltKeyDown = _G.IsAltKeyDown
 local IsShiftKeyDown = _G.IsShiftKeyDown
 local IsModifierKeyDown = _G.IsModifierKeyDown
@@ -73,7 +74,7 @@ local unpack = _G.unpack
 local wipe = _G.wipe
 local math = _G.math
 local GameTooltip = _G.GameTooltip
-local IsInPetBattle = _G.C_PetBattles.IsInBattle
+local IsInPetBattle = _G.C_PetBattles and _G.C_PetBattles.IsInBattle or function() return false end
 local strtrim = _G.strtrim
 local strsub = _G.strsub
 local strlen = _G.strlen
@@ -2062,15 +2063,17 @@ function Bazooka:OnInitialize()
     self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDisable")
     self:profileChanged()
     self:setupDummyOptions()
-    hooksecurefunc("OrderHall_CheckCommandBar",
-        function()
-            if self.db.global.hideOrderHallCommandBar then
-                if OrderHallCommandBar then
-                    OrderHallCommandBar:Hide()
+    if not IsClassic then
+        hooksecurefunc("OrderHall_CheckCommandBar",
+            function()
+                if self.db.global.hideOrderHallCommandBar then
+                    if OrderHallCommandBar then
+                        OrderHallCommandBar:Hide()
+                    end
                 end
             end
-        end
-    )
+        )
+    end
 end
 
 function Bazooka:OnEnable(first)
@@ -2078,8 +2081,10 @@ function Bazooka:OnEnable(first)
     self:init()
     self:RegisterEvent("PLAYER_REGEN_DISABLED", "onEnteringCombat")
     self:RegisterEvent("PLAYER_REGEN_ENABLED", "onLeavingCombat")
-    self:RegisterEvent("PET_BATTLE_OPENING_START", "onPetBattleStart")
-    self:RegisterEvent("PET_BATTLE_CLOSE", "onPetBattleEnd")
+    if not IsClassic then
+        self:RegisterEvent("PET_BATTLE_OPENING_START", "onPetBattleStart")
+        self:RegisterEvent("PET_BATTLE_CLOSE", "onPetBattleEnd")
+    end
     self:RegisterEvent("MODIFIER_STATE_CHANGED")
     LDB.RegisterCallback(self, "LibDataBroker_DataObjectCreated", "dataObjectCreated")
 end
