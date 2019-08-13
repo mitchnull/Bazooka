@@ -24,6 +24,7 @@ externals:
         tag: latest
     libs/LibDualSpec-1.0: 
         url: https://repos.wowace.com/wow/libdualspec-1-0
+        tag: latest
     libs/LibJostle-3.0:
         url: https://repos.wowace.com/wow/libjostle-3-0/trunk
 
