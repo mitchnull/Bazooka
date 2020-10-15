@@ -721,7 +721,7 @@ function Bar:enable(id, db)
     self.name = Bazooka:getBarName(id)
     self.db = db
     if not self.frame then
-        self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent)
+        self.frame = CreateFrame("Frame", "BazookaBar_" .. id, UIParent, BackdropTemplateMixin and "BackdropTemplate" or nil)
         self.frame.bzkBar = self
         self.frame:SetScript("OnUpdate", Bar.initialOnUpdateFixFontMetricHack)
         if EnableOpacityWorkaround then
