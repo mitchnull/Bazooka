@@ -1,4 +1,4 @@
-## Interface: 90001
+## Interface: 90005
 ## Title: Bazooka Options
 ## Author: mitch0
 ## Version: @project-version@
