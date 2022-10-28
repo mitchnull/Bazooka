@@ -2679,7 +2679,7 @@ function Bazooka:getSubAppName(name)
 end
 
 function Bazooka:setupDummyOptions()
-    if self.optionsLoaded then
+    if self.optionsLoaded or not InterfaceOptionsFrame then
         return
     end
     self.dummyOpts = CreateFrame("Frame")
