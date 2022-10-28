@@ -743,8 +743,12 @@ function Bar:enable(id, db)
         self.frame:SetScript("OnMouseDown", Bar.OnMouseDown)
         self.frame:SetMovable(true)
         self.frame:SetResizable(true)
-        self.frame:SetMinResize(Defaults.minFrameWidth, Defaults.minFrameHeight)
-        self.frame:SetMaxResize(Defaults.maxFrameWidth, Defaults.maxFrameHeight)
+        if self.frame.SetResizeBounds then
+            self.frame:SetResizeBounds(Defaults.minFrameWidth, Defaults.minFrameHeight, Defaults.maxFrameWidth, Defaults.maxFrameHeight)
+        else
+            self.frame:SetMinResize(Defaults.minFrameWidth, Defaults.minFrameHeight)
+            self.frame:SetMaxResize(Defaults.maxFrameWidth, Defaults.maxFrameHeight)
+        end
         self.centerFrame = CreateFrame("Frame", nil, self.frame)
         self.centerFrame:EnableMouse(false)
         self.centerFrame:SetPoint("TOP", self.frame, "TOP", 0, 0)
@@ -2708,7 +2712,9 @@ function Bazooka:openConfigDialog(opts, ...)
     -- this function will be overwritten by the Options module when loaded
     if not self.optionsLoaded then
         self:loadOptions()
-        InterfaceAddOnsList_Update()
+        if InterfaceAddOnsList_Update then
+            InterfaceAddOnsList_Update()
+        end
         return self:openConfigDialog(opts, ...)
     end
     InterfaceOptionsFrame_OpenToCategory(self.dummyOpts)

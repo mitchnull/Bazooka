@@ -1,4 +1,4 @@
-## Interface: 100000
+## Interface: 30400
 ## Title: Bazooka
 ## Author: mitch0
 ## Version: @project-version@
@@ -6,7 +6,7 @@
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: true
 ## SavedVariables: BazookaDB
-## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 LibJostle-3.0
 ## X-License: Public Domain
 ## X-RelSite-WoWI: 14767
 ## X-Credits: ckknight for the original FuBar design
@@ -21,6 +21,7 @@ libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
 libs\LibSharedMedia-3.0\lib.xml
 libs\LibDualSpec-1.0\LibDualSpec-1.0.lua
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+libs\LibJostle-3.0\lib.xml
 #@end-no-lib-strip@
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 
