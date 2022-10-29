@@ -1556,20 +1556,6 @@ do
 
   -- BEGIN
 
-  self.optionsLoaded = true
-
-  -- remove dummy options frame, ugly hack
-  if self.dummyOpts then
-    for k, f in ipairs(INTERFACEOPTIONS_ADDONCATEGORIES) do
-      if f == self.dummyOpts then
-        tremove(INTERFACEOPTIONS_ADDONCATEGORIES, k)
-        f:SetParent(UIParent)
-        break
-      end
-    end
-    self.dummyOpts = nil
-  end
-
   ACR:RegisterOptionsTable(self.AppName, mainOptions)
   self.opts = ACD:AddToBlizOptions(self.AppName, self.AppName)
   self.barOpts = registerSubOptions('bars', barOptions)

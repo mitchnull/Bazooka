@@ -82,6 +82,7 @@ local strtrim = _G.strtrim
 local strsub = _G.strsub
 local strlen = _G.strlen
 local strsplit = _G.strsplit
+local Settings = _G.Settings
 
 -- hard-coded config stuff
 
@@ -2069,7 +2070,7 @@ function Bazooka:OnInitialize()
   self.db.RegisterCallback(self, "OnProfileReset", "profileChanged")
   self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDisable")
   self:profileChanged()
-  self:setupDummyOptions()
+  self:loadOptions()
   if not IsClassic then
     hooksecurefunc("OrderHall_CheckCommandBar",
       function()
@@ -2672,53 +2673,40 @@ function Bazooka:toggleBars(hiddenFlag, params)
   end
 end
 
--- BEGIN LoD Options muckery
-
 function Bazooka:getSubAppName(name)
   return self.AppName .. '.' .. name
 end
 
-function Bazooka:setupDummyOptions()
-  if self.optionsLoaded or not InterfaceOptionsFrame then
-    return
-  end
-  self.dummyOpts = CreateFrame("Frame")
-  self.dummyOpts:Hide()
-  self.dummyOpts.name = AppName
-  self.dummyOpts:SetScript("OnShow", function(frame)
-    if not self.optionsLoaded then
-      if not InterfaceOptionsFrame:IsVisible() then
-        return -- wtf... Happens if you open the game map and close it with ESC
-      end
-      self:openConfigDialog()
-    else
-      frame:Hide()
-    end
-  end)
-  InterfaceOptions_AddCategory(self.dummyOpts)
-end
+-- BEGIN LoD Options muckery
 
 function Bazooka:loadOptions()
-  if not self.optionsLoaded then
-    self.optionsLoaded = true
-    local loaded, reason = LoadAddOn(OptionsAppName)
-    if not loaded then
-      print("Failed to load " .. tostring(OptionsAppName) .. ": " .. tostring(reason))
+  local loaded, reason = LoadAddOn(OptionsAppName)
+  if not loaded then
+    print("Failed to load " .. tostring(OptionsAppName) .. ": " .. tostring(reason))
+    local dummyOpts = CreateFrame("Frame")
+    dummyOpts.name = AppName
+    local text = dummyOpts:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    text:SetText(("%s - %s"):format(OptionsAppName, reason))
+    if Settings then
+      local category = Settings.RegisterCanvasLayoutCategory(dummyOpts, AppName, AppName)
+      category.ID = AppName
+      Settings.RegisterCategory(category)
+    else
+      InterfaceOptions_AddCategory(self.dummyOpts)
     end
   end
 end
 
 function Bazooka:openConfigDialog(opts, ...)
   -- this function will be overwritten by the Options module when loaded
-  if not self.optionsLoaded then
-    self:loadOptions()
-    if InterfaceAddOnsList_Update then
-      InterfaceAddOnsList_Update()
-    end
-    return self:openConfigDialog(opts, ...)
+  if Settings then
+    Settings.OpenToCategory(AppName)
+  else
+    InterfaceOptionsFrame_OpenToCategory(AppName)
   end
-  InterfaceOptionsFrame_OpenToCategory(self.dummyOpts)
 end
+
+-- END LoD Options muckery
 
 -- static dialog setup
 
@@ -2748,8 +2736,6 @@ StaticPopupDialogs[BzkDialogDisablePlugin] = {
   whileDead = 1,
   hideOnEscape = 1,
 }
-
--- END LoD Options muckery
 
 -- Stubs for Bazooka_Options
 
