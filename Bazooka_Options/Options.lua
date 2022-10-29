@@ -21,7 +21,6 @@ local BulkSeparatorPrefix = "bulks_"
 local BulkNamePrefix = "bulkn_"
 local BEPLEN = strlen(BulkEnabledPrefix)
 local BNPLEN = strlen(BulkNamePrefix)
-local lastConfiguredOpts -- stupid hack to remember last open config frame
 local Huge = math.huge
 local Settings = Settings
 
@@ -94,7 +93,6 @@ local function setColor(dbcolor, r, g, b, a)
 end
 
 function Bazooka:openConfigDialog(optsAppName, ...)
-  optsAppName = optsAppName or lastConfiguredOpts
   if optsAppName then
     ACD:SelectGroup(optsAppName, ...)
   end
@@ -145,10 +143,6 @@ local barOptionArgs = {
     type = 'toggle',
     name = L["Hidden"],
     order = 6,
-    disabled = function()
-      lastConfiguredOpts = Bazooka:getSubAppName("bars")
-      return false
-    end,
   },
   marked = {
     type = 'toggle',
@@ -692,10 +686,6 @@ local pluginOptionArgs = {
 --        width = 'full',
     name = L["Enabled"],
     order = 10,
-    disabled = function()
-      lastConfiguredOpts = Bazooka:getSubAppName("plugins")
-      return false
-    end,
   },
   useLabelAsTitle = {
     type = 'toggle',
@@ -1233,10 +1223,6 @@ local bulkConfigOptions = {
   get = "getOption",
   set = "setOption",
   order = 10,
-  disabled = function()
-    lastConfiguredOpts = Bazooka:getSubAppName("bulk-config")
-    return false
-  end,
   args = {
     autoApply = {
       type = 'toggle',
@@ -1436,10 +1422,6 @@ do
         type = 'toggle',
         name = L["Locked"],
         order = 10,
-        disabled = function()
-          lastConfiguredOpts = nil
-          return false
-        end,
       },
       simpleTip = {
         type = 'toggle',
@@ -1566,10 +1548,6 @@ do
   local profiles =  AceDBOptions:GetOptionsTable(self.db)
   if LibDualSpec then
     LibDualSpec:EnhanceOptions(profiles, self.db)
-  end
-  profiles.disabled = function()
-    lastConfiguredOpts = Bazooka:getSubAppName("profiles")
-    return false
   end
   self.profiles = registerSubOptions('profiles', profiles)
 end
