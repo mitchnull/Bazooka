@@ -11,9 +11,6 @@ License: Public Domain
 local AppName, Bazooka = ...
 local OptionsAppName = AppName .. "_Options"
 local VERSION = AppName .. "-@project-version@"
---@debug@
-local VERSION = AppName .. "-r" .. ("$Revision$"):match("%d+")
---@end-debug@
 
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
