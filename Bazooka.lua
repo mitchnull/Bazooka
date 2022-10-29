@@ -2675,6 +2675,7 @@ function Bazooka:loadOptions()
 end
 
 function Bazooka:openConfigDialog()
+  -- this function will be overwritten by the Options module when loaded
   print(OptionsAppName .. " not loaded: " .. tostring(self.optionsLoadError))
   self.openConfigDialog = function() end
 end
