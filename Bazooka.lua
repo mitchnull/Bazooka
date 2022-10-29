@@ -2676,6 +2676,7 @@ end
 
 function Bazooka:openConfigDialog()
   print(OptionsAppName .. " not loaded: " .. tostring(self.optionsLoadError))
+  self.openConfigDialog = function() end
 end
 
 -- END LoD Options muckery
