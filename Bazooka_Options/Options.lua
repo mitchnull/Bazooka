@@ -23,6 +23,7 @@ local BEPLEN = strlen(BulkEnabledPrefix)
 local BNPLEN = strlen(BulkNamePrefix)
 local lastConfiguredOpts -- stupid hack to remember last open config frame
 local Huge = math.huge
+local Settings = Settings
 
 local _
 
@@ -92,16 +93,15 @@ local function setColor(dbcolor, r, g, b, a)
   dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a = r, g, b, a
 end
 
-function Bazooka:openConfigDialog(opts, optsAppName, ...)
-  opts = opts or lastConfiguredOpts
-  if opts then
-    if optsAppName then
-      ACD:SelectGroup(optsAppName, ...)
-    end
-    InterfaceOptionsFrame_OpenToCategory(opts)
+function Bazooka:openConfigDialog(optsAppName, ...)
+  optsAppName = optsAppName or lastConfiguredOpts
+  if optsAppName then
+    ACD:SelectGroup(optsAppName, ...)
+  end
+  if Settings then
+    Settings.OpenToCategory(self.AppName)
   else
-    InterfaceOptionsFrame_OpenToCategory(self.profiles) -- to expand our tree
-    InterfaceOptionsFrame_OpenToCategory(self.opts)
+    InterfaceOptionsFrame_OpenToCategory(self.AppName)
   end
 end
 
@@ -120,7 +120,7 @@ local function createNewBar()
   local bar = Bazooka:createBar()
   Bazooka:updateBarOptions()
   Bazooka:setupLDB()
-  Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), bar:getOptionsName())
+  Bazooka:openConfigDialog(Bazooka:getSubAppName("bars"), bar:getOptionsName())
 end
 
 local function isTweakValid(info, value)
@@ -146,7 +146,7 @@ local barOptionArgs = {
     name = L["Hidden"],
     order = 6,
     disabled = function()
-      lastConfiguredOpts = Bazooka.barOpts
+      lastConfiguredOpts = Bazooka:getSubAppName("bars")
       return false
     end,
   },
@@ -693,7 +693,7 @@ local pluginOptionArgs = {
     name = L["Enabled"],
     order = 10,
     disabled = function()
-      lastConfiguredOpts = Bazooka.pluginOpts
+      lastConfiguredOpts = Bazooka:getSubAppName("plugins")
       return false
     end,
   },
@@ -1234,7 +1234,7 @@ local bulkConfigOptions = {
   set = "setOption",
   order = 10,
   disabled = function()
-    lastConfiguredOpts = Bazooka.bulkConfigOpts
+    lastConfiguredOpts = Bazooka:getSubAppName("bulk-config")
     return false
   end,
   args = {
@@ -1568,7 +1568,7 @@ do
     LibDualSpec:EnhanceOptions(profiles, self.db)
   end
   profiles.disabled = function()
-    lastConfiguredOpts = self.profiles
+    lastConfiguredOpts = Bazooka:getSubAppName("profiles")
     return false
   end
   self.profiles = registerSubOptions('profiles', profiles)
