@@ -1,9 +1,7 @@
 --[[
 Name: Bazooka
-Revision: $Revision$
 Author(s): mitch0
 Website: http://www.wowace.com/projects/bazooka/
-SVN: svn://svn.wowace.com/wow/bazooka/mainline/trunk
 Description: Bazooka is a FuBar like broker display
 License: Public Domain
 ]]
