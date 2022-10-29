@@ -77,7 +77,6 @@ local strtrim = _G.strtrim
 local strsub = _G.strsub
 local strlen = _G.strlen
 local strsplit = _G.strsplit
-local Settings = _G.Settings
 
 -- hard-coded config stuff
 
@@ -2672,30 +2671,11 @@ end
 -- BEGIN LoD Options muckery
 
 function Bazooka:loadOptions()
-  local loaded, reason = LoadAddOn(OptionsAppName)
-  if not loaded then
-    print("Failed to load " .. tostring(OptionsAppName) .. ": " .. tostring(reason))
-    local dummyOpts = CreateFrame("Frame")
-    dummyOpts.name = AppName
-    local text = dummyOpts:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    text:SetText(("%s - %s"):format(OptionsAppName, reason))
-    if Settings then
-      local category = Settings.RegisterCanvasLayoutCategory(dummyOpts, AppName, AppName)
-      category.ID = AppName
-      Settings.RegisterCategory(category)
-    else
-      InterfaceOptions_AddCategory(self.dummyOpts)
-    end
-  end
+  self.optionsLoaded, self.optionsLoadError = LoadAddOn(OptionsAppName)
 end
 
 function Bazooka:openConfigDialog()
-  -- this function will be overwritten by the Options module when loaded
-  if Settings then
-    Settings.OpenToCategory(AppName)
-  else
-    InterfaceOptionsFrame_OpenToCategory(AppName)
-  end
+  print(OptionsAppName .. " not loaded: " .. tostring(self.optionsLoadError))
 end
 
 -- END LoD Options muckery
