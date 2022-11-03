@@ -92,14 +92,18 @@ local function setColor(dbcolor, r, g, b, a)
   dbcolor.r, dbcolor.g, dbcolor.b, dbcolor.a = r, g, b, a
 end
 
-function Bazooka:openConfigDialog(optsAppName, ...)
+function Bazooka:openConfigDialog(opts, optsAppName, ...)
   if optsAppName then
     ACD:SelectGroup(optsAppName, ...)
   end
   if Settings then
+    -- FIXME: fix this when Settings can select sub-categories
+    if opts and opts:IsVisible() then
+      return
+    end
     Settings.OpenToCategory(self.AppName)
   else
-    InterfaceOptionsFrame_OpenToCategory(self.AppName)
+    InterfaceOptionsFrame_OpenToCategory(opts or self.opts)
   end
 end
 
@@ -118,7 +122,7 @@ local function createNewBar()
   local bar = Bazooka:createBar()
   Bazooka:updateBarOptions()
   Bazooka:setupLDB()
-  Bazooka:openConfigDialog(Bazooka:getSubAppName("bars"), bar:getOptionsName())
+  Bazooka:openConfigDialog(Bazooka.barOpts, Bazooka:getSubAppName("bars"), bar:getOptionsName())
 end
 
 local function isTweakValid(info, value)
