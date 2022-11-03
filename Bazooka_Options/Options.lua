@@ -670,7 +670,8 @@ end
 
 local pluginOptions = {
   type = 'group',
-  childGroups = 'tree',
+  -- childGroups = 'tree',
+  childGroups = 'select',
   inline = true,
   name = L["Plugins"],
   get = "getOption",
