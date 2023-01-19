@@ -7,7 +7,6 @@
 ## Dependencies: Bazooka
 ## LoadOnDemand: 1
 ## X-License: Public Domain
-## X-RelSite-WoWI:
 
 #@no-lib-strip@
 libs\Ace3\AceGUI-3.0\AceGUI-3.0.xml

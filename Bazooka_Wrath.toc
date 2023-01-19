@@ -9,7 +9,8 @@
 ## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0, LibDualSpec-1.0 LibJostle-3.0
 ## X-License: Public Domain
 ## X-RelSite-WoWI: 14767
-## X-Credits: ckknight for the original FuBar design
+## X-WoWI-ID: 14767
+## X-Curse-Project-ID: 13712
 
 #@no-lib-strip@
 libs\LibStub-1.0\LibStub.lua
