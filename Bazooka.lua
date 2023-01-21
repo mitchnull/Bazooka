@@ -2695,6 +2695,29 @@ function Bazooka:closeStaticDialog(dialog)
   StaticPopup_Hide(dialog)
 end
 
+function Bazooka:profileCmd(profileName)
+  profileName = strtrim(profileName or "")
+  if profileName == "" then
+    local curr = self.db:GetCurrentProfile()
+    for i, p in ipairs(self.db:GetProfiles()) do
+      if (p == curr) then
+        print("|cFF33cc33" .. p .. "|r")
+      else
+        print(p)
+      end
+    end
+  else
+    for i, p in ipairs(self.db:GetProfiles()) do
+      if (p == profileName) then
+        self.db:SetProfile(profileName)
+        return
+      end
+    end
+    print("|cFFcc3333? " .. profileName .. "|r")
+  end
+end
+
+
 StaticPopupDialogs[BzkDialogDisablePlugin] = {
   text = L["Disable %s plugin?"],
   button1 = _G.YES,
@@ -2736,6 +2759,8 @@ SlashCmdList["BAZOOKA"] = function(msg)
     Bazooka:toggleBars(false, params)
   elseif cmd == "togglebars" then
     Bazooka:toggleBars(nil, params)
+  elseif cmd == "profile" then
+    Bazooka:profileCmd(params)
   else
     Bazooka:openConfigDialog()
   end
