@@ -10,7 +10,7 @@
 ## X-License: Public Domain
 ## X-RelSite-WoWI: 14767
 ## X-WoWI-ID: 14767
-## X-Curse-Project-ID: 13712
+## X-Curse-Project-ID: 20695
 
 #@no-lib-strip@
 libs\LibStub-1.0\LibStub.lua
