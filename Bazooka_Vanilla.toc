@@ -21,7 +21,6 @@ libs\Ace3\AceDB-3.0\AceDB-3.0.xml
 libs\Ace3\AceLocale-3.0\AceLocale-3.0.xml
 libs\LibSharedMedia-3.0\lib.xml
 libs\LibDualSpec-1.0\LibDualSpec-1.0.lua
-libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 libs\LibJostle-3.0\lib.xml
 #@end-no-lib-strip@
 libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
