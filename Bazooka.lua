@@ -56,7 +56,7 @@ local IsAltKeyDown = _G.IsAltKeyDown
 local IsShiftKeyDown = _G.IsShiftKeyDown
 local IsModifierKeyDown = _G.IsModifierKeyDown
 local GetCursorPosition = _G.GetCursorPosition
-local GetAddOnInfo = _G.GetAddOnInfo
+local GetAddOnInfo = C_AddOns.GetAddOnInfo
 local GetScreenWidth = _G.GetScreenWidth
 local GetScreenHeight = _G.GetScreenHeight
 local UIParent = _G.UIParent
@@ -2672,7 +2672,7 @@ end
 -- BEGIN LoD Options muckery
 
 function Bazooka:loadOptions()
-  self.optionsLoaded, self.optionsLoadError = LoadAddOn(OptionsAppName)
+  self.optionsLoaded, self.optionsLoadError = C_AddOns.LoadAddOn(OptionsAppName)
 end
 
 function Bazooka:openConfigDialog()
