@@ -57,6 +57,7 @@ local IsShiftKeyDown = _G.IsShiftKeyDown
 local IsModifierKeyDown = _G.IsModifierKeyDown
 local GetCursorPosition = _G.GetCursorPosition
 local GetAddOnInfo = _G.GetAddOnInfo or C_AddOns.GetAddOnInfo
+local LoadAddOn = _G.LoadAddOn or C_AddOns.LoadAddOn
 local GetScreenWidth = _G.GetScreenWidth
 local GetScreenHeight = _G.GetScreenHeight
 local UIParent = _G.UIParent
