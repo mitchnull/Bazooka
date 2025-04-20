@@ -1,4 +1,4 @@
-## Interface: 100207,110000,110002
+## Interface: 110100,110105
 ## Title: Bazooka
 ## Author: mitch0
 ## Version: @project-version@
