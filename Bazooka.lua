@@ -47,7 +47,7 @@ end
 -- cached stuff
 
 local _G = _G
-local IsClassic = _G.WOW_PROJECT_ID ~= _G.WOW_PROJECT_MAINLINE
+local IsMainline = _G.WOW_PROJECT_ID == _G.WOW_PROJECT_MAINLINE
 local IsAltKeyDown = _G.IsAltKeyDown
 local IsShiftKeyDown = _G.IsShiftKeyDown
 local IsModifierKeyDown = _G.IsModifierKeyDown
@@ -2060,7 +2060,7 @@ function Bazooka:OnInitialize()
   self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDisable")
   self:profileChanged()
   self:loadOptions()
-  if not IsClassic then
+  if IsMainline then
     hooksecurefunc("OrderHall_CheckCommandBar",
       function()
         if self.db.global.hideOrderHallCommandBar then
@@ -2078,7 +2078,7 @@ function Bazooka:OnEnable(first)
   self:init()
   self:RegisterEvent("PLAYER_REGEN_DISABLED", "onEnteringCombat")
   self:RegisterEvent("PLAYER_REGEN_ENABLED", "onLeavingCombat")
-  if not IsClassic then
+  if IsMainline then
     self:RegisterEvent("PET_BATTLE_OPENING_START", "onPetBattleStart")
     self:RegisterEvent("PET_BATTLE_CLOSE", "onPetBattleEnd")
   end
