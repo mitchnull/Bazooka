@@ -9,7 +9,6 @@ local AceDBOptions = LibStub("AceDBOptions-3.0")
 local ACD = LibStub("AceConfigDialog-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale(OptionsAppName)
 local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
-local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
 
 local MinFontSize = 5
 local MaxFontSize = 30
@@ -1438,12 +1437,6 @@ do
         name = L["Manual tooltip toggle mode"],
         desc = L["Set if you want to hide the plugin tooltip when releasing the modifier key in manual tooltip mode"],
         order = 25,
-      },
-      adjustFrames = {
-        type = 'toggle',
-        name = L["Adjust frames"],
-        order = 30,
-        disabled = not Jostle,
       },
       hideOrderHallCommandBar = {
         type = 'toggle',

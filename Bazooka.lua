@@ -13,7 +13,6 @@ local VERSION = AppName .. "-@project-version@"
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0", true)
 local LibDualSpec = LibStub:GetLibrary("LibDualSpec-1.0", true)
-local Jostle = LibStub:GetLibrary("LibJostle-3.0", true)
 local L = LibStub("AceLocale-3.0"):GetLocale(AppName)
 
 -- internal vars
@@ -2452,19 +2451,6 @@ function Bazooka:applySettings()
   else
     self:enableDBIcon()
   end
-  if Jostle then
-    if self.db.profile.adjustFrames then
-      Jostle:RegisterTop(self.TopAnchor)
-      Jostle:RegisterBottom(self.BottomAnchor)
-      Jostle:EnableTopAdjusting()
-      Jostle:EnableBottomAdjusting()
-    else
-      Jostle:Unregister(self.TopAnchor)
-      Jostle:Unregister(self.BottomAnchor)
-      Jostle:DisableTopAdjusting()
-      Jostle:DisableBottomAdjusting()
-    end
-  end
 end
 
 function Bazooka:getBarsTopBottom(bars)
@@ -2493,19 +2479,13 @@ function Bazooka:updateAnchors()
   if not bottomTop then
     bottomTop, bottomBottom = 0, -1
   end
-  local needJostleRefresh
   if self.topTop ~= topTop or self.topBottom ~= topBottom then
     self.topTop, self.topBottom = topTop, topBottom
     self:setTopAnchorPoints()
-    needJostleRefresh = true
   end
   if self.bottomTop ~= bottomTop or self.bottomBottom ~= bottomBottom then
     self.bottomTop, self.bottomBottom = bottomTop, bottomBottom
     self:setBottomAnchorPoints()
-    needJostleRefresh = true
-  end
-  if needJostleRefresh and Jostle and self.db.profile.adjustFrames then
-    Jostle:Refresh()
   end
 end
 

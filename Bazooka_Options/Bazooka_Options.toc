@@ -1,4 +1,10 @@
 ## Interface: 110107,110200
+## Interface-Vanilla: 11506,11507
+## Interface-TBC: 20504
+## Interface-Wrath: 30403
+## Interface-Cata: 40402
+## Interface-Mists: 50500
+
 ## Title: Bazooka Options
 ## Author: mitch0
 ## Version: @project-version@
