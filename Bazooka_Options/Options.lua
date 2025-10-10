@@ -1438,17 +1438,6 @@ do
         desc = L["Set if you want to hide the plugin tooltip when releasing the modifier key in manual tooltip mode"],
         order = 25,
       },
-      hideOrderHallCommandBar = {
-        type = 'toggle',
-        name = L["Hide Order Hall Command Bar"],
-        order = 33,
-        set = function(info, value)
-          Bazooka.db.global.hideOrderHallCommandBar = value
-        end,
-        get = function(info)
-          return Bazooka.db.global.hideOrderHallCommandBar
-        end,
-      },
       enableHL = {
         type = 'toggle',
         name = L["Enable highlight"],
