@@ -95,7 +95,9 @@ function Bazooka:openConfigDialog(opts, optsAppName, ...)
   if optsAppName then
     ACD:SelectGroup(optsAppName, ...)
   end
-  if Settings then
+  if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
+    C_SettingsUtil.OpenSettingsPanel(self.optsId)
+  elseif Settings then
     -- FIXME: fix this when Settings can select sub-categories
     if opts and opts:IsVisible() then
       return
@@ -1526,7 +1528,7 @@ do
   -- BEGIN
 
   ACR:RegisterOptionsTable(self.AppName, mainOptions)
-  self.opts = ACD:AddToBlizOptions(self.AppName, self.AppName)
+  self.opts, self.optsId = ACD:AddToBlizOptions(self.AppName, self.AppName)
   self.barOpts = registerSubOptions('bars', barOptions)
   self.pluginOpts = registerSubOptions('plugins', pluginOptions)
   self.bulkConfigOpts = registerSubOptions('bulk-config', bulkConfigOptions)
