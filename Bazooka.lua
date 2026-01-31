@@ -2370,29 +2370,38 @@ end
 
 function Bazooka:disableDBIcon()
   local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
-  if DBIcon and DBIcon.DisableLibrary then
+  if not DBIcon or self.origDBIconRegister then
+    return
+  end
+  if DBIcon.DisableLibrary then
     DBIcon:DisableLibrary()
   end
-  if DBIcon and DBIcon.Hide and DBIcon.GetButtonList then
-    local buttons = DBIcon:GetButtonList()
-    for i = 1, #buttons do
-      DBIcon:Hide(buttons[i])
-    end
+  local buttons = DBIcon:GetButtonList()
+  for i = 1, #buttons do
+    DBIcon:Hide(buttons[i])
+  end
+  self.origDBIconRegister = DBIcon.Register
+  DBIcon.Register = function(name, ...)
+    self.origDBIconRegister(name, ...)
+    DBIcon:Hide(name)
   end
 end
 
 function Bazooka:enableDBIcon()
   local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
-  if DBIcon and DBIcon.EnableLibrary then
+  if not DBIcon or not self.origDBIconRegister then
+    return
+  end
+  if DBIcon.EnableLibrary then
     DBIcon:EnableLibrary()
   end
-  if DBIcon and DBIcon.Show and DBIcon.objects then
-    for name, button in pairs(DBIcon.objects) do
-      if not button.db or not button.db.hide then
-        DBIcon:Show(name)
-      end
+  for name, button in pairs(DBIcon.objects or {}) do
+    if not button.db or not button.db.hide then
+      DBIcon:Show(name)
     end
   end
+  DBIcon.Register = self.origDBIconRegister
+  self.origDBIconRegister = nil
 end
 
 function Bazooka:createPlugin(name, dataobj)
