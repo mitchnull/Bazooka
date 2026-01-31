@@ -2375,8 +2375,14 @@ function Bazooka:disableDBIcon()
   local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
   if DBIcon and DBIcon.DisableLibrary then
     DBIcon:DisableLibrary()
-    self.isDBIconDisabled = true
   end
+  if DBIcon and DBIcon.Hide and DBIcon.GetButtonList then
+    local buttons = DBIcon:GetButtonList()
+    for i = 1, #buttons do
+      DBIcon:Hide(buttons[i])
+    end
+  end
+  self.isDBIconDisabled = true
 end
 
 function Bazooka:enableDBIcon()
@@ -2386,8 +2392,14 @@ function Bazooka:enableDBIcon()
   local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
   if DBIcon and DBIcon.EnableLibrary then
     DBIcon:EnableLibrary()
-    self.isDBIconDisabled = nil
   end
+  if DBIcon and DBIcon.Show and DBIcon.GetButtonList then
+    local buttons = DBIcon:GetButtonList()
+    for i = 1, #buttons do
+      DBIcon:Hide(buttons[i])
+    end
+  end
+  self.isDBIconDisabled = nil
 end
 
 function Bazooka:createPlugin(name, dataobj)
