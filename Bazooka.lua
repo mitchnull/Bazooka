@@ -2373,12 +2373,15 @@ function Bazooka:disableDBIcon()
     return
   end
   local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
+  if DBIcon and DBIcon.DisableLibrary then
+    DBIcon:DisableLibrary()
+  end
   if DBIcon and DBIcon.Hide then
-    for k,_ in pairs(DBIcon.objects) do
+    for k, _ in pairs(DBIcon.objects) do
       DBIcon:Hide(k)
     end
-    self.isDBIconDisabled = true
   end
+  self.isDBIconDisabled = true
 end
 
 function Bazooka:enableDBIcon()
@@ -2386,12 +2389,15 @@ function Bazooka:enableDBIcon()
     return
   end
   local DBIcon = LibStub:GetLibrary("LibDBIcon-1.0", true)
+  if DBIcon and DBIcon.EnableLibrary then
+    DBIcon:EnableLibrary()
+  end
   if DBIcon and DBIcon.Show then
-    for k,_ in pairs(DBIcon.objects) do
+    for k, _ in pairs(DBIcon.objects) do
       DBIcon:Show(k)
     end
-    self.isDBIconDisabled = nil
   end
+  self.isDBIconDisabled = nil
 end
 
 function Bazooka:createPlugin(name, dataobj)
@@ -2768,3 +2774,4 @@ local bft = bottomFrame:CreateTexture()
 bft:SetAllPoints()
 bft:SetTexture(.8, 0.4, 0.2, 0.5)
 --]]
+
