@@ -42,12 +42,6 @@ local Gradients = {
   ["VERTICAL"] = L["Vertical"],
 }
 
-local Gradients = {
-  [""] = L["None"],
-  ["HORIZONTAL"] = L["Horizontal"],
-  ["VERTICAL"] = L["Vertical"],
-}
-
 local FontOutlines = {
   [""] = L["None"],
   ["OUTLINE"] = L["Normal"],
@@ -97,28 +91,16 @@ function Bazooka:openConfigDialog(opts, optsAppName, ...)
   end
 
   local targetFrame = opts or self.opts
-  local targetCategoryName = targetFrame and targetFrame.name or self.AppName
-  local categoryID = (opts == nil and self.optsId) or nil
+  -- AceConfigDialog stores the settings category id in frame.name: a number on mainline,
+  -- but the category name on clients without C_SettingsUtil (classic flavors)
+  local categoryID = targetFrame and targetFrame.name or self.AppName
 
-  if Settings and Settings.GetCategory and not categoryID then
-    local category = Settings.GetCategory(targetCategoryName)
-    if category then
-      categoryID = category:GetID()
-    end
-  end
-
-  if type(categoryID) == "number" then
-    if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel then
-      C_SettingsUtil.OpenSettingsPanel(categoryID)
-    elseif Settings and Settings.OpenToCategory then
-      Settings.OpenToCategory(categoryID)
-    else
-      InterfaceOptionsFrame_OpenToCategory(targetFrame)
-    end
-  else
-    if InterfaceOptionsFrame_OpenToCategory then
-      InterfaceOptionsFrame_OpenToCategory(targetFrame)
-    end
+  if C_SettingsUtil and C_SettingsUtil.OpenSettingsPanel and type(categoryID) == "number" then
+    C_SettingsUtil.OpenSettingsPanel(categoryID)
+  elseif Settings and Settings.OpenToCategory then
+    Settings.OpenToCategory(categoryID)
+  elseif InterfaceOptionsFrame_OpenToCategory then
+    InterfaceOptionsFrame_OpenToCategory(targetFrame)
   end
 end
 
@@ -678,6 +660,10 @@ function Bazooka:updateBarOptions()
       order = i,
     }
   end
+  -- don't offer removed bars (or the bars of a previous profile) in the plugins' bar selection
+  for i = #BarNames, self.numBars + 1, -1 do
+    BarNames[i] = nil
+  end
   barOptions.args['+'] = CreateNewBarFakeOptions
   ACR:NotifyChange(self:getSubAppName("bars"))
   ACR:NotifyChange(self:getSubAppName("bulk-config"))
@@ -746,8 +732,9 @@ local pluginOptionArgs = {
     type = 'toggle',
     name = L["Show value"],
     desc = function(info)
-      if info.handler.dataobj and info.handler.dataobj.value then
-        return tostring(info.handler.dataobj.value)
+      local value = info.handler.dataobj and info.handler.dataobj.value
+      if value and not (issecretvalue and issecretvalue(value)) then
+        return tostring(value)
       end
     end,
     disabled = "isDisabled",

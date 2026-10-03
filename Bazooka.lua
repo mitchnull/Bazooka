@@ -72,6 +72,16 @@ local GameTooltip = _G.GameTooltip
 local IsInPetBattle = _G.C_PetBattles and _G.C_PetBattles.IsInBattle or function() return false end
 local C_Timer = _G.C_Timer
 local CreateColor = _G.CreateColor
+local issecretvalue = _G.issecretvalue or function() return false end
+local pcall = _G.pcall
+
+-- not every event exists in every flavor (e.g. pet battles: mainline and MoP Classic only)
+local function isEventValid(event)
+  if _G.C_EventUtils and _G.C_EventUtils.IsEventValid then
+    return _G.C_EventUtils.IsEventValid(event)
+  end
+  return IsMainline
+end
 local strtrim = _G.strtrim
 local strsplit = _G.strsplit
 
@@ -365,7 +375,11 @@ local function setupTooltip(owner, ttFrame, dx, dy)
   return ttFrame
 end
 
+-- secret values (12.0+) can't be converted or matched, so they are passed through as they are
 local function stripColors(text)
+  if issecretvalue(text) then
+    return text
+  end
   return (tostring(text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
@@ -557,9 +571,12 @@ end
 -- END EnableOpacityWorkaround
 
 -- BEGIN EnableGradientWorkaround
+-- hooked (not set), so BackdropTemplate's own OnSizeChanged handler keeps updating the backdrop's texture coords
 Bar.fixGradientOnSizeChanged = function(frame, w, h)
   local self = frame.bzkBar
-  self:setGradientBg()
+  if EnableGradientWorkaround and self.bgt then
+    self:setGradientBg()
+  end
 end
 -- END EnableGradientWorkaround
 
@@ -722,6 +739,7 @@ function Bar:enable(id, db)
     self.frame:SetScript("OnDragStart", Bar.OnDragStart)
     self.frame:SetScript("OnDragStop", Bar.OnDragStop)
     self.frame:SetScript("OnMouseDown", Bar.OnMouseDown)
+    self.frame:HookScript("OnSizeChanged", Bar.fixGradientOnSizeChanged)
     self.frame:SetMovable(true)
     self.frame:SetResizable(true)
     if self.frame.SetResizeBounds then
@@ -1231,16 +1249,11 @@ function Bar:applyBGSettings()
   self.frame:SetBackdropColor(self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a)
   self.frame:SetBackdropBorderColor(self.db.bgBorderColor.r, self.db.bgBorderColor.g, self.db.bgBorderColor.b, self.db.bgBorderColor.a)
   if self.db.bgGradient and self.db.bgGradient ~= "" and self.db.bgGradientColor then
-    self.bgt = getTexture(bg.bgFile, self.frame:GetRegions())
+    -- BackdropTemplate keeps the background in .Center (GetTexture() returns a file id there, not the path)
+    self.bgt = self.frame.Center or getTexture(bg.bgFile, self.frame:GetRegions())
     self:setGradientBg()
-    if EnableGradientWorkaround then
-      self.frame:SetScript("OnSizeChanged", Bar.fixGradientOnSizeChanged)
-    end
   else
     self.bgt = nil
-    if EnableGradientWorkaround then
-      self.frame:SetScript("OnSizeChanged", nil)
-    end
   end
 end
 
@@ -1490,8 +1503,10 @@ function Plugin:New(name, dataobj, db)
   plugin.dataobj = dataobj
 
   if dataobj.tocname then
-    local addonName, addonTitle = GetAddOnInfo(dataobj.tocname or name)
-    plugin.title = name .. '[' .. (addonTitle or addonName) .. ']'
+    -- C_AddOns.GetAddOnInfo() throws for unknown addons on some clients
+    local ok, addonName, addonTitle = pcall(GetAddOnInfo, dataobj.tocname)
+    local addonLabel = ok and (addonTitle or addonName) or dataobj.tocname
+    plugin.title = name .. '[' .. tostring(addonLabel) .. ']'
   else
     plugin.title = name
   end
@@ -1673,7 +1688,7 @@ function Plugin:globalSettingsChanged()
   self.iconSize = bdb.iconSize
   self.fontSize = bdb.fontSize
   if self.text then
-    local dbFontPath = self.bar and self.bar.dbFontPath or bdb.fontPath
+    local dbFontPath = self.bar and self.bar.dbFontPath or Defaults.fontPath
     local fontPath, fontSize, fontOutline = self.text:GetFont()
     fontOutline = fontOutline or ""
     if dbFontPath ~= fontPath or bdb.fontSize ~= fontSize or bdb.fontOutline ~= fontOutline then
@@ -1729,6 +1744,10 @@ function Plugin:updateLayout(forced)
   local w = 0
   if self.db.showText or self.db.showValue or self.db.showLabel then
     local tw = self.text:GetStringWidth()
+    if issecretvalue(tw) then
+      -- the text contains secret values, its width can't be used for layout: keep the current size
+      return
+    end
     local iw = self.db.showIcon and self.icon:GetWidth() or 0
     if tw > 0 then
       if self.db.maxTextWidth and self.db.maxTextWidth < tw then
@@ -1878,11 +1897,9 @@ function Plugin:setIcon()
     return
   end
   local dataobj = self.dataobj
-  local icon = self.icon
-  icon:SetTexture(dataobj.icon)
-  if self.db.iconBorderClip > 0 and not dataobj.iconCoords then
-    local tl, br = self.db.iconBorderClip, (1 - self.db.iconBorderClip)
-    icon:SetTexCoord(tl, br, tl, br)
+  self.icon:SetTexture(dataobj.icon)
+  if not dataobj.iconCoords then
+    self:setIconCoords()
   end
 end
 
@@ -1893,6 +1910,8 @@ function Plugin:setIconColor()
   local dataobj = self.dataobj
   if dataobj.iconR then
     self.icon:SetVertexColor(dataobj.iconR, dataobj.iconG, dataobj.iconB)
+  else
+    self.icon:SetVertexColor(1, 1, 1)
   end
 end
 
@@ -1903,6 +1922,10 @@ function Plugin:setIconCoords()
   local dataobj = self.dataobj
   if dataobj.iconCoords then
     self.icon:SetTexCoord(unpack(dataobj.iconCoords))
+  else
+    -- also resets the coords when iconCoords is cleared or the clip is changed back to 0
+    local clip = self.db.iconBorderClip or 0
+    self.icon:SetTexCoord(clip, 1 - clip, clip, 1 - clip)
   end
 end
 
@@ -2031,7 +2054,7 @@ function Bazooka:OnEnable(first)
   self:init()
   self:RegisterEvent("PLAYER_REGEN_DISABLED", "onEnteringCombat")
   self:RegisterEvent("PLAYER_REGEN_ENABLED", "onLeavingCombat")
-  if IsMainline then
+  if isEventValid("PET_BATTLE_OPENING_START") and isEventValid("PET_BATTLE_CLOSE") then
     self:RegisterEvent("PET_BATTLE_OPENING_START", "onPetBattleStart")
     self:RegisterEvent("PET_BATTLE_CLOSE", "onPetBattleEnd")
   end
@@ -2089,6 +2112,10 @@ function Bazooka:onPetBattleStart()
 end
 
 function Bazooka:onPetBattleEnd()
+  -- onPetBattleStart() locked the bars, undo that unless locked by the user (or by combat)
+  if not self.db.profile.locked and not InCombatLockdown() then
+    self:unlock()
+  end
   for i = 1, #self.bars do
     local bar = self.bars[i]
     if not bar.db.hidden then
@@ -2182,6 +2209,11 @@ function Bazooka:init()
   end
   for i = 1, numBars do
     self:createBar()
+  end
+  -- drop the (already disabled) bars of a previous profile that had more bars, otherwise
+  -- they would still be iterated, e.g. as drop targets
+  for i = #self.bars, self.numBars + 1, -1 do
+    self.bars[i] = nil
   end
   for name, dataobj in LDB:DataObjectIterator() do
     self:createPlugin(name, dataobj)
@@ -2560,6 +2592,9 @@ function Bazooka:getDropPlace(x, y)
     if dist < minDist then
       dstBar, dstArea, dstPos, minDist = bar, area, pos, dist
     end
+  end
+  if not dstBar then
+    return -- all bars are hidden
   end
   if minDist < NearSquared or getDistance2Frame(x, y, dstBar.frame) < NearSquared then
     return dstBar, dstArea, dstPos
