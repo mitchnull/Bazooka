@@ -70,9 +70,9 @@ local wipe = _G.wipe
 local math = _G.math
 local GameTooltip = _G.GameTooltip
 local IsInPetBattle = _G.C_PetBattles and _G.C_PetBattles.IsInBattle or function() return false end
+local C_Timer = _G.C_Timer
+local CreateColor = _G.CreateColor
 local strtrim = _G.strtrim
-local strsub = _G.strsub
-local strlen = _G.strlen
 local strsplit = _G.strsplit
 
 -- hard-coded config stuff
@@ -181,6 +181,33 @@ local PluginDefaults = {
   alignment = "LEFT",
 }
 
+local function withOverrides(base, overrides)
+  local res = {}
+  for k, v in pairs(base) do
+    res[k] = v
+  end
+  for k, v in pairs(overrides) do
+    res[k] = v
+  end
+  return res
+end
+
+local LauncherDefaults = withOverrides(PluginDefaults, {
+  enabled = true,
+  showLabel = false,
+  showTitle = true,
+  showText = false,
+  shrinkThreshold = 0,
+})
+
+local DataSourceDefaults = withOverrides(PluginDefaults, {
+  enabled = true,
+  area = 'right',
+  showLabel = false,
+  showTitle = false,
+  showText = true,
+})
+
 local Icon = [[Interface\AddOns\]] .. AppName .. [[\bzk_locked.tga]]
 local UnlockedIcon = [[Interface\AddOns\]] .. AppName .. [[\bzk_unlocked.tga]]
 local HighlightImage = [[Interface\AddOns\]] .. AppName .. [[\highlight.tga]]
@@ -254,51 +281,13 @@ local defaults = {
         ["**"] = PluginDefaults,
       },
       ["launcher"] = {
-        ["**"] = {
-          enabled = true,
-          bar = 1,
-          area = 'left',
-          pos = nil,
-          hideTipOnClick = true,
-          disableTooltip = false,
-          disableTooltipInCombat = true,
-          disableMouseInCombat = false,
-          disableMouseOutOfCombat = false,
-          forceHideTip = false,
-          showIcon = true,
-          showLabel = false,
-          showTitle = true,
-          showText = false,
-          shrinkThreshold = 0,
-          overrideTooltipScale = false,
-          tooltipScale = 1.0,
-          iconBorderClip = 0.07,
-        },
+        ["**"] = LauncherDefaults,
         [AppName] = {
           pos = 1,
         },
       },
       ["data source"] = {
-        ["**"] = {
-          enabled = true,
-          bar = 1,
-          area = 'right',
-          pos = nil,
-          hideTipOnClick = true,
-          disableTooltip = false,
-          disableTooltipInCombat = true,
-          disableMouseInCombat = false,
-          disableMouseOutOfCombat = false,
-          forceHideTip = false,
-          showIcon = true,
-          showLabel = false,
-          showTitle = false,
-          showText = true,
-          shrinkThreshold = PluginDefaults.shrinkThreshold,
-          overrideTooltipScale = false,
-          tooltipScale = 1.0,
-          iconBorderClip = 0.07,
-        },
+        ["**"] = DataSourceDefaults,
       },
     },
   },
@@ -377,7 +366,25 @@ local function setupTooltip(owner, ttFrame, dx, dy)
 end
 
 local function stripColors(text)
-  return tostring(text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+  return (tostring(text):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
+-- Texture:SetGradientAlpha() was removed in 10.0, newer clients use SetGradient() with color objects
+local function setTextureGradient(texture, orientation, c1, c2, alpha)
+  alpha = alpha or 1.0
+  local a1, a2 = (c1.a or 1.0) * alpha, (c2.a or 1.0) * alpha
+  if texture.SetGradientAlpha then
+    texture:SetGradientAlpha(orientation, c1.r, c1.g, c1.b, a1, c2.r, c2.g, c2.b, a2)
+  else
+    texture:SetGradient(orientation, CreateColor(c1.r, c1.g, c1.b, a1), CreateColor(c2.r, c2.g, c2.b, a2))
+  end
+end
+
+local function hideActiveTip()
+  if Bazooka.tipOwner then
+    Bazooka.tipOwner:hideTip(true)
+    Bazooka.tipOwner = nil
+  end
 end
 
 ---------------------------------
@@ -418,28 +425,16 @@ setDeepCopyIndex(Bar)
 Bar.OnEnter = function(frame)
   local self = frame.bzkBar or frame.bzkPlugin.bar
   self.isMouseInside = true
-  if InCombatLockdown() then
-    if self.db.fadeInCombat then
-      self:fadeIn()
-    end
-  else
-    if self.db.fadeOutOfCombat then
-      self:fadeIn()
-    end
+  if self:isFadeEnabled(InCombatLockdown()) then
+    self:fadeIn()
   end
 end
 
 Bar.OnLeave = function(frame)
   local self = frame.bzkBar or frame.bzkPlugin.bar
   self.isMouseInside = false
-  if InCombatLockdown() then
-    if self.db.fadeInCombat then
-      self:fadeOut()
-    end
-  else
-    if self.db.fadeOutOfCombat then
-      self:fadeOut()
-    end
+  if self:isFadeEnabled(InCombatLockdown()) then
+    self:fadeOut()
   end
 end
 
@@ -447,10 +442,7 @@ Bar.OnDragStart = function(frame, button)
   if Bazooka.locked then
     return
   end
-  if Bazooka.tipOwner then
-    Bazooka.tipOwner:hideTip(true)
-    Bazooka.tipOwner = nil
-  end
+  hideActiveTip()
   local self = frame.bzkBar
   updateUIScale()
   frame:SetAlpha(0.7)
@@ -760,30 +752,30 @@ function Bar:disable()
   end
 end
 
+-- returns the top/bottom of this bar and its parents, followed by the top/bottom of this bar
 function Bar:getTopBottom()
-  if self.db.attach == 'top' then
-    if self.parent then
-      local top, bottom, pt, pb = self.parent:getTopBottom()
-      local mt = pb + tonumber(self.db.tweakTop)
-      local mb = mt - self.db.frameHeight
-      return math.max(top, mt), math.min(bottom, mb), mt, mb
-    else
-      local mt = tonumber(self.db.tweakTop)
-      local mb = mt - self.db.frameHeight
-      return mt, mb, mt, mb
-    end
-  elseif self.db.attach == 'bottom' then
-    if self.parent then
-      local top, bottom, pt, pb = self.parent:getTopBottom()
-      local mb = pt + tonumber(self.db.tweakBottom)
-      local mt = mb + self.db.frameHeight
-      return math.max(top, mt), math.min(bottom, mb), mt, mb
-    else
-      local mb = tonumber(self.db.tweakBottom)
-      local mt = mb + self.db.frameHeight
-      return mt, mb, mt, mb
-    end
+  local db = self.db
+  if db.attach ~= 'top' and db.attach ~= 'bottom' then
+    return
   end
+  local top, bottom, pt, pb
+  if self.parent then
+    top, bottom, pt, pb = self.parent:getTopBottom()
+  else
+    pt, pb = 0, 0
+  end
+  local mt, mb
+  if db.attach == 'top' then
+    mt = pb + tonumber(db.tweakTop)
+    mb = mt - db.frameHeight
+  else
+    mb = pt + tonumber(db.tweakBottom)
+    mt = mb + db.frameHeight
+  end
+  if top then
+    return math.max(top, mt), math.min(bottom, mb), mt, mb
+  end
+  return mt, mb, mt, mb
 end
 
 function Bar:getAreaCoords(area)
@@ -1076,45 +1068,41 @@ local function numSideGaps(numPlugins)
   end
 end
 
+-- width of the left or right area, including the bar margin on that side
+local function sideAreaWidth(plugins, spacing, margin)
+  return sumPluginsWidth(plugins) + spacing * numSideGaps(#plugins) + margin
+end
+
+-- width of the cleft or cright area (each plugin is preceded by a gap)
+local function centerSideAreaWidth(plugins, spacing)
+  return sumPluginsWidth(plugins) + spacing * #plugins
+end
+
 function Bar:updateWidth()
-  if self.db.fitToContentWidth and self.db.attach == 'none' then
-    local w = 2 * self.inset
-    local numCenterPlugins = #self.plugins.cleft + #self.plugins.center + #self.plugins.cright
-    if numCenterPlugins > 0 then
-      local lw =
-        sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * numSideGaps(#self.plugins.left) + self.db.leftMargin +
-        sumPluginsWidth(self.plugins.cleft) + self.db.centerSpacing * #self.plugins.cleft
-      local rw =
-        sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * numSideGaps(#self.plugins.right) + self.db.rightMargin +
-        sumPluginsWidth(self.plugins.cright) + self.db.centerSpacing * #self.plugins.cright
-      if lw > rw then
-        w = w + lw + lw + self.centerFrame:GetWidth()
-      else
-        w = w + rw + rw + self.centerFrame:GetWidth()
-      end
-    elseif #self.plugins.left > 0 then
-      if #self.plugins.right > 0 then
-        w = w +
-          sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * numSideGaps(#self.plugins.left) + self.db.leftMargin +
-          sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * numSideGaps(#self.plugins.right) + self.db.rightMargin +
-          self.db.centerSpacing
-      else
-        w = w +
-          sumPluginsWidth(self.plugins.left) + self.db.leftSpacing * numSideGaps(#self.plugins.left) + self.db.leftMargin +
-          self.db.rightMargin
-      end
-    elseif #self.plugins.right > 0 then
-      w = w +
-        sumPluginsWidth(self.plugins.right) + self.db.rightSpacing * numSideGaps(#self.plugins.right) + self.db.rightMargin +
-        self.db.leftMargin
-    else
-      w = self.db.frameWidth
-    end
-    if w < Defaults.minFrameWidth then
-      w = Defaults.minFrameWidth
-    end
-    self.frame:SetWidth(w)
+  local db = self.db
+  if not (db.fitToContentWidth and db.attach == 'none') then
+    return
   end
+  local p = self.plugins
+  local lw = sideAreaWidth(p.left, db.leftSpacing, db.leftMargin)
+  local rw = sideAreaWidth(p.right, db.rightSpacing, db.rightMargin)
+  local w = 2 * self.inset
+  if #p.cleft + #p.center + #p.cright > 0 then
+    lw = lw + centerSideAreaWidth(p.cleft, db.centerSpacing)
+    rw = rw + centerSideAreaWidth(p.cright, db.centerSpacing)
+    w = w + 2 * math.max(lw, rw) + self.centerFrame:GetWidth()
+  elseif #p.left > 0 or #p.right > 0 then
+    w = w + lw + rw
+    if #p.left > 0 and #p.right > 0 then
+      w = w + db.centerSpacing
+    end
+  else
+    w = db.frameWidth
+  end
+  if w < Defaults.minFrameWidth then
+    w = Defaults.minFrameWidth
+  end
+  self.frame:SetWidth(w)
 end
 
 function Bar:setId(id)
@@ -1193,12 +1181,8 @@ end
 
 function Bar:setGradientBg()
   if self.bgt then
-    if EnableOpacityWorkaround then
-      local alpha = self.frame.bzkAlpha
-      self.bgt:SetGradientAlpha(self.db.bgGradient, self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a * alpha, self.db.bgGradientColor.r, self.db.bgGradientColor.g, self.db.bgGradientColor.b, self.db.bgGradientColor.a * alpha)
-    else
-      self.bgt:SetGradientAlpha(self.db.bgGradient, self.db.bgColor.r, self.db.bgColor.g, self.db.bgColor.b, self.db.bgColor.a, self.db.bgGradientColor.r, self.db.bgGradientColor.g, self.db.bgGradientColor.b, self.db.bgGradientColor.a)
-    end
+    local alpha = EnableOpacityWorkaround and self.frame.bzkAlpha or 1.0
+    setTextureGradient(self.bgt, self.db.bgGradient, self.db.bgColor, self.db.bgGradientColor, alpha)
   end
 end
 
@@ -1314,29 +1298,38 @@ function Bar:attachBottom(prevBar)
   end
 end
 
+function Bar:isFadeEnabled(inCombat)
+  if inCombat then
+    return self.db.fadeInCombat
+  end
+  return self.db.fadeOutOfCombat
+end
+
+function Bar:isMouseDisabled(inCombat)
+  if inCombat then
+    return self.db.disableMouseInCombat
+  end
+  return self.db.disableMouseOutOfCombat
+end
+
+-- inCombat is passed explicitly, because InCombatLockdown() is still false while PLAYER_REGEN_DISABLED is handled
+function Bar:applyCombatState(inCombat, skipFadeAnim)
+  self:toggleMouse(not self:isMouseDisabled(inCombat))
+  if self:isFadeEnabled(inCombat) and not self.isMouseInside then
+    self:fadeOut(0, nil, skipFadeAnim and self.db.fadeAlpha or nil)
+  else
+    self:fadeIn(skipFadeAnim and 1.0 or nil)
+  end
+  for name, plugin in pairs(self.allPlugins) do
+    plugin:toggleMouse(not plugin:isMouseDisabled(inCombat))
+  end
+end
+
 function Bar:enableAndShow(skipFadeAnim)
   if IsInPetBattle() and self.db.disableDuringPetBattle then
     self:disableAndHide(skipFadeAnim)
-  elseif InCombatLockdown() then
-    self:toggleMouse(not self.db.disableMouseInCombat)
-    if self.db.fadeInCombat and not self.isMouseInside then
-      self:fadeOut(0, nil, skipFadeAnim and self.db.fadeAlpha or nil)
-    else
-      self:fadeIn(skipFadeAnim and 1.0 or nil)
-    end
-    for name, plugin in pairs(self.allPlugins) do
-      plugin:toggleMouse(not plugin.db.disableMouseInCombat)
-    end
   else
-    self:toggleMouse(not self.db.disableMouseOutOfCombat)
-    if self.db.fadeOutOfCombat and not self.isMouseInside then
-      self:fadeOut(0, nil, skipFadeAnim and self.db.fadeAlpha or nil)
-    else
-      self:fadeIn(skipFadeAnim and 1.0 or nil)
-    end
-    for name, plugin in pairs(self.allPlugins) do
-      plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
-    end
+    self:applyCombatState(InCombatLockdown(), skipFadeAnim)
   end
 end
 
@@ -1436,10 +1429,7 @@ Plugin.OnDragStart = function(frame)
   if Bazooka.locked then
     return
   end
-  if Bazooka.tipOwner then
-    Bazooka.tipOwner:hideTip(true)
-    Bazooka.tipOwner = nil
-  end
+  hideActiveTip()
   local self = frame.bzkPlugin
   self:highlight(nil)
   self:detach()
@@ -1536,14 +1526,11 @@ end
 
 function Plugin:showTip(modifierKey, modifierState)
   if Bazooka.checkForceHide then
-    Bazooka.checkForceHide:forceHideFrames(UIParent:GetChildren())
+    Bazooka.checkForceHide:forceHideFrames()
     Bazooka.checkForceHide = nil
   end
   local origTipType = self.tipType
-  if Bazooka.tipOwner then
-    Bazooka.tipOwner:hideTip(true)
-    Bazooka.tipOwner = nil
-  end
+  hideActiveTip()
   if self.db.disableTooltip or (self.db.disableTooltipInCombat and InCombatLockdown()) then
     return
   end
@@ -1597,14 +1584,19 @@ function Plugin:toggleMouse(flag)
   self.frame:EnableMouseWheel(flag)
 end
 
--- hides frames that are not Bazooka's but are anchored to our frame
--- useage: plugin:forceHideFrames(UIParent:GetChildren())
-function Plugin:forceHideFrames(frame, ...)
-  if not frame then
-    return
+function Plugin:isMouseDisabled(inCombat)
+  if inCombat then
+    return self.db.disableMouseInCombat
   end
-  if not frame:IsForbidden() then
-    if not frame.bzkPlugin then
+  return self.db.disableMouseOutOfCombat
+end
+
+-- hides the children of UIParent that are not Bazooka's but are anchored to our frame
+function Plugin:forceHideFrames()
+  local children = { UIParent:GetChildren() }
+  for i = 1, #children do
+    local frame = children[i]
+    if not frame:IsForbidden() and not frame.bzkPlugin then
       -- we assume that if the frame is anchored to us, it's _only_ anchored to us
       local _, relativeTo = frame:GetPoint()
       if relativeTo == self.frame then
@@ -1612,7 +1604,6 @@ function Plugin:forceHideFrames(frame, ...)
       end
     end
   end
-  return self:forceHideFrames(...)
 end
 
 function Plugin:hideTip(force)
@@ -1620,34 +1611,25 @@ function Plugin:hideTip(force)
     return
   end
   Bazooka.tipOwner = nil
-  if not self.tipType then
+  local tipType = self.tipType
+  if not tipType then
     return
   end
-  if self.tipType == 'simple' then
-    local tt = setupTooltip()
-    tt:Hide()
-    self:resetTipScale(tt)
-  elseif self.tipType == 'OnTooltipShow' then
-    if self.dataobj.OnLeave then
-      self.dataobj.OnLeave(self.frame)
-    end
-    local tt = setupTooltip()
-    tt:Hide()
-    self:resetTipScale(tt)
-  elseif self.tipType == 'OnEnter' then
-    if self.dataobj.OnLeave then
-      self.dataobj.OnLeave(self.frame)
-    end
+  if (tipType == 'OnTooltipShow' or tipType == 'OnEnter') and self.dataobj.OnLeave then
+    self.dataobj.OnLeave(self.frame)
+  end
+  if tipType == 'OnEnter' then
+    -- the dataobj owns GameTooltip in this case, it's up to its OnLeave to hide it
     self:resetTipScale(GameTooltip)
-  elseif self.tipType == 'tooltip' then
-    local tt = self.dataobj.tooltip
+  else
+    local tt = (tipType == 'tooltip') and self.dataobj.tooltip or GameTooltip
     tt:Hide()
     self:resetTipScale(tt)
   end
   self.tipType = nil
   if self.db.forceHideTip then
     if force then
-      self:forceHideFrames(UIParent:GetChildren())
+      self:forceHideFrames()
     else
       Bazooka.checkForceHide = self
     end
@@ -1713,16 +1695,15 @@ function Plugin:globalSettingsChanged()
   self:updateLayout(true)
   if bdb.hidden then
     self:toggleMouse(false)
-  elseif InCombatLockdown() then
-    self:toggleMouse(not self.db.disableMouseInCombat)
   else
-    self:toggleMouse(not self.db.disableMouseOutOfCombat)
+    self:toggleMouse(not self:isMouseDisabled(InCombatLockdown()))
   end
 end
 
 function Plugin:createIcon()
   self.icon = self.frame:CreateTexture("BazookaPluginIcon_" .. self.name, "ARTWORK")
   self.icon:ClearAllPoints()
+  self.iconAlign = nil
   local iconSize = BarDefaults.iconSize
   self.icon:SetWidth(iconSize)
   self.icon:SetHeight(iconSize)
@@ -1732,11 +1713,15 @@ function Plugin:createText()
   self.text = self.frame:CreateFontString("BazookaPluginText_" .. self.name, "ARTWORK", "GameFontNormal")
   self.text:SetFont(Defaults.fontPath, BarDefaults.fontSize, BarDefaults.fontOutline)
   self.text:SetWordWrap(false)
+  self.textAlign, self.textOffset = nil, nil
 end
 
+-- Called on every text update, so the icon and text are only re-anchored when their position actually changes
+-- (or when forced).
 function Plugin:updateLayout(forced)
   local align = self.db.alignment or "LEFT"
-  if self.icon then
+  if self.icon and (forced or self.iconAlign ~= align) then
+    self.iconAlign = align
     self.icon:ClearAllPoints()
     self.icon:SetPoint(align, self.frame, align, 0, 0)
   end
@@ -1750,13 +1735,12 @@ function Plugin:updateLayout(forced)
         tw = self.db.maxTextWidth
       end
       local offset = (iw > 0) and (iw + self.iconTextSpacing) or 0
-      self.text:ClearAllPoints()
-      if align == "LEFT" then
-        self.text:SetPoint(align, self.frame, align, offset, 0)
-      else
-        self.text:SetPoint(align, self.frame, align, -offset, 0)
+      if forced or self.textAlign ~= align or self.textOffset ~= offset then
+        self.textAlign, self.textOffset = align, offset
+        self.text:ClearAllPoints()
+        self.text:SetPoint(align, self.frame, align, (align == "LEFT") and offset or -offset, 0)
+        self.text:SetJustifyH(align)
       end
-      self.text:SetJustifyH(align)
       w = offset + tw
     elseif iw > 0 then
       w = iw
@@ -1922,98 +1906,79 @@ function Plugin:setIconCoords()
   end
 end
 
+-- setText() runs on every LDB text/value/suffix change, so the format strings are cached
+-- by the combination of parts shown, and the argument table is reused.
+local FmtLabel, FmtText, FmtValue, FmtSuffix = 1, 2, 4, 8
+local textFormats = {}
+local textArgs = {}
+
+-- builds "|cLABEL:|r TEXT VALUE |cSUFFIX|r", leaving out the parts not in fmtKey
+local function getTextFormat(fmtKey)
+  local fmt = textFormats[fmtKey]
+  if fmt then
+    return fmt
+  end
+  local parts = {}
+  if fmtKey % (2 * FmtText) >= FmtText then
+    tinsert(parts, "%s")
+  end
+  if fmtKey % (2 * FmtValue) >= FmtValue then
+    tinsert(parts, "%s")
+  end
+  if fmtKey % (2 * FmtSuffix) >= FmtSuffix then
+    tinsert(parts, "|c%s%s|r")
+  end
+  fmt = table.concat(parts, " ")
+  if fmtKey % (2 * FmtLabel) >= FmtLabel then
+    if #parts > 0 then
+      fmt = "|c%s%s:|r " .. fmt
+    else
+      fmt = "|c%s%s|r"
+    end
+  end
+  textFormats[fmtKey] = fmt
+  return fmt
+end
+
 function Plugin:setText()
   if self.bar and self.bar.isFullyHidden then
     return
   end
-  local dataobj = self.dataobj
-  if self.db.showLabel and self.label then
-    if self.db.showText and dataobj.text then
-      if self.db.showValue and dataobj.value then
-        if self.db.showSuffix and dataobj.suffix then
-          if self.db.stripColors then
-            self.text:SetFormattedText("|c%s%s:|r %s %s |c%s%s|r", self.labelColorHex, stripColors(self.label), stripColors(dataobj.text), stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
-          else
-            self.text:SetFormattedText("|c%s%s:|r %s %s |c%s%s|r", self.labelColorHex, self.label, dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
-          end
-        else
-          if self.db.stripColors then
-            self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, stripColors(self.label), stripColors(dataobj.text), stripColors(dataobj.value))
-          else
-            self.text:SetFormattedText("|c%s%s:|r %s %s", self.labelColorHex, self.label, dataobj.text, dataobj.value)
-          end
-        end
-      else
-        if self.db.stripColors then
-          self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, stripColors(self.label), stripColors(dataobj.text))
-        else
-          self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.text)
-        end
-      end
-    elseif self.db.showValue and dataobj.value then
-      if self.db.showSuffix and dataobj.suffix then
-        if self.db.stripColors then
-          self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, stripColors(self.label), stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
-        else
-          self.text:SetFormattedText("|c%s%s:|r %s |c%s%s|r", self.labelColorHex, self.label, dataobj.value, self.suffixColorHex, dataobj.suffix)
-        end
-      else
-        if self.db.stripColors then
-          self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, stripColors(self.label), stripColors(dataobj.value))
-        else
-          self.text:SetFormattedText("|c%s%s:|r %s", self.labelColorHex, self.label, dataobj.value)
-        end
-      end
-    else
-      if self.db.stripColors then
-        self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, stripColors(self.label))
-      else
-        self.text:SetFormattedText("|c%s%s|r", self.labelColorHex, self.label)
-      end
-    end
-    self:updateLayout()
-  elseif self.db.showText and dataobj.text then
-    if self.db.showValue and dataobj.value then
-      if self.db.showSuffix and dataobj.suffix then
-        if self.db.stripColors then
-          self.text:SetFormattedText("%s %s |c%s%s|r", stripColors(dataobj.text), stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
-        else
-          self.text:SetFormattedText("%s %s |c%s%s|r", dataobj.text, dataobj.value, self.suffixColorHex, dataobj.suffix)
-        end
-      else
-        if self.db.stripColors then
-          self.text:SetFormattedText("%s %s", stripColors(dataobj.text), stripColors(dataobj.value))
-        else
-          self.text:SetFormattedText("%s %s", dataobj.text, dataobj.value)
-        end
-      end
-    else
-      if self.db.stripColors then
-        self.text:SetFormattedText("%s", stripColors(dataobj.text))
-      else
-        self.text:SetFormattedText("%s", dataobj.text)
-      end
-    end
-    self:updateLayout()
-  elseif self.db.showValue and dataobj.value then
-    if self.db.showSuffix and dataobj.suffix then
-      if self.db.stripColors then
-        self.text:SetFormattedText("%s |c%s%s|r", stripColors(dataobj.value), self.suffixColorHex, stripColors(dataobj.suffix))
-      else
-        self.text:SetFormattedText("%s |c%s%s|r", dataobj.value, self.suffixColorHex, dataobj.suffix)
-      end
-    else
-      if self.db.stripColors then
-        self.text:SetFormattedText("%s", stripColors(dataobj.value))
-      else
-        self.text:SetFormattedText("%s", dataobj.value)
-      end
-    end
-    self:updateLayout()
-  elseif self.text then
-    self.text:SetFormattedText("")
-    self:updateLayout()
+  local text = self.text
+  if not text then
+    return
   end
+  local db, dataobj = self.db, self.dataobj
+  local strip = db.stripColors
+  local hasLabel = db.showLabel and self.label
+  local hasText = db.showText and dataobj.text
+  local hasValue = db.showValue and dataobj.value
+  local hasSuffix = hasValue and db.showSuffix and dataobj.suffix
+
+  local args, n = textArgs, 0
+  local fmtKey = 0
+  if hasLabel then
+    fmtKey = fmtKey + FmtLabel
+    args[n + 1], args[n + 2] = self.labelColorHex, strip and stripColors(self.label) or self.label
+    n = n + 2
+  end
+  if hasText then
+    fmtKey = fmtKey + FmtText
+    n = n + 1
+    args[n] = strip and stripColors(dataobj.text) or dataobj.text
+  end
+  if hasValue then
+    fmtKey = fmtKey + FmtValue
+    n = n + 1
+    args[n] = strip and stripColors(dataobj.value) or dataobj.value
+  end
+  if hasSuffix then
+    fmtKey = fmtKey + FmtSuffix
+    args[n + 1], args[n + 2] = self.suffixColorHex, strip and stripColors(dataobj.suffix) or dataobj.suffix
+    n = n + 2
+  end
+  text:SetFormattedText(getTextFormat(fmtKey), unpack(args, 1, n))
+  self:updateLayout()
 end
 
 function Plugin:updateLabel()
@@ -2090,42 +2055,25 @@ end
 
 -- BEGIN handlers
 
-function Bazooka:onEnteringCombat()
-  self:lock()
+function Bazooka:applyCombatState(inCombat)
   for i = 1, #self.bars do
     local bar = self.bars[i]
     if not bar.db.hidden then
-      bar:toggleMouse(not bar.db.disableMouseInCombat)
-      if bar.db.fadeInCombat and not bar.isMouseInside then
-        bar:fadeOut(0)
-      else
-        bar:fadeIn()
-      end
-      for name, plugin in pairs(bar.allPlugins) do
-        plugin:toggleMouse(not plugin.db.disableMouseInCombat)
-      end
+      bar:applyCombatState(inCombat)
     end
   end
+end
+
+function Bazooka:onEnteringCombat()
+  self:lock()
+  self:applyCombatState(true)
 end
 
 function Bazooka:onLeavingCombat()
   if not self.db.profile.locked then
     self:unlock()
   end
-  for i = 1, #self.bars do
-    local bar = self.bars[i]
-    if not bar.db.hidden then
-      bar:toggleMouse(not bar.db.disableMouseOutOfCombat)
-      if bar.db.fadeOutOfCombat and not bar.isMouseInside then
-        bar:fadeOut(0)
-      else
-        bar:fadeIn()
-      end
-      for name, plugin in pairs(bar.allPlugins) do
-        plugin:toggleMouse(not plugin.db.disableMouseOutOfCombat)
-      end
-    end
-  end
+  self:applyCombatState(false)
 end
 
 function Bazooka:onPetBattleStart()
@@ -2158,7 +2106,19 @@ end
 
 function Bazooka:dataObjectCreated(event, name, dataobj)
   self:createPlugin(name, dataobj)
-  self:updatePluginOptions()
+end
+
+-- Rebuilding the plugin options is O(n log n) in the number of plugins, and data objects tend to be
+-- created in bursts (e.g. during login), so coalesce the rebuilds into one per frame.
+function Bazooka:schedulePluginOptionsUpdate()
+  if self.pluginOptionsUpdatePending then
+    return
+  end
+  self.pluginOptionsUpdatePending = true
+  C_Timer.After(0, function()
+    self.pluginOptionsUpdatePending = nil
+    self:updatePluginOptions()
+  end)
 end
 
 function Bazooka:profileChanged()
@@ -2419,7 +2379,7 @@ function Bazooka:createPlugin(name, dataobj)
   if self.db.profile.disableDBIcon then
     self:disableDBIcon()
   end
-  self:updatePluginOptions()
+  self:schedulePluginOptionsUpdate()
   return plugin
 end
 
