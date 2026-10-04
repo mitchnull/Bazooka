@@ -405,10 +405,12 @@ end
 
 -- BEGIN Bar stuff
 
+-- uses the width cached by Plugin:updateLayout(), so the frames' rects don't have to be queried
 local function sumPluginsWidth(plugins)
   local w = 0
   for i = 1, #plugins do
-    w = w + plugins[i].frame:GetWidth()
+    local plugin = plugins[i]
+    w = w + (plugin.origWidth or plugin.frame:GetWidth())
   end
   return w
 end
@@ -731,6 +733,7 @@ function Bar:enable(id, db)
       self.frame.GetAlpha = Bar.getAlphaByParts
     end
     self.frame:EnableMouse(true)
+    self.mouseEnabled = true
     self.frame:SetClampedToScreen(false)
     self.frame:SetClampRectInsets(MaxTweakPts, -MaxTweakPts, -MaxTweakPts, MaxTweakPts)
     self.frame:RegisterForDrag("LeftButton", "RightButton")
@@ -1075,7 +1078,10 @@ function Bar:updateCenterWidth()
   if cw <= 0 then
     cw = 1
   end
-  self.centerFrame:SetWidth(cw)
+  if cw ~= self.centerWidth then
+    self.centerWidth = cw
+    self.centerFrame:SetWidth(cw)
+  end
 end
 
 local function numSideGaps(numPlugins)
@@ -1108,7 +1114,7 @@ function Bar:updateWidth()
   if #p.cleft + #p.center + #p.cright > 0 then
     lw = lw + centerSideAreaWidth(p.cleft, db.centerSpacing)
     rw = rw + centerSideAreaWidth(p.cright, db.centerSpacing)
-    w = w + 2 * math.max(lw, rw) + self.centerFrame:GetWidth()
+    w = w + 2 * math.max(lw, rw) + (self.centerWidth or self.centerFrame:GetWidth())
   elseif #p.left > 0 or #p.right > 0 then
     w = w + lw + rw
     if #p.left > 0 and #p.right > 0 then
@@ -1188,12 +1194,15 @@ function Bar:getSizingPoint(x, y)
   end
 end
 
+-- runs for every bar on each combat state change, so the frame is only touched when the state changes
 function Bar:toggleMouse(flag)
-  if flag then
-    self.frame:EnableMouse(true)
-  else
-    self.frame:EnableMouse(false)
+  flag = flag and true or false
+  if not flag then
     self.isMouseInside = false
+  end
+  if self.mouseEnabled ~= flag then
+    self.mouseEnabled = flag
+    self.frame:EnableMouse(flag)
   end
 end
 
@@ -1595,8 +1604,12 @@ function Plugin:showTip(modifierKey, modifierState)
 end
 
 function Plugin:toggleMouse(flag)
-  self.frame:EnableMouse(flag)
-  self.frame:EnableMouseWheel(flag)
+  flag = flag and true or false
+  if self.mouseEnabled ~= flag then
+    self.mouseEnabled = flag
+    self.frame:EnableMouse(flag)
+    self.frame:EnableMouseWheel(flag)
+  end
 end
 
 function Plugin:isMouseDisabled(inCombat)
@@ -1700,7 +1713,7 @@ function Plugin:globalSettingsChanged()
       self.text:SetShadowOffset(0, 0)
     end
     self.text:SetTextColor(bdb.textColor.r, bdb.textColor.g, bdb.textColor.b, bdb.textColor.a)
-    self:setText()
+    self:renderText() -- the forced updateLayout() below measures it
   end
   if self.icon then
     self.icon:SetWidth(self.iconSize)
@@ -1814,6 +1827,7 @@ function Plugin:enable()
     end
     self.frame:EnableMouse(true)
     self.frame:EnableMouseWheel(true)
+    self.mouseEnabled = true
   end
   self.frame:Show()
 end
@@ -1872,23 +1886,19 @@ function Plugin:applySettings()
       self:createText()
     end
     self.text:SetWidth(self.db.maxTextWidth or 0)
-    if self.db.showLabel then
-      self:updateLabel()
-    else
-      self:setText()
-    end
     self.text:Show()
   elseif self.text then
     self.text:SetFormattedText("")
     self.text:Hide()
   end
+  self:setLabel()
+  -- globalSettingsChanged() renders the text and does a forced layout, attachPlugin() calls it as well
   if not self.bar or self.bar.id ~= self.db.bar or self.area ~= self.db.area then
     self:detach()
     Bazooka:attachPlugin(self)
+  else
+    self:globalSettingsChanged()
   end
-  self:globalSettingsChanged()
-  self:updateLabel()
-  self:updateLayout(true)
   self:updateLDBCallbacks()
 end
 
@@ -1963,13 +1973,21 @@ local function getTextFormat(fmtKey)
   return fmt
 end
 
+-- LDB callback for text/value/suffix changes
 function Plugin:setText()
+  if self:renderText() then
+    self:updateLayout()
+  end
+end
+
+-- formats the text without re-measuring the layout, returns true if the text was updated
+function Plugin:renderText()
   if self.bar and self.bar.isFullyHidden then
-    return
+    return false
   end
   local text = self.text
   if not text then
-    return
+    return false
   end
   local db, dataobj = self.db, self.dataobj
   local strip = db.stripColors
@@ -2001,14 +2019,19 @@ function Plugin:setText()
     n = n + 2
   end
   text:SetFormattedText(getTextFormat(fmtKey), unpack(args, 1, n))
-  self:updateLayout()
+  return true
 end
 
-function Plugin:updateLabel()
+function Plugin:setLabel()
   self.label = self.dataobj.label
   if not self.label and self.db.showTitle then
     self.label = self.title
   end
+end
+
+-- LDB callback for label changes
+function Plugin:updateLabel()
+  self:setLabel()
   self:setText()
 end
 
@@ -2124,9 +2147,15 @@ function Bazooka:onPetBattleEnd()
   end
 end
 
+-- Re-showing the tip calls the plugin's OnLeave/OnEnter, which can rebuild a heavy tooltip, so only do it when
+-- the modifier matters: for manual tooltips, or to switch from the simple (Alt+hover) tip to the plugin's tip.
+-- showTip() never switches to the simple tip on a modifier change, so a shown plugin tip is left alone.
 function Bazooka:MODIFIER_STATE_CHANGED(event, key, state)
   local tipOwner = Bazooka.tipOwner
-  if tipOwner and (tipOwner.db.manualTooltip or Bazooka.db.profile.simpleTip) then
+  if not tipOwner then
+    return
+  end
+  if tipOwner.db.manualTooltip or (Bazooka.db.profile.simpleTip and tipOwner.tipType == 'simple') then
     tipOwner:showTip(key, state)
   end
 end
@@ -2667,7 +2696,11 @@ function Bazooka:openStaticDialog(dialog, frameArg, textArg1, textArg2)
   end
 end
 
+-- called on every combat start (via lock()), so skip StaticPopup_Hide() when the dialog isn't shown
 function Bazooka:closeStaticDialog(dialog)
+  if StaticPopup_Visible and not StaticPopup_Visible(dialog) then
+    return
+  end
   StaticPopup_Hide(dialog)
 end
 
