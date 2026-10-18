@@ -1196,7 +1196,6 @@ end
 
 -- runs for every bar on each combat state change, so the frame is only touched when the state changes
 function Bar:toggleMouse(flag)
-  flag = flag and true or false
   if not flag then
     self.isMouseInside = false
   end
@@ -1604,7 +1603,6 @@ function Plugin:showTip(modifierKey, modifierState)
 end
 
 function Plugin:toggleMouse(flag)
-  flag = flag and true or false
   if self.mouseEnabled ~= flag then
     self.mouseEnabled = flag
     self.frame:EnableMouse(flag)
